@@ -104,6 +104,14 @@
 |----|--------|------|
 | `dirs` | 空 | 分号或英文逗号分隔的目录列表；与 `claude_web_paths.config.json` 及环境变量 `CLAUDE_WEB_READONLY_DIRS` 合并去重后进入 `--add-dir`。环境变量优先于本项 |
 
+### `[features]` — 功能开关（V2 每用户 API）
+
+| 键 | 默认值 | 说明 |
+|----|--------|------|
+| `v2_multi_user_api` | `false` | **`true`** 时启用 V2：浏览器地址栏为 **本机**（`127.0.0.1` / `localhost` / `::1`）时，Claude 子进程仍使用 **服务器本机** 的环境变量与 `config.ini` 中的 `model`；通过 **局域网 IP 或域名** 打开时，使用 **各用户** 在侧栏「API 配置」中保存的 `env` + `model`（文件位于 `cache/<规范化IP>/<user_id>/claude_api_credentials.json`，**不**随请求明文传输）。环境变量：`CLAUDE_WEB_V2_MULTI_USER_API` |
+
+若 `trust_x_forwarded = true`，判定「访问站点的主机名」时优先使用 **`X-Forwarded-Host`** 的首段（与 `X-Forwarded-For` 策略一致），以便反向代理后仍正确区分本机与局域网。
+
 ### 技能包 JSON（`claude_web_paths.config.json`）
 
 与 `config.ini` 并列，用于 **分类技能包**（`bundles`）及补充 `readonly_dirs`，详见后文「Skills 从哪加载」一节。
@@ -117,6 +125,10 @@
 | 接口 | 方法 | 说明 |
 |------|------|------|
 | `GET /` | GET | 聊天页面 |
+| `GET /api/features` | GET | 返回功能开关，如 `v2_multi_user_api`（无需登录） |
+| `GET /api/user/claude-credentials?user_id=` | GET | V2：用户凭证摘要（不含密钥明文） |
+| `PUT /api/user/claude-credentials` | PUT | V2：保存 `{"user_id","env":{...},"model":""}`（JSON） |
+| `DELETE /api/user/claude-credentials?user_id=` | DELETE | V2：清除该用户已保存的凭证文件 |
 | `POST /chat` | POST | 发送消息（SSE 流式响应） |
 | `GET /sessions?user_id=xxx` | GET | 获取会话列表 |
 | `POST /sessions` | POST | 创建新会话 |
@@ -265,6 +277,7 @@ python server.py
 | 变量 | 说明 |
 |------|------|
 | `CLAUDE_WEB_TOKEN` | 与 `python server.py <token>` 类似，用于鉴权 |
+| `CLAUDE_WEB_V2_MULTI_USER_API` | 为 `1`/`true` 时等同 `config.ini` `[features]` → `v2_multi_user_api` |
 | `CLAUDE_WEB_HOST` / `CLAUDE_WEB_PORT` | 监听地址与端口，同 `config.ini` `[server]` |
 | `CLAUDE_WEB_CLI_PATH` / `CLAUDE_WEB_MODEL` / `CLAUDE_WEB_EXTRA_CLI_ARGS` | 同 `config.ini` `[claude]` |
 | `CLAUDE_WEB_CACHE_DIR` 等 | 数据目录，同 `config.ini` `[paths]` |

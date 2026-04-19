@@ -15,6 +15,16 @@ from .feedback_service import save_feedback_package
 from .filename_sanitize import ascii_storage_filename, is_ascii_filename, safe_client_filename
 from .paths import get_client_ip
 from .session_manager import SessionManager
+from .user_claude_credentials import (
+    delete_credentials,
+    load_credentials,
+    merge_env_preserve_existing,
+    public_status,
+    resolve_claude_runtime_for_request,
+    sanitize_env,
+    save_credentials,
+    validate_save_payload,
+)
 
 log = logging.getLogger('claude-web')
 
@@ -42,6 +52,59 @@ def register_routes(app, sm: SessionManager):
     def _readonly_bundles():
         return app.config.get(PATHS_BUNDLES_KEY) or []
 
+    def _v2_orch_kwargs(rt: dict) -> dict:
+        return {
+            'child_env_extra': rt.get('child_env_extra'),
+            'model_override': rt.get('model_override'),
+        }
+
+    @app.route('/api/features', methods=['GET'])
+    def api_features():
+        return jsonify({'v2_multi_user_api': bool(config.FEATURE_V2_MULTI_USER_API)})
+
+    @app.route('/api/user/claude-credentials', methods=['GET'])
+    @optional_token
+    def api_get_claude_credentials():
+        user_id = request.args.get('user_id', '').strip()
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        data = load_credentials(sm, client_ip, user_id)
+        return jsonify(public_status(data))
+
+    @app.route('/api/user/claude-credentials', methods=['PUT'])
+    @optional_token
+    def api_put_claude_credentials():
+        data = request.json or {}
+        user_id = data.get('user_id', '').strip()
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        env_in = data.get('env')
+        model_in = data.get('model', '')
+        if not isinstance(model_in, str):
+            model_in = ''
+        env_new, err = sanitize_env(env_in)
+        if err:
+            return jsonify({'error': err}), 400
+        existing = load_credentials(sm, client_ip, user_id)
+        merged = merge_env_preserve_existing(existing, env_new or {})
+        verr = validate_save_payload(merged, model_in)
+        if verr:
+            return jsonify({'error': verr}), 400
+        save_credentials(sm, client_ip, user_id, merged, model_in)
+        return jsonify({'ok': True})
+
+    @app.route('/api/user/claude-credentials', methods=['DELETE'])
+    @optional_token
+    def api_delete_claude_credentials():
+        user_id = request.args.get('user_id', '').strip()
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        delete_credentials(sm, client_ip, user_id)
+        return jsonify({'ok': True})
+
     @app.route('/chat', methods=['POST'])
     @optional_token
     def chat():
@@ -61,6 +124,12 @@ def register_routes(app, sm: SessionManager):
         session = sm.get_session(client_ip, user_id, session_id)
         if not session:
             return jsonify({'error': 'Session not found'}), 404
+
+        rt = resolve_claude_runtime_for_request(request, sm, client_ip, user_id)
+        if rt.get('error'):
+            return jsonify({'error': rt['error'], 'code': 'v2_claude_config_required'}), 400
+        if rt.get('use_per_user'):
+            log.info('[Chat] V2 使用每用户 API 环境（Host 非本机）')
 
         claude_sid = session.get('claude_session_id')
         if not claude_sid:
@@ -136,6 +205,7 @@ def register_routes(app, sm: SessionManager):
                     readonly_dirs_notes=_readonly_notes(),
                     skill_bundles=_readonly_bundles(),
                     cli_log_context=cli_ctx,
+                    **_v2_orch_kwargs(rt),
                 )
             )
 
@@ -179,6 +249,12 @@ def register_routes(app, sm: SessionManager):
         sess = sm.get_session(client_ip, user_id, session_id)
         if not sess:
             return jsonify({'error': 'Session not found'}), 404
+
+        rt = resolve_claude_runtime_for_request(request, sm, client_ip, user_id)
+        if rt.get('error'):
+            return jsonify({'error': rt['error'], 'code': 'v2_claude_config_required'}), 400
+        if rt.get('use_per_user'):
+            log.info('[Orchestration/continue] V2 使用每用户 API 环境')
 
         session_workspace = sm.get_session_dir(client_ip, user_id, session_id)
         state = orchestrator.read_pause_state(session_workspace)
@@ -245,6 +321,7 @@ def register_routes(app, sm: SessionManager):
                         readonly_dirs_notes=_readonly_notes(),
                         skill_bundles=_readonly_bundles(),
                         cli_log_context=cli_ctx,
+                        **_v2_orch_kwargs(rt),
                     )
                 )
             else:
@@ -262,6 +339,7 @@ def register_routes(app, sm: SessionManager):
                         skill_bundles=_readonly_bundles(),
                         cli_log_context=cli_ctx,
                         total_rounds_offset=total_offset,
+                        **_v2_orch_kwargs(rt),
                     )
                 )
 

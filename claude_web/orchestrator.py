@@ -109,6 +109,8 @@ def stream_orchestrated_turns(
     readonly_dirs_notes: str = '',
     skill_bundles: Optional[List[Dict[str, Any]]] = None,
     total_rounds_offset: int = 0,
+    child_env_extra: Optional[Dict[str, str]] = None,
+    model_override: Optional[str] = None,
 ) -> Iterator[str]:
     """
     外环：最多 max_rounds 次完整 claude 子进程；任一轮成功则结束。
@@ -128,6 +130,8 @@ def stream_orchestrated_turns(
         readonly_dirs_notes=readonly_dirs_notes,
         skill_bundles=skill_bundles,
         cli_log_context=cli_log_context,
+        child_env_extra=child_env_extra,
+        model_override=model_override,
     )
 
     for round_idx in range(1, max_rounds + 1):
@@ -243,6 +247,8 @@ def stream_summarize_only(
     cli_log_context: Dict[str, Any],
     readonly_dirs_notes: str = '',
     skill_bundles: Optional[List[Dict[str, Any]]] = None,
+    child_env_extra: Optional[Dict[str, str]] = None,
+    model_override: Optional[str] = None,
 ) -> Iterator[str]:
     """单轮总结（用户选择「结束并总结」）。"""
     yield _sse({'type': 'info', 'message': '正在生成结束总结…'})
@@ -257,4 +263,6 @@ def stream_summarize_only(
         readonly_dirs_notes=readonly_dirs_notes,
         skill_bundles=skill_bundles,
         cli_log_context=cli_log_context,
+        child_env_extra=child_env_extra,
+        model_override=model_override,
     )

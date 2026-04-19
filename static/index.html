@@ -254,6 +254,12 @@
             margin-bottom: 6px;
         }
 
+        .feedback-modal textarea#v2EnvJson {
+            min-height: 220px;
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 12px;
+        }
+
         .feedback-modal textarea {
             width: 100%;
             min-height: 100px;
@@ -990,6 +996,7 @@
             <div class="sidebar-list" id="sessionList"></div>
             <div class="sidebar-footer">
                 <span class="footer-hint">局域网 AI 对话服务</span>
+                <button type="button" class="feedback-btn" id="apiConfigBtn" onclick="openApiConfig()" style="display:none">API 配置</button>
                 <button type="button" class="feedback-btn" onclick="openFeedback()">意见反馈</button>
             </div>
         </aside>
@@ -1056,6 +1063,23 @@
             <div class="feedback-actions">
                 <button type="button" class="btn-secondary" onclick="closeFeedback()">取消</button>
                 <button type="button" class="btn-primary" id="feedbackSubmitBtn" onclick="submitFeedback()">提交</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- V2 每用户 API（局域网） -->
+    <div class="feedback-overlay" id="apiConfigOverlay" onclick="if(event.target===this) closeApiConfig()">
+        <div class="feedback-modal" onclick="event.stopPropagation()">
+            <h3>API 配置（V2）</h3>
+            <p class="footer-hint" id="v2ApiHint" style="margin-bottom:12px;">通过局域网 IP 访问且服务端开启 V2 时，需在此保存密钥与模型；用本机 127.0.0.1 / localhost 打开则始终使用服务器上的配置。</p>
+            <label for="v2ModelInput">model（CLI --model，可空则沿用服务器 config.ini）</label>
+            <input type="text" id="v2ModelInput" placeholder="例如 opus[1m]" autocomplete="off">
+            <label for="v2EnvJson">环境变量 env（JSON 对象）</label>
+            <textarea id="v2EnvJson" placeholder='{ "ANTHROPIC_AUTH_TOKEN": "...", "ANTHROPIC_BASE_URL": "https://..." }'></textarea>
+            <div class="feedback-actions">
+                <button type="button" class="btn-secondary" onclick="closeApiConfig()">取消</button>
+                <button type="button" class="btn-secondary" onclick="clearApiConfig()">清除凭证</button>
+                <button type="button" class="btn-primary" onclick="submitApiConfig()">保存</button>
             </div>
         </div>
     </div>
@@ -1166,6 +1190,94 @@
         const txt = await r.text();
         if (!txt || !txt.trim()) return {};
         try { return JSON.parse(txt); } catch (e) { return {}; }
+    }
+
+    async function apiPut(url, body) {
+        const r = await fetch(url, { method: 'PUT', headers: apiHeaders(), body: JSON.stringify(body) });
+        if (!r.ok) {
+            let msg = `HTTP ${r.status}`;
+            try { const j = await r.json(); msg = j.error || msg; } catch (_) {}
+            throw new Error(msg);
+        }
+        return r.json();
+    }
+
+    function isLocalAccessHostname() {
+        const h = (window.location.hostname || '').toLowerCase();
+        return h === 'localhost' || h === '127.0.0.1' || h === '::1';
+    }
+
+    function updateApiConfigButtonVisibility() {
+        const btn = document.getElementById('apiConfigBtn');
+        if (!btn || !window.__featuresV2) return;
+        btn.style.display = (!isLocalAccessHostname()) ? 'block' : 'none';
+    }
+
+    async function loadFeatures() {
+        try {
+            const r = await fetch('/api/features');
+            const j = await r.json();
+            window.__featuresV2 = !!j.v2_multi_user_api;
+            updateApiConfigButtonVisibility();
+        } catch (_) {
+            window.__featuresV2 = false;
+        }
+    }
+
+    function openApiConfig() {
+        document.getElementById('apiConfigOverlay').classList.add('show');
+        (async () => {
+            try {
+                const st = await apiGet(`/api/user/claude-credentials?user_id=${encodeURIComponent(userId)}`);
+                document.getElementById('v2ModelInput').value = st.model || '';
+                document.getElementById('v2EnvJson').value = JSON.stringify(st.env_preview || {}, null, 2);
+                const hint = document.getElementById('v2ApiHint');
+                if (hint) {
+                    hint.textContent = st.has_token
+                        ? '已保存密钥：若不在 JSON 中填写 ANTHROPIC_AUTH_TOKEN，将沿用服务器已存密钥；可只改 BASE_URL 等。'
+                        : '请在 JSON 中至少填写 ANTHROPIC_AUTH_TOKEN（或兼容的 API_KEY），以及按需填写 ANTHROPIC_BASE_URL 等。';
+                }
+            } catch (e) {
+                showToast('加载配置失败: ' + e.message);
+            }
+        })();
+    }
+
+    function closeApiConfig() {
+        document.getElementById('apiConfigOverlay').classList.remove('show');
+    }
+
+    async function submitApiConfig() {
+        const model = document.getElementById('v2ModelInput').value.trim();
+        let env;
+        try {
+            env = JSON.parse(document.getElementById('v2EnvJson').value || '{}');
+        } catch (e) {
+            showToast('环境变量 JSON 格式不正确');
+            return;
+        }
+        if (typeof env !== 'object' || env === null || Array.isArray(env)) {
+            showToast('env 须为 JSON 对象');
+            return;
+        }
+        try {
+            await apiPut('/api/user/claude-credentials', { user_id: userId, env, model });
+            showToast('已保存');
+            closeApiConfig();
+        } catch (e) {
+            showToast(e.message || '保存失败');
+        }
+    }
+
+    async function clearApiConfig() {
+        if (!confirm('确定清除本用户在本机保存的 API 凭证？')) return;
+        try {
+            await apiDelete(`/api/user/claude-credentials?user_id=${encodeURIComponent(userId)}`);
+            showToast('已清除');
+            closeApiConfig();
+        } catch (e) {
+            showToast(e.message || '清除失败');
+        }
     }
 
     function showToast(msg, ms) {
@@ -1852,7 +1964,13 @@
             });
             if (!response.ok) {
                 let errorMsg = `请求失败 (${response.status})`;
-                try { const err = await response.json(); errorMsg = err.error || errorMsg; } catch (_) {}
+                try {
+                    const err = await response.json();
+                    errorMsg = err.error || errorMsg;
+                    if (err.code === 'v2_claude_config_required') {
+                        errorMsg += '（请打开侧栏「API 配置」保存密钥与模型）';
+                    }
+                } catch (_) {}
                 aiRow.remove();
                 showError(errorMsg);
                 return;
@@ -1974,7 +2092,13 @@
 
             if (!response.ok) {
                 let errorMsg = `请求失败 (${response.status})`;
-                try { const err = await response.json(); errorMsg = err.error || errorMsg; } catch(_) {}
+                try {
+                    const err = await response.json();
+                    errorMsg = err.error || errorMsg;
+                    if (err.code === 'v2_claude_config_required') {
+                        errorMsg += '（请打开侧栏「API 配置」保存密钥与模型）';
+                    }
+                } catch (_) {}
                 aiRow.remove();
                 showError(errorMsg);
                 return;
@@ -2012,6 +2136,7 @@
     }
 
     // ==================== Boot ====================
+    loadFeatures();
     loadSessions();
     </script>
 </body>

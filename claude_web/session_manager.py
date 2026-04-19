@@ -41,6 +41,10 @@ class SessionManager:
         sip = sanitize_ip_for_path(client_ip)
         return self.cache_dir / sip / user_id
 
+    def get_user_dir(self, client_ip: str, user_id: str) -> Path:
+        """用户根目录 cache/<规范化IP>/<user_id>/（供凭证等扩展使用）。"""
+        return self._get_user_dir(client_ip, user_id)
+
     def _lock_key(self, client_ip: str, user_id: str) -> str:
         return f'{sanitize_ip_for_path(client_ip)}|{user_id}'
 

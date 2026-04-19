@@ -85,6 +85,11 @@ FEEDBACK_DIR = _sl.resolve_optional_dir(ROOT, _str('paths', 'feedback_dir', '', 
 # ---------- 上传 ----------
 UPLOAD_MAX_SIZE = _int('upload', 'max_size_mb', 10, env='CLAUDE_WEB_UPLOAD_MAX_MB', minimum=1) * 1024 * 1024
 
+# ---------- V2：局域网每用户 API（Host 非本机时读用户保存的 env + model）----------
+FEATURE_V2_MULTI_USER_API = _bool(
+    'features', 'v2_multi_user_api', False, env='CLAUDE_WEB_V2_MULTI_USER_API'
+)
+
 
 def parse_readonly_dirs(log):
     """
@@ -232,3 +237,4 @@ def log_config_summary(log: logging.Logger) -> None:
         log.info('[Config] Claude --model: %s', CLAUDE_MODEL)
     if CLAUDE_EXTRA_CLI_ARGS:
         log.info('[Config] Claude 附加参数: %s', CLAUDE_EXTRA_CLI_ARGS)
+    log.info('[Config] V2 每用户 API（局域网）: %s', FEATURE_V2_MULTI_USER_API)

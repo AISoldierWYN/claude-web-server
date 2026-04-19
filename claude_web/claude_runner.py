@@ -417,6 +417,8 @@ def stream_claude_output(
     readonly_dirs_notes: str = '',
     skill_bundles: Optional[List[Dict[str, Any]]] = None,
     cli_log_context: Optional[Dict[str, Any]] = None,
+    child_env_extra: Optional[Dict[str, str]] = None,
+    model_override: Optional[str] = None,
 ):
     """
     调用 Claude CLI 并流式转发输出。
@@ -430,8 +432,9 @@ def stream_claude_output(
         '--include-partial-messages',
         '--verbose', '--print',
     ]
-    if str(config.CLAUDE_MODEL or '').strip():
-        cmd.extend(['--model', str(config.CLAUDE_MODEL).strip()])
+    model_eff = (model_override or '').strip() if model_override else (config.CLAUDE_MODEL or '').strip()
+    if model_eff:
+        cmd.extend(['--model', model_eff])
     if config.CLAUDE_EXTRA_CLI_ARGS:
         cmd.extend(list(config.CLAUDE_EXTRA_CLI_ARGS))
     if config.CLAUDE_WEB_PERMISSION_MODE:
@@ -535,6 +538,10 @@ def stream_claude_output(
     if 'env' not in popen_kw:
         popen_kw['env'] = os.environ.copy()
     popen_kw['env'].setdefault('PYTHONIOENCODING', 'utf-8')
+    if child_env_extra:
+        for k, v in child_env_extra.items():
+            if k:
+                popen_kw['env'][str(k)] = str(v)
 
     try:
         process = subprocess.Popen(
@@ -612,6 +619,9 @@ def stream_claude_output(
     claude_sid_returned = None
     stream_open_block = None  # None | 'thinking' | 'text' | 'tool'
     api_error_yet = False
+    # stream_event 已用 delta 推过思考/正文时，勿再转发 assistant 汇总里的同一块（否则前端会重复展示）
+    streamed_thinking_delta = False
+    streamed_text_delta = False
 
     def _tool_start_payload(cb: dict) -> dict:
         name = cb.get('name') or cb.get('tool_name') or ''
@@ -673,10 +683,12 @@ def stream_claude_output(
                     if delta_type == 'thinking_delta':
                         thinking_chunk = delta.get('thinking', '')
                         if thinking_chunk:
+                            streamed_thinking_delta = True
                             yield f'data: {json.dumps({"type": "thinking", "content": thinking_chunk})}\n\n'
                     elif delta_type == 'text_delta':
                         text_chunk = delta.get('text', '')
                         if text_chunk:
+                            streamed_text_delta = True
                             yield f'data: {json.dumps({"type": "text", "content": text_chunk})}\n\n'
                     elif delta_type in ('input_json_delta', 'input_json'):
                         partial = (
@@ -700,6 +712,8 @@ def stream_claude_output(
                     yield f'data: {json.dumps({"type": "content_block_stop"})}\n\n'
 
                 elif event_type == 'message_start':
+                    streamed_thinking_delta = False
+                    streamed_text_delta = False
                     yield f'data: {json.dumps({"type": "message_start"})}\n\n'
 
                 elif event_type == 'message_stop':
@@ -710,12 +724,16 @@ def stream_claude_output(
                 for content in msg.get('content', []):
                     ctype = content.get('type')
                     if ctype in ('thinking', 'redacted_thinking'):
+                        if streamed_thinking_delta:
+                            continue
                         yield f'data: {json.dumps({"type": "thinking_start"})}\n\n'
                         thinking_text = content.get('thinking', '')
                         if thinking_text:
                             yield f'data: {json.dumps({"type": "thinking", "content": thinking_text})}\n\n'
                         yield f'data: {json.dumps({"type": "thinking_stop"})}\n\n'
                     elif ctype == 'text':
+                        if streamed_text_delta:
+                            continue
                         yield f'data: {json.dumps({"type": "text", "content": content["text"]})}\n\n'
                     elif ctype in ('tool_use', 'tool_use_block', 'server_tool_use'):
                         yield f'data: {json.dumps(_tool_start_payload(content))}\n\n'
