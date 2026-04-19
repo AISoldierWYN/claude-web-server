@@ -44,9 +44,9 @@
 
 ## 快速开始
 
-详见 **`快速开始.md`**（依赖安装、最小配置、启动与防火墙）。
+详见 **`快速开始.md`**（**从 Git 克隆后的模板复制**、依赖安装、最小配置、启动与防火墙）。
 
-摘要：复制或保留项目根目录 **`config.ini`**，执行 `pip install -r requirements.txt` 后运行 `python server.py`；默认 **`http://127.0.0.1:8080`**（端口见 `config.ini` 中 `[server] port`）。
+摘要：**克隆后**将 `config.example.ini` 复制为 `config.ini`，将 `claude_web_paths.config.example.json` 复制为 `claude_web_paths.config.json`（详见 `快速开始.md`）；再执行 `pip install -r requirements.txt` 与 `python server.py`；默认 **`http://127.0.0.1:8080`**（端口见 `config.ini` 中 `[server] port`）。
 
 ## 配置文件详解（`config.ini`）
 
