@@ -60,7 +60,12 @@ def register_routes(app, sm: SessionManager):
 
     @app.route('/api/features', methods=['GET'])
     def api_features():
-        return jsonify({'v2_multi_user_api': bool(config.FEATURE_V2_MULTI_USER_API)})
+        return jsonify(
+            {
+                'v2_multi_user_api': bool(config.FEATURE_V2_MULTI_USER_API),
+                'v3_linux_deploy': bool(config.FEATURE_V3_LINUX_DEPLOY),
+            }
+        )
 
     @app.route('/api/user/claude-credentials', methods=['GET'])
     @optional_token

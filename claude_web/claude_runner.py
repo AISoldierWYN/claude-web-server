@@ -403,6 +403,14 @@ def _build_claude_child_env_isolate_home(session_workspace_dir: str) -> dict:
         roaming.mkdir(parents=True, exist_ok=True)
         env['LOCALAPPDATA'] = str(local_app)
         env['APPDATA'] = str(roaming)
+    else:
+        # Linux/macOS：部分 CLI 会读 XDG_*，与 HOME 下的会话目录对齐
+        xdg_config = Path(sw) / '.config'
+        xdg_cache = Path(sw) / '.cache'
+        xdg_config.mkdir(parents=True, exist_ok=True)
+        xdg_cache.mkdir(parents=True, exist_ok=True)
+        env['XDG_CONFIG_HOME'] = str(xdg_config)
+        env['XDG_CACHE_HOME'] = str(xdg_cache)
     return env
 
 
@@ -543,6 +551,7 @@ def stream_claude_output(
             if k:
                 popen_kw['env'][str(k)] = str(v)
 
+    # POSIX 上 argv 列表应使用 shell=False；Windows 下 list + shell=True 易与 shell 解析不一致，同样用 False。
     try:
         process = subprocess.Popen(
             cmd,
@@ -553,7 +562,7 @@ def stream_claude_output(
             encoding='utf-8',
             errors='replace',
             bufsize=1,
-            shell=True,
+            shell=False,
             **popen_kw,
         )
     except FileNotFoundError:

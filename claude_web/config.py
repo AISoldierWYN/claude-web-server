@@ -89,6 +89,10 @@ UPLOAD_MAX_SIZE = _int('upload', 'max_size_mb', 10, env='CLAUDE_WEB_UPLOAD_MAX_M
 FEATURE_V2_MULTI_USER_API = _bool(
     'features', 'v2_multi_user_api', False, env='CLAUDE_WEB_V2_MULTI_USER_API'
 )
+# V3：可选标记（Linux 服务器部署说明等）；**不**作为「仅在 Linux 生效」的运行时硬开关，兼容仍靠 sys.platform
+FEATURE_V3_LINUX_DEPLOY = _bool(
+    'features', 'v3_linux_deploy', False, env='CLAUDE_WEB_V3_LINUX_DEPLOY'
+)
 
 
 def parse_readonly_dirs(log):
@@ -231,6 +235,7 @@ def merge_readonly_dirs(log) -> Tuple[List[str], str, List[Dict[str, Any]]]:
 def log_config_summary(log: logging.Logger) -> None:
     """启动时打印关键配置（不含 token 明文）。"""
     log.info('[Config] 配置文件: %s', CONFIG_INI_PATH)
+    log.info('[Config] 运行平台: %s（Windows/Linux/macOS 由运行时自动适配）', sys.platform)
     log.info('[Config] 监听 %s:%s', SERVER_HOST, SERVER_PORT)
     log.info('[Config] Claude CLI: %s', CLAUDE_CLI_PATH)
     if CLAUDE_MODEL:
@@ -238,3 +243,5 @@ def log_config_summary(log: logging.Logger) -> None:
     if CLAUDE_EXTRA_CLI_ARGS:
         log.info('[Config] Claude 附加参数: %s', CLAUDE_EXTRA_CLI_ARGS)
     log.info('[Config] V2 每用户 API（局域网）: %s', FEATURE_V2_MULTI_USER_API)
+    if FEATURE_V3_LINUX_DEPLOY:
+        log.info('[Config] V3 Linux 部署标记: 已开启（文档/运维提示；与 sys.platform 自动兼容并存）')

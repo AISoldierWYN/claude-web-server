@@ -135,6 +135,24 @@ def find_claude_cli_explicit(cli_path: str) -> Optional[str]:
     return w
 
 
+def _candidate_claude_paths_posix() -> List[Path]:
+    """Linux/macOS 常见安装位置（在 shutil.which 之前）。"""
+    out: List[Path] = []
+    try:
+        home = Path.home()
+        out.extend(
+            [
+                home / '.local' / 'bin' / 'claude',
+                home / '.npm-global' / 'bin' / 'claude',
+                Path('/usr/local/bin/claude'),
+                Path('/opt/homebrew/bin/claude'),  # macOS Apple Silicon Homebrew
+            ]
+        )
+    except Exception:
+        pass
+    return out
+
+
 def find_claude_cli_auto() -> str:
     if sys.platform == 'win32':
         npm_prefix = os.environ.get('APPDATA', '')
@@ -143,6 +161,13 @@ def find_claude_cli_auto() -> str:
                 candidate = os.path.join(npm_prefix, 'npm', 'claude' + ext)
                 if os.path.isfile(candidate):
                     return candidate
+    else:
+        for cand in _candidate_claude_paths_posix():
+            try:
+                if cand.is_file():
+                    return str(cand.resolve())
+            except OSError:
+                continue
     path = shutil.which('claude')
     if path:
         return path
