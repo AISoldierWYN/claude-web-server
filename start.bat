@@ -1,4 +1,5 @@
 @echo off
+REM Windows 一键启动；Linux / macOS 请使用同目录下的 start.sh
 setlocal EnableDelayedExpansion
 chcp 65001 >nul
 cd /d "%~dp0"

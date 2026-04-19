@@ -1,0 +1,2 @@
+# 保证 shell 脚本在 Linux 上换行与 shebang 正确
+*.sh text eol=lf

@@ -177,7 +177,8 @@ claude-web-server/
 ├── feedback/              # 用户反馈落盘
 ├── logs/                  # server.log；logs/users/... 下为按会话 CLI 日志
 ├── requirements.txt
-├── start.bat
+├── start.bat              # Windows 一键启动
+├── start.sh               # Linux / macOS 一键启动（chmod +x 后执行）
 └── README.md
 ```
 
