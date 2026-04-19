@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "notes": "全局说明（可选）：会追加在沙箱提示末尾，与技能包摘要不同。",
+  "readonly_dirs": [],
+  "bundles": [
+    {
+      "id": "example-skills",
+      "title": "示例技能包",
+      "summary": "两三句话说明：本包解决什么问题、包含哪类技能文档或代码；模型默认只读这段摘要，需要时再 Read/Grep 下列路径。",
+      "paths": [
+        "D:/path/to/skills",
+        "D:/path/to/docs"
+      ]
+    }
+  ]
+}

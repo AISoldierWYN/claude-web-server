@@ -1,0 +1,2018 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Claude Chat</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0F0F1A;
+            --bg-secondary: #1A1A2E;
+            --bg-sidebar: #141425;
+            --bg-chat: #0F0F1A;
+            --bg-input: #1E1E35;
+            --bg-hover: #252545;
+            --bg-active: #2D2D55;
+            --text-primary: #E6E6E6;
+            --text-secondary: #8888A0;
+            --text-muted: #555570;
+            --accent: #7C3AED;
+            --accent-hover: #8B5CF6;
+            --accent-glow: rgba(124, 58, 237, 0.25);
+            --user-bubble: #5B2DA0;
+            --ai-bubble: #1A1A35;
+            --thinking-bg: #151530;
+            --border: #2A2A4A;
+            --success: #4ADE80;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --sidebar-width: 280px;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ============ Layout ============ */
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ============ Sidebar ============ */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 20px 16px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .sidebar-logo .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: #fff;
+        }
+
+        .sidebar-logo .logo-text {
+            font-size: 17px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #c4b5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, var(--accent), #6D28D9);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            background: linear-gradient(135deg, var(--accent-hover), #7C3AED);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .new-chat-btn svg { width: 16px; height: 16px; }
+
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .sidebar-list::-webkit-scrollbar { width: 4px; }
+        .sidebar-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        .session-item {
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.15s;
+            margin-bottom: 2px;
+            position: relative;
+        }
+
+        .session-item:hover { background: var(--bg-hover); }
+        .session-item.active { background: var(--bg-active); }
+
+        .session-item .session-icon {
+            width: 18px;
+            height: 18px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .session-item .session-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-item .session-title {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .session-item .session-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .session-item .session-delete {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .session-item:hover .session-delete { opacity: 1; }
+        .session-item .session-delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+        .sidebar-footer {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        .sidebar-footer .footer-hint { line-height: 1.4; }
+
+        .feedback-btn {
+            width: 100%;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .feedback-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--accent);
+        }
+
+        .feedback-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .feedback-overlay.show { display: flex; }
+
+        .feedback-modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow: auto;
+            padding: 20px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+        }
+
+        .feedback-modal h3 {
+            font-size: 16px;
+            margin-bottom: 14px;
+            font-weight: 600;
+        }
+
+        .feedback-modal label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .feedback-modal textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 12px;
+        }
+
+        .feedback-modal input[type="text"] {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .feedback-modal input[type="file"] {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 14px;
+        }
+
+        .feedback-modal .feedback-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .feedback-modal .btn-secondary {
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .feedback-modal .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+        .feedback-modal .btn-primary {
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: linear-gradient(135deg, var(--accent), #6D28D9);
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .feedback-modal .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            z-index: 2000;
+            max-width: 90%;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            display: none;
+        }
+
+        .toast.show { display: block; }
+
+        /* Streaming: 计时条 + 锁定交互 */
+        .stream-status-bar {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            min-height: 18px;
+        }
+
+        .stream-status-bar .stream-timer { color: #a78bfa; font-variant-numeric: tabular-nums; }
+
+        .app.streaming-locked .sidebar,
+        .app.streaming-locked .sidebar-overlay {
+            pointer-events: none !important;
+            opacity: 0.72;
+        }
+
+        .app.streaming-locked .main-header {
+            pointer-events: none !important;
+            opacity: 0.72;
+        }
+
+        .app.streaming-locked .input-area {
+            pointer-events: none !important;
+            opacity: 0.65;
+        }
+
+        .app.streaming-locked .main {
+            pointer-events: none;
+        }
+
+        .app.streaming-locked .main .chat-container {
+            pointer-events: auto;
+            opacity: 1;
+        }
+
+        .app.streaming-locked .drop-zone {
+            pointer-events: none !important;
+            display: none !important;
+        }
+
+        .ai-stream-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 8px;
+            width: 100%;
+        }
+
+        .tool-block {
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(124,58,237,0.25);
+            background: var(--thinking-bg);
+            overflow: hidden;
+            font-size: 12px;
+        }
+
+        .tool-header {
+            padding: 8px 12px;
+            color: #c4b5fd;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tool-body {
+            margin: 0;
+            padding: 10px 12px;
+            max-height: 220px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text-secondary);
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 12px;
+        }
+
+        .message-bubble.answer-bubble {
+            min-height: 1.2em;
+        }
+
+        /* 整块思考区折叠（DeepSeek 风格） */
+        .reasoning-panel {
+            border: 1px solid rgba(124,58,237,0.25);
+            border-radius: var(--radius-sm);
+            margin-bottom: 10px;
+            overflow: hidden;
+            background: rgba(20, 21, 48, 0.6);
+        }
+
+        .reasoning-panel-head {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 8px 12px;
+            background: var(--thinking-bg);
+            border: none;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s;
+        }
+
+        .reasoning-panel-head:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+        .reasoning-panel-head .rph-title { font-weight: 600; color: #c4b5fd; }
+
+        .reasoning-panel-head .rph-sub { font-size: 11px; opacity: 0.75; }
+
+        .rph-compact-row {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+        }
+
+        .rpt-mini-spin {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            flex-shrink: 0;
+        }
+
+        .reasoning-panel.stream-finished .rpt-mini-spin {
+            display: none !important;
+        }
+
+        .reasoning-panel.stream-finished .rph-compact-label {
+            color: var(--text-secondary);
+            opacity: 0.95;
+        }
+
+        .reasoning-panel:not(.open) .reasoning-panel-detail { display: none; }
+
+        .reasoning-panel:not(.open) .rph-expanded-only { display: none !important; }
+
+        .reasoning-panel:not(.open) .rph-compact-row { display: inline-flex; }
+
+        .reasoning-panel.open .rph-chevron { transform: rotate(0deg); }
+
+        .reasoning-panel:not(.open) .rph-chevron { transform: rotate(-90deg); }
+
+        .reasoning-panel.open .rph-compact-row { display: none !important; }
+
+        .rph-chevron {
+            margin-left: auto;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .reasoning-panel-detail {
+            padding: 10px 12px;
+            border-top: 1px solid rgba(124,58,237,0.15);
+        }
+
+        /* ============ Main Area ============ */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: var(--bg-chat);
+        }
+
+        .main-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            background: var(--bg-secondary);
+        }
+
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .menu-toggle:hover { background: var(--bg-hover); }
+        .menu-toggle svg { width: 20px; height: 20px; }
+
+        .main-header .header-title {
+            font-size: 15px;
+            font-weight: 600;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .header-actions { display: flex; gap: 6px; }
+
+        .icon-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s;
+        }
+
+        .icon-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+        .icon-btn svg { width: 14px; height: 14px; }
+
+        /* ============ Chat Area ============ */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .chat-container::-webkit-scrollbar { width: 6px; }
+        .chat-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* Welcome */
+        .welcome {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            color: var(--text-secondary);
+        }
+
+        .welcome-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        .welcome h2 {
+            font-size: 22px;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .welcome p {
+            font-size: 14px;
+            max-width: 400px;
+            text-align: center;
+            line-height: 1.7;
+        }
+
+        /* Messages */
+        .message-row {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 12px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-row.user { justify-content: flex-end; }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .message-avatar.ai {
+            background: linear-gradient(135deg, var(--accent), #6D28D9);
+            color: #fff;
+        }
+
+        .message-avatar.user-av {
+            background: #5B2DA0;
+            color: #fff;
+        }
+
+        .message-content {
+            max-width: 72%;
+            min-width: 60px;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 16px;
+            line-height: 1.7;
+            font-size: 14px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message-row.user .message-bubble {
+            background: var(--user-bubble);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-row.ai .message-bubble {
+            background: var(--ai-bubble);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-files {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .file-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            background: rgba(124,58,237,0.15);
+            border: 1px solid rgba(124,58,237,0.3);
+            border-radius: 20px;
+            font-size: 12px;
+            color: #c4b5fd;
+        }
+
+        .file-tag svg { width: 12px; height: 12px; }
+
+        /* Thinking */
+        .thinking-block {
+            margin-bottom: 8px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 1px solid rgba(124,58,237,0.2);
+        }
+
+        .thinking-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--thinking-bg);
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-secondary);
+            transition: background 0.15s;
+        }
+
+        .thinking-header:hover { background: var(--bg-hover); }
+
+        .thinking-header .thinking-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .thinking-header .chevron {
+            margin-left: auto;
+            transition: transform 0.2s;
+        }
+
+        .thinking-header .chevron.open { transform: rotate(90deg); }
+
+        .thinking-body {
+            padding: 10px 12px;
+            background: var(--thinking-bg);
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .thinking-body.open { display: block; }
+
+        /* Error */
+        .message-error {
+            text-align: center;
+            padding: 10px 16px;
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: var(--radius-sm);
+            color: #fca5a5;
+            font-size: 13px;
+            margin: 10px auto;
+            max-width: 90%;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            padding: 4px 0;
+        }
+
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: blink 1.4s infinite both;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0.2; }
+            40% { opacity: 1; }
+        }
+
+        /* ============ Input Area ============ */
+        .input-area {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            background: var(--bg-secondary);
+        }
+
+        .upload-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .upload-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(124,58,237,0.12);
+            border: 1px solid rgba(124,58,237,0.25);
+            border-radius: 20px;
+            font-size: 12px;
+            color: #c4b5fd;
+        }
+
+        .upload-tag .remove-file {
+            background: none;
+            border: none;
+            color: #c4b5fd;
+            cursor: pointer;
+            padding: 0;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .upload-tag .remove-file:hover { color: var(--danger); }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            max-width: 900px;
+            margin: 0 auto;
+            align-items: flex-end;
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .input-action-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            transition: all 0.15s;
+        }
+
+        .input-action-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .input-action-btn svg { width: 18px; height: 18px; }
+
+        .input-wrapper textarea {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            min-height: 42px;
+            max-height: 140px;
+            line-height: 1.5;
+            transition: border-color 0.2s;
+        }
+
+        .input-wrapper textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+        .input-wrapper textarea::placeholder { color: var(--text-muted); }
+
+        .send-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--accent), #6D28D9);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--accent-hover), #7C3AED);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ============ Overlay ============ */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+
+        .sidebar-overlay.show { display: block; }
+
+        /* ============ Drop Zone ============ */
+        .drop-zone {
+            position: fixed;
+            inset: 0;
+            background: rgba(15,15,26,0.9);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drop-zone.show { display: flex; }
+
+        .drop-zone-inner {
+            border: 2px dashed var(--accent);
+            border-radius: 20px;
+            padding: 60px 80px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .drop-zone-inner svg { width: 48px; height: 48px; margin-bottom: 16px; color: var(--accent); }
+        .drop-zone-inner p { font-size: 16px; }
+
+        /* ============ Confirm Dialog ============ */
+        .confirm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .confirm-overlay.show { display: flex; }
+
+        .confirm-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            max-width: 360px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .confirm-box p { margin-bottom: 20px; font-size: 14px; line-height: 1.6; }
+
+        .confirm-btns { display: flex; gap: 10px; justify-content: center; }
+
+        .confirm-btns button {
+            padding: 8px 24px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            transition: all 0.15s;
+        }
+
+        .btn-cancel { background: var(--bg-secondary); color: var(--text-primary); }
+        .btn-cancel:hover { background: var(--bg-hover); }
+        .btn-confirm-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+        .btn-confirm-danger:hover { background: #dc2626; }
+
+        /* ============ Mobile ============ */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+            }
+            .sidebar.open { transform: translateX(0); }
+            .menu-toggle { display: flex; }
+            .message-content { max-width: 85%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-icon">C</div>
+                    <div class="logo-text">Claude Chat</div>
+                </div>
+                <button class="new-chat-btn" onclick="createNewSession()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    新对话
+                </button>
+            </div>
+            <div class="sidebar-list" id="sessionList"></div>
+            <div class="sidebar-footer">
+                <span class="footer-hint">局域网 AI 对话服务</span>
+                <button type="button" class="feedback-btn" onclick="openFeedback()">意见反馈</button>
+            </div>
+        </aside>
+
+        <!-- Sidebar Overlay (mobile) -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Main -->
+        <main class="main">
+            <div class="main-header">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <div class="header-title" id="headerTitle">Claude Chat</div>
+                <div class="header-actions">
+                    <button class="icon-btn danger" onclick="confirmDeleteSession()" title="删除当前会话">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="chat-container" id="chatContainer">
+                <div class="welcome" id="welcome">
+                    <div class="welcome-icon">✦</div>
+                    <h2>欢迎使用 Claude Chat</h2>
+                    <p>局域网 AI 对话服务，支持多会话管理、文件上传和流式输出。<br>点击「新对话」开始聊天。</p>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="upload-preview" id="uploadPreview"></div>
+                <div class="input-wrapper">
+                    <div class="input-actions">
+                        <button class="input-action-btn" onclick="document.getElementById('fileInput').click()" title="上传文件">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        </button>
+                    </div>
+                    <textarea id="messageInput" placeholder="输入消息... (Enter 发送, Shift+Enter 换行)" rows="1" autofocus></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="handleSend()">发送</button>
+                </div>
+                <input type="file" id="fileInput" multiple hidden onchange="handleFileSelect(this.files)">
+            </div>
+        </main>
+    </div>
+
+    <!-- Drop Zone -->
+    <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p>释放文件以上传</p>
+        </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="feedback-overlay" id="feedbackOverlay" onclick="if(event.target===this) closeFeedback()">
+        <div class="feedback-modal" onclick="event.stopPropagation()">
+            <h3>意见反馈</h3>
+            <label for="feedbackText">反馈内容</label>
+            <textarea id="feedbackText" placeholder="请描述问题或建议…"></textarea>
+            <label for="feedbackContact">联系方式（可选）</label>
+            <input type="text" id="feedbackContact" placeholder="邮箱 / 飞书等">
+            <label for="feedbackImages">截图（可选）</label>
+            <input type="file" id="feedbackImages" accept="image/*" multiple>
+            <div class="feedback-actions">
+                <button type="button" class="btn-secondary" onclick="closeFeedback()">取消</button>
+                <button type="button" class="btn-primary" id="feedbackSubmitBtn" onclick="submitFeedback()">提交</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- Confirm Dialog -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-box">
+            <p id="confirmText">确定要删除这个会话吗？</p>
+            <div class="confirm-btns">
+                <button class="btn-cancel" onclick="closeConfirm()">取消</button>
+                <button class="btn-confirm-danger" id="confirmAction" onclick="doDeleteSession()">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // http://IP 非安全上下文，crypto.randomUUID 可能不存在，会导致整段脚本失败（发送无反应）
+    function genUUID() {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    // ==================== State ====================
+    const TOKEN = new URLSearchParams(window.location.search).get('token') || null;
+    let userId = localStorage.getItem('claude_user_id');
+    if (!userId) {
+        userId = 'u-' + genUUID();
+        localStorage.setItem('claude_user_id', userId);
+    }
+
+    let currentSessionId = null;
+    let sessions = [];
+    let isStreaming = false;
+    let pendingFiles = []; // {name, size} 文件名须与 /upload 返回的 name 一致，供 /chat 在服务端解析
+
+    // ==================== DOM ====================
+    const chatContainer = document.getElementById('chatContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const welcomeEl = document.getElementById('welcome');
+    const sessionListEl = document.getElementById('sessionList');
+    const headerTitle = document.getElementById('headerTitle');
+    const uploadPreview = document.getElementById('uploadPreview');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const dropZone = document.getElementById('dropZone');
+
+    // ==================== Init ====================
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+    });
+
+    messageInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+
+    // Drag & Drop
+    let dragCounter = 0;
+    document.addEventListener('dragenter', e => {
+        e.preventDefault();
+        if (isStreaming) return;
+        dragCounter++; dropZone.classList.add('show');
+    });
+    document.addEventListener('dragleave', e => { e.preventDefault(); dragCounter--; if (dragCounter <= 0) { dragCounter = 0; dropZone.classList.remove('show'); } });
+    document.addEventListener('dragover', e => e.preventDefault());
+    document.addEventListener('drop', e => {
+        e.preventDefault();
+        dragCounter = 0;
+        dropZone.classList.remove('show');
+        if (isStreaming) return;
+        if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files);
+    });
+
+    // ==================== API Helpers ====================
+    function apiHeaders() {
+        const h = { 'Content-Type': 'application/json' };
+        if (TOKEN) h['Authorization'] = 'Bearer ' + TOKEN;
+        return h;
+    }
+
+    async function apiGet(url) {
+        const r = await fetch(url, { headers: apiHeaders() });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+    }
+
+    async function apiPost(url, body) {
+        const r = await fetch(url, { method: 'POST', headers: apiHeaders(), body: JSON.stringify(body) });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+    }
+
+    async function apiDelete(url) {
+        const r = await fetch(url, { method: 'DELETE', headers: apiHeaders() });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const txt = await r.text();
+        if (!txt || !txt.trim()) return {};
+        try { return JSON.parse(txt); } catch (e) { return {}; }
+    }
+
+    function showToast(msg, ms) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('show');
+        setTimeout(function() { el.classList.remove('show'); }, ms || 4000);
+    }
+
+    function openFeedback() {
+        document.getElementById('feedbackOverlay').classList.add('show');
+        document.getElementById('feedbackText').focus();
+    }
+
+    function closeFeedback() {
+        document.getElementById('feedbackOverlay').classList.remove('show');
+    }
+
+    async function submitFeedback() {
+        const text = (document.getElementById('feedbackText').value || '').trim();
+        const contact = (document.getElementById('feedbackContact').value || '').trim();
+        const files = document.getElementById('feedbackImages').files;
+        if (!text) {
+            showToast('请填写反馈内容', 2500);
+            return;
+        }
+        const btn = document.getElementById('feedbackSubmitBtn');
+        btn.disabled = true;
+        try {
+            const fd = new FormData();
+            fd.append('text', text);
+            fd.append('contact', contact);
+            fd.append('user_id', userId);
+            for (let i = 0; i < files.length; i++) fd.append('images', files[i]);
+            const h = {};
+            if (TOKEN) h['Authorization'] = 'Bearer ' + TOKEN;
+            const r = await fetch('/feedback', { method: 'POST', headers: h, body: fd });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const data = await r.json();
+            showToast('感谢反馈！已保存：' + (data.saved_to || ''), 5000);
+            document.getElementById('feedbackText').value = '';
+            document.getElementById('feedbackContact').value = '';
+            document.getElementById('feedbackImages').value = '';
+            closeFeedback();
+        } catch (e) {
+            console.error(e);
+            showToast('提交失败，请稍后重试', 3500);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ==================== Session Management ====================
+    async function loadSessions() {
+        try {
+            sessions = await apiGet(`/sessions?user_id=${encodeURIComponent(userId)}`);
+            renderSessionList();
+        } catch (e) {
+            console.error('加载会话列表失败:', e);
+        }
+    }
+
+    function renderSessionList() {
+        sessionListEl.innerHTML = '';
+        for (const s of sessions) {
+            const item = document.createElement('div');
+            item.className = 'session-item' + (s.id === currentSessionId ? ' active' : '');
+            item.onclick = (e) => {
+                if (e.target.closest('.session-delete')) return;
+                switchSession(s.id);
+            };
+            item.innerHTML = `
+                <svg class="session-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <div class="session-info">
+                    <div class="session-title">${escapeHtml(s.title)}</div>
+                    <div class="session-time">${s.updated_at || ''}</div>
+                </div>
+                <button class="session-delete" title="删除" onclick="confirmDeleteSessionById('${s.id}')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            `;
+            sessionListEl.appendChild(item);
+        }
+    }
+
+    async function createNewSession() {
+        if (isStreaming) return;
+        try {
+            const session = await apiPost('/sessions', { user_id: userId });
+            sessions.unshift(session);
+            currentSessionId = session.id;
+            renderSessionList();
+            renderChat([]);
+            headerTitle.textContent = session.title;
+            closeSidebar();
+            messageInput.focus();
+        } catch (e) {
+            console.error('创建会话失败:', e);
+        }
+    }
+
+    async function switchSession(sessionId) {
+        if (isStreaming) return;
+        if (sessionId === currentSessionId) { closeSidebar(); return; }
+
+        currentSessionId = sessionId;
+        const s = sessions.find(x => x.id === sessionId);
+        if (s) headerTitle.textContent = s.title;
+        renderSessionList();
+        closeSidebar();
+        pendingFiles = [];
+        renderUploadPreview();
+
+        // Load messages
+        try {
+            const messages = await apiGet(`/sessions/${sessionId}/messages?user_id=${encodeURIComponent(userId)}`);
+            renderChat(messages);
+        } catch (e) {
+            console.error('加载消息失败:', e);
+            renderChat([]);
+        }
+    }
+
+    let deleteTargetId = null;
+
+    function confirmDeleteSession() {
+        if (!currentSessionId) return;
+        deleteTargetId = currentSessionId;
+        document.getElementById('confirmText').textContent = '确定要删除当前会话吗？此操作不可撤销。';
+        document.getElementById('confirmOverlay').classList.add('show');
+    }
+
+    function confirmDeleteSessionById(id) {
+        deleteTargetId = id;
+        document.getElementById('confirmText').textContent = '确定要删除这个会话吗？此操作不可撤销。';
+        document.getElementById('confirmOverlay').classList.add('show');
+    }
+
+    function closeConfirm() {
+        document.getElementById('confirmOverlay').classList.remove('show');
+    }
+
+    async function doDeleteSession() {
+        if (!deleteTargetId) return;
+        const targetId = deleteTargetId;
+        deleteTargetId = null;
+        document.getElementById('confirmOverlay').classList.remove('show');
+
+        try {
+            const delRes = await apiDelete(`/sessions/${targetId}?user_id=${encodeURIComponent(userId)}`);
+            sessions = sessions.filter(s => s.id !== targetId);
+            if (currentSessionId === targetId) {
+                currentSessionId = null;
+                headerTitle.textContent = 'Claude Chat';
+                renderChat([]);
+            }
+            renderSessionList();
+            if (delRes && delRes.backed_up_to) {
+                showToast('会话已备份至：' + delRes.backed_up_to, 6000);
+            }
+        } catch (e) {
+            console.error('删除会话失败:', e);
+        }
+    }
+
+    // ==================== Sidebar Toggle ====================
+    function toggleSidebar() {
+        sidebar.classList.toggle('open');
+        sidebarOverlay.classList.toggle('show');
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        sidebarOverlay.classList.remove('show');
+    }
+
+    // ==================== Chat Rendering ====================
+    function renderChat(messages) {
+        chatContainer.innerHTML = '';
+        if (!messages || messages.length === 0) {
+            chatContainer.appendChild(welcomeEl);
+            welcomeEl.style.display = 'flex';
+            return;
+        }
+        welcomeEl.style.display = 'none';
+        for (const m of messages) {
+            appendMessage(m.role, m.content, m.thinking, m.files);
+        }
+        scrollToBottom();
+    }
+
+    function appendMessage(role, content, thinking, files) {
+        const row = document.createElement('div');
+        row.className = 'message-row ' + (role === 'user' ? 'user' : 'ai');
+
+        let avatarHtml = '';
+        let filesHtml = '';
+        let thinkingHtml = '';
+
+        if (role === 'ai') {
+            avatarHtml = '<div class="message-avatar ai">C</div>';
+        } else {
+            avatarHtml = '<div class="message-avatar user-av">U</div>';
+        }
+
+        if (files && files.length) {
+            filesHtml = '<div class="message-files">';
+            for (const f of files) {
+                const name = typeof f === 'string' ? f : f.name;
+                filesHtml += `<span class="file-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${escapeHtml(name)}</span>`;
+            }
+            filesHtml += '</div>';
+        }
+
+        if (thinking) {
+            const thinkId = 'think-' + Math.random().toString(36).substr(2, 8);
+            thinkingHtml = `
+                <div class="thinking-block">
+                    <div class="thinking-header" onclick="toggleThinking('${thinkId}')">
+                        <span>思考过程</span>
+                        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <div class="thinking-body" id="${thinkId}">${escapeHtml(thinking)}</div>
+                </div>
+            `;
+        }
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        contentDiv.innerHTML = filesHtml + thinkingHtml + `<div class="message-bubble">${escapeHtml(content)}</div>`;
+
+        row.innerHTML = avatarHtml;
+        row.appendChild(contentDiv);
+        chatContainer.appendChild(row);
+        return row;
+    }
+
+    function toggleThinking(id) {
+        const body = document.getElementById(id);
+        const header = body.previousElementSibling;
+        body.classList.toggle('open');
+        header.querySelector('.chevron').classList.toggle('open');
+    }
+
+    function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    // ==================== File Upload ====================
+    async function handleFileSelect(fileList) {
+        if (isStreaming) return;
+        if (!currentSessionId) {
+            alert('请先创建或选择一个会话');
+            return;
+        }
+
+        for (const file of fileList) {
+            if (file.size > 10 * 1024 * 1024) {
+                alert(`文件 ${file.name} 超过 10MB 限制`);
+                continue;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('user_id', userId);
+            formData.append('session_id', currentSessionId);
+
+            try {
+                const h = {};
+                if (TOKEN) h['Authorization'] = 'Bearer ' + TOKEN;
+                const r = await fetch('/upload', { method: 'POST', headers: h, body: formData });
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const result = await r.json();
+                pendingFiles.push({
+                    name: result.name,
+                    displayName: result.display_name || result.name,
+                    size: result.size,
+                });
+                renderUploadPreview();
+            } catch (e) {
+                alert(`上传 ${file.name} 失败: ${e.message}`);
+            }
+        }
+        // Reset file input
+        document.getElementById('fileInput').value = '';
+    }
+
+    function renderUploadPreview() {
+        uploadPreview.innerHTML = '';
+        for (let i = 0; i < pendingFiles.length; i++) {
+            const f = pendingFiles[i];
+            const tag = document.createElement('span');
+            tag.className = 'upload-tag';
+            const showName = f.displayName || f.name;
+            tag.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${escapeHtml(showName)}<button class="remove-file" onclick="removePendingFile(${i})">&times;</button>`;
+            uploadPreview.appendChild(tag);
+        }
+    }
+
+    function removePendingFile(index) {
+        pendingFiles.splice(index, 1);
+        renderUploadPreview();
+    }
+
+    let streamTimerId = null;
+    let streamStartTs = 0;
+
+    function formatStreamElapsed(startTs) {
+        const sec = Math.floor((Date.now() - startTs) / 1000);
+        if (sec < 60) return '思考中… (' + sec + 's)';
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return '思考中… (' + m + ' 分 ' + s + ' 秒)';
+    }
+
+    function formatEndedSummary(totalSec) {
+        const sec = Math.max(0, totalSec);
+        if (sec < 60) return '已思考结束（用时 ' + sec + ' 秒）';
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return '已思考结束（用时 ' + m + ' 分 ' + s + ' 秒）';
+    }
+
+    /** 流结束后：状态栏与折叠态标题同步为「已思考结束」，并去掉转圈（折叠时不再显示「思考中」） */
+    function finalizeReasoningPanelUI(reasoningPanel, streamStartTs) {
+        if (!reasoningPanel || !reasoningPanel.isConnected) return;
+        const totalSec = Math.floor((Date.now() - streamStartTs) / 1000);
+        const ended = formatEndedSummary(totalSec);
+        const te = reasoningPanel.querySelector('.stream-timer');
+        if (te) te.textContent = ended;
+        const spin = reasoningPanel.querySelector('.rpt-mini-spin');
+        if (spin) spin.style.display = 'none';
+        const compactLabel = reasoningPanel.querySelector('.rph-compact-label');
+        if (compactLabel) compactLabel.textContent = ended + ' · 点击展开';
+        reasoningPanel.classList.add('stream-finished');
+    }
+
+    function startStreamTimer(statusBarEl) {
+        streamStartTs = Date.now();
+        const tick = () => {
+            if (!statusBarEl || !statusBarEl.isConnected) return;
+            const te = statusBarEl.querySelector('.stream-timer');
+            if (te) te.textContent = formatStreamElapsed(streamStartTs);
+        };
+        tick();
+        if (streamTimerId) clearInterval(streamTimerId);
+        streamTimerId = setInterval(tick, 1000);
+    }
+
+    function stopStreamTimer() {
+        if (streamTimerId) {
+            clearInterval(streamTimerId);
+            streamTimerId = null;
+        }
+    }
+
+    function setStreamingLocked(on) {
+        const app = document.querySelector('.app');
+        if (!app) return;
+        app.classList.toggle('streaming-locked', !!on);
+    }
+
+    /**
+     * 消费 /chat 或 /chat/orchestration/continue 的 SSE，驱动单条助手气泡 UI。
+     * @returns {{ doneReceived: boolean, orchestrationPaused: boolean, continuationToken: string|null, orchMeta: object, fullText: string }}
+     */
+    async function streamAssistantResponse(response, ui) {
+        const { aiRow, contentEl, aiBubble, timelineEl, statusBar, streamStartTs } = ui;
+        let doneReceived = false;
+        let orchestrationPaused = false;
+        let continuationToken = null;
+        let orchMeta = {};
+        let currentThinkingBody = null;
+        let currentThinkingSegBuf = '';
+        let currentToolBody = null;
+        let toolInputBuf = '';
+        let firstText = true;
+        let fullText = '';
+
+        function appendThinkingSegment() {
+            const thinkId = 'think-live-' + Math.random().toString(36).substr(2, 8);
+            currentThinkingSegBuf = '';
+            const block = document.createElement('div');
+            block.className = 'thinking-block';
+            block.innerHTML = `
+                <div class="thinking-header" onclick="toggleThinking('${thinkId}')">
+                    <span>思考过程</span>
+                    <svg class="chevron open" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+                <div class="thinking-body open" id="${thinkId}"></div>`;
+            timelineEl.appendChild(block);
+            currentThinkingBody = block.querySelector('.thinking-body');
+        }
+
+        function finalizeThinkingSegment() {
+            if (!currentThinkingBody) return;
+            const block = currentThinkingBody.closest('.thinking-block');
+            if (block) {
+                const h = block.querySelector('.thinking-header span');
+                if (h) h.textContent = '思考过程';
+                currentThinkingBody.classList.remove('open');
+                const chev = block.querySelector('.chevron');
+                if (chev) chev.classList.remove('open');
+            }
+            currentThinkingBody = null;
+        }
+
+        function ensureToolSegment(name) {
+            finalizeThinkingSegment();
+            const tool = document.createElement('div');
+            tool.className = 'tool-block';
+            const safeName = escapeHtml(name || 'tool');
+            tool.innerHTML = '<div class="tool-header">工具：' + safeName + '</div><pre class="tool-body"></pre>';
+            timelineEl.appendChild(tool);
+            currentToolBody = tool.querySelector('.tool-body');
+            toolInputBuf = '';
+        }
+
+        function appendToolPartial(p) {
+            if (!currentToolBody) return;
+            toolInputBuf += (p || '');
+            currentToolBody.textContent = toolInputBuf;
+            currentToolBody.scrollTop = currentToolBody.scrollHeight;
+            scrollToBottom();
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop() || '';
+
+            for (const part of parts) {
+                const line = part.trim();
+                if (!line.startsWith('data: ')) continue;
+                try {
+                    const data = JSON.parse(line.slice(6));
+
+                    switch (data.type) {
+                        case 'session':
+                            break;
+
+                        case 'orchestration_round': {
+                            const lab = document.createElement('div');
+                            lab.className = 'orch-round-label';
+                            lab.style.cssText = 'font-size:0.85em;opacity:0.75;margin:6px 0 2px';
+                            let t = '外环 ' + (data.round || '?') + '/' + (data.max_rounds || '?');
+                            if (data.total_rounds != null) t += '（累计 ' + data.total_rounds + '）';
+                            lab.textContent = t;
+                            contentEl.appendChild(lab);
+                            scrollToBottom();
+                            break;
+                        }
+
+                        case 'orchestration_complete':
+                            break;
+
+                        case 'info':
+                            if (data.message) {
+                                const infoEl = document.createElement('div');
+                                infoEl.className = 'stream-info';
+                                infoEl.style.cssText = 'opacity:0.85;font-size:0.9em;margin:8px 0;padding:6px 10px;border-radius:6px;background:rgba(128,128,128,0.12);';
+                                infoEl.textContent = data.message;
+                                contentEl.appendChild(infoEl);
+                                scrollToBottom();
+                            }
+                            break;
+
+                        case 'thinking_start':
+                            appendThinkingSegment();
+                            break;
+
+                        case 'thinking':
+                            if (!currentThinkingBody) appendThinkingSegment();
+                            currentThinkingSegBuf += (data.content || '');
+                            currentThinkingBody.textContent = currentThinkingSegBuf;
+                            currentThinkingBody.scrollTop = currentThinkingBody.scrollHeight;
+                            scrollToBottom();
+                            break;
+
+                        case 'thinking_stop':
+                            finalizeThinkingSegment();
+                            break;
+
+                        case 'tool_start':
+                            ensureToolSegment(data.name);
+                            break;
+
+                        case 'tool_input_delta':
+                            appendToolPartial(data.partial || data.partial_json);
+                            break;
+
+                        case 'tool_stop':
+                            currentToolBody = null;
+                            break;
+
+                        case 'content_block_stop':
+                            break;
+
+                        case 'text':
+                            if (firstText) {
+                                finalizeThinkingSegment();
+                                firstText = false;
+                            }
+                            fullText += (data.content || '');
+                            aiBubble.textContent = fullText;
+                            scrollToBottom();
+                            break;
+
+                        case 'done':
+                            doneReceived = true;
+                            if (data.paused) orchestrationPaused = true;
+                            if (!fullText.trim() && data.ok !== false && !data.paused) {
+                                aiBubble.textContent = '（无回复内容）';
+                            } else if (!fullText.trim() && data.ok === false && !data.paused) {
+                                aiBubble.textContent = '（见上方错误说明）';
+                            } else if (!fullText.trim() && data.paused) {
+                                aiBubble.textContent = '（已达本段外环轮数上限，请使用下方按钮继续或总结）';
+                            }
+                            break;
+
+                        case 'needs_continue':
+                            continuationToken = data.continuation_token || null;
+                            orchMeta = {
+                                message: data.message || '',
+                                rounds_used_segment: data.rounds_used_segment,
+                                max_rounds_per_segment: data.max_rounds_per_segment,
+                                total_rounds: data.total_rounds,
+                            };
+                            break;
+
+                        case 'error':
+                            if (data.soft) {
+                                const softErr = document.createElement('div');
+                                softErr.className = 'message-error';
+                                softErr.style.marginTop = '10px';
+                                softErr.textContent = data.message;
+                                contentEl.appendChild(softErr);
+                                break;
+                            }
+                            doneReceived = false;
+                            aiRow.remove();
+                            showError(data.message);
+                            break;
+                    }
+                } catch (e) {
+                    console.warn('JSON 解析失败:', line);
+                }
+            }
+        }
+
+        if (buffer.trim().startsWith('data: ')) {
+            try {
+                const data = JSON.parse(buffer.trim().slice(6));
+                if (data.type === 'text') {
+                    fullText += (data.content || '');
+                    aiBubble.textContent = fullText;
+                }
+            } catch (_) {}
+        }
+
+        return { doneReceived, orchestrationPaused, continuationToken, orchMeta, fullText };
+    }
+
+    function showOrchestrationContinueModal(token, orchMeta) {
+        const wrap = document.createElement('div');
+        wrap.className = 'orch-pause-overlay';
+        wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+        const box = document.createElement('div');
+        box.style.cssText = 'background:var(--panel-bg, #1e1e1e);color:var(--text, #eee);padding:20px;border-radius:12px;max-width:440px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.35);';
+        const p1 = document.createElement('p');
+        p1.style.margin = '0 0 10px';
+        p1.textContent = orchMeta.message || '已达到本段最大外环轮数，仍未能成功。';
+        const p2 = document.createElement('p');
+        p2.style.cssText = 'opacity:.85;font-size:.9em;margin:0 0 16px';
+        p2.textContent = '本段已用 ' + (orchMeta.rounds_used_segment != null ? orchMeta.rounds_used_segment : '?')
+            + ' / ' + (orchMeta.max_rounds_per_segment != null ? orchMeta.max_rounds_per_segment : '?')
+            + ' 轮；累计外环约 ' + (orchMeta.total_rounds != null ? orchMeta.total_rounds : '?') + ' 轮。';
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end';
+        const bContinue = document.createElement('button');
+        bContinue.type = 'button';
+        bContinue.textContent = '继续任务（再跑一段）';
+        bContinue.style.cssText = 'padding:8px 14px;cursor:pointer;border-radius:8px;border:1px solid #555;background:#333;color:#eee';
+        const bSum = document.createElement('button');
+        bSum.type = 'button';
+        bSum.textContent = '结束并总结';
+        bSum.style.cssText = 'padding:8px 14px;cursor:pointer;border-radius:8px;border:1px solid #666;background:#2a2a2a;color:#eee';
+        const bDismiss = document.createElement('button');
+        bDismiss.type = 'button';
+        bDismiss.textContent = '关闭';
+        bDismiss.style.cssText = 'padding:8px 14px;cursor:pointer;border-radius:8px;border:1px solid #444;background:transparent;color:#aaa';
+        bContinue.addEventListener('click', () => {
+            wrap.remove();
+            runOrchestrationContinue('continue', token);
+        });
+        bSum.addEventListener('click', () => {
+            wrap.remove();
+            runOrchestrationContinue('summarize', token);
+        });
+        bDismiss.addEventListener('click', () => wrap.remove());
+        btnRow.appendChild(bDismiss);
+        btnRow.appendChild(bSum);
+        btnRow.appendChild(bContinue);
+        box.appendChild(p1);
+        box.appendChild(p2);
+        box.appendChild(btnRow);
+        wrap.appendChild(box);
+        document.body.appendChild(wrap);
+    }
+
+    async function runOrchestrationContinue(action, token) {
+        if (!currentSessionId || !userId) return;
+        isStreaming = true;
+        setStreamingLocked(true);
+        sendBtn.disabled = true;
+        sendBtn.textContent = '回复中...';
+
+        const aiRow = document.createElement('div');
+        aiRow.className = 'message-row ai';
+        const contentEl = document.createElement('div');
+        contentEl.className = 'message-content';
+        const statusBar = document.createElement('div');
+        statusBar.className = 'stream-status-bar';
+        statusBar.innerHTML = '<span class="stream-timer" id="liveStreamTimerOrch">思考中… (0s)</span>';
+        const timelineEl = document.createElement('div');
+        timelineEl.className = 'ai-stream-timeline';
+        const reasoningPanel = document.createElement('div');
+        reasoningPanel.className = 'reasoning-panel open';
+        const reasoningHead = document.createElement('button');
+        reasoningHead.type = 'button';
+        reasoningHead.className = 'reasoning-panel-head';
+        reasoningHead.innerHTML = `
+            <span class="rph-title rph-expanded-only">思考过程</span>
+            <span class="rph-sub rph-expanded-only">点击折叠</span>
+            <span class="rph-compact-row"><span class="rpt-mini-spin"></span><span class="rph-compact-label">思考中…</span></span>
+            <svg class="rph-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+        reasoningHead.addEventListener('click', () => reasoningPanel.classList.toggle('open'));
+        const reasoningDetail = document.createElement('div');
+        reasoningDetail.className = 'reasoning-panel-detail';
+        reasoningDetail.appendChild(statusBar);
+        reasoningDetail.appendChild(timelineEl);
+        reasoningPanel.appendChild(reasoningHead);
+        reasoningPanel.appendChild(reasoningDetail);
+        const aiBubble = document.createElement('div');
+        aiBubble.className = 'message-bubble answer-bubble';
+        aiBubble.textContent = '';
+        contentEl.appendChild(reasoningPanel);
+        contentEl.appendChild(aiBubble);
+        aiRow.innerHTML = '<div class="message-avatar ai">C</div>';
+        aiRow.appendChild(contentEl);
+        chatContainer.appendChild(aiRow);
+        scrollToBottom();
+
+        const streamStartTs = Date.now();
+        startStreamTimer(statusBar);
+        let streamResult = { doneReceived: false };
+
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+            const response = await fetch('/chat/orchestration/continue', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    user_id: userId,
+                    session_id: currentSessionId,
+                    continuation_token: token,
+                    action: action,
+                }),
+            });
+            if (!response.ok) {
+                let errorMsg = `请求失败 (${response.status})`;
+                try { const err = await response.json(); errorMsg = err.error || errorMsg; } catch (_) {}
+                aiRow.remove();
+                showError(errorMsg);
+                return;
+            }
+            streamResult = await streamAssistantResponse(response, {
+                aiRow, contentEl, aiBubble, timelineEl, statusBar, streamStartTs,
+            });
+            if (streamResult.continuationToken) {
+                showOrchestrationContinueModal(streamResult.continuationToken, streamResult.orchMeta || {});
+            }
+        } catch (e) {
+            aiRow.remove();
+            showError(`网络错误: ${e.message}`);
+        } finally {
+            stopStreamTimer();
+            if (streamResult.doneReceived && reasoningPanel && reasoningPanel.isConnected) {
+                finalizeReasoningPanelUI(reasoningPanel, streamStartTs);
+            }
+            setStreamingLocked(false);
+            isStreaming = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+            messageInput.focus();
+            loadSessions();
+        }
+    }
+
+    // ==================== Send Message ====================
+    async function handleSend() {
+        const message = messageInput.value.trim();
+        if ((!message && pendingFiles.length === 0) || isStreaming) return;
+
+        if (!currentSessionId) {
+            // Auto create session
+            await createNewSession();
+            if (!currentSessionId) return;
+        }
+
+        // Build full message including file references
+        let fullMessage = message;
+        // 只传服务端返回的文件名；附件内容一律由服务器在 cache/<user>/<session>/uploads 下解析（局域网设备无服务器路径）
+        const fileNamesForApi = pendingFiles.map(f => f.name);
+        const fileNamesDisplay = pendingFiles.map(f => f.displayName || f.name);
+        if (pendingFiles.length > 0) {
+            // 后端按 files[] 在会话 uploads 目录读取内容注入，不依赖客户端路径
+        }
+
+        // Show user message
+        welcomeEl.style.display = 'none';
+        appendMessage('user', message || `上传了 ${pendingFiles.length} 个文件`, null, fileNamesDisplay);
+
+        // Clear input
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        pendingFiles = [];
+        renderUploadPreview();
+
+        // Start streaming
+        isStreaming = true;
+        setStreamingLocked(true);
+        sendBtn.disabled = true;
+        sendBtn.textContent = '回复中...';
+
+        const aiRow = document.createElement('div');
+        aiRow.className = 'message-row ai';
+        const contentEl = document.createElement('div');
+        contentEl.className = 'message-content';
+        const statusBar = document.createElement('div');
+        statusBar.className = 'stream-status-bar';
+        statusBar.innerHTML = '<span class="stream-timer" id="liveStreamTimer">思考中… (0s)</span>';
+        const timelineEl = document.createElement('div');
+        timelineEl.className = 'ai-stream-timeline';
+        const reasoningPanel = document.createElement('div');
+        reasoningPanel.className = 'reasoning-panel open';
+        const reasoningHead = document.createElement('button');
+        reasoningHead.type = 'button';
+        reasoningHead.className = 'reasoning-panel-head';
+        reasoningHead.innerHTML = `
+            <span class="rph-title rph-expanded-only">思考过程</span>
+            <span class="rph-sub rph-expanded-only">点击折叠</span>
+            <span class="rph-compact-row"><span class="rpt-mini-spin"></span><span class="rph-compact-label">思考中…</span></span>
+            <svg class="rph-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+        reasoningHead.addEventListener('click', () => reasoningPanel.classList.toggle('open'));
+        const reasoningDetail = document.createElement('div');
+        reasoningDetail.className = 'reasoning-panel-detail';
+        reasoningDetail.appendChild(statusBar);
+        reasoningDetail.appendChild(timelineEl);
+        reasoningPanel.appendChild(reasoningHead);
+        reasoningPanel.appendChild(reasoningDetail);
+        const aiBubble = document.createElement('div');
+        aiBubble.className = 'message-bubble answer-bubble';
+        aiBubble.textContent = '';
+        contentEl.appendChild(reasoningPanel);
+        contentEl.appendChild(aiBubble);
+        aiRow.innerHTML = '<div class="message-avatar ai">C</div>';
+        aiRow.appendChild(contentEl);
+        chatContainer.appendChild(aiRow);
+        scrollToBottom();
+
+        const streamStartTs = Date.now();
+        startStreamTimer(statusBar);
+
+        let streamResult = { doneReceived: false };
+
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    message: fullMessage,
+                    user_id: userId,
+                    session_id: currentSessionId,
+                    files: fileNamesForApi
+                })
+            });
+
+            if (!response.ok) {
+                let errorMsg = `请求失败 (${response.status})`;
+                try { const err = await response.json(); errorMsg = err.error || errorMsg; } catch(_) {}
+                aiRow.remove();
+                showError(errorMsg);
+                return;
+            }
+
+            streamResult = await streamAssistantResponse(response, {
+                aiRow, contentEl, aiBubble, timelineEl, statusBar, streamStartTs,
+            });
+            if (streamResult.continuationToken) {
+                showOrchestrationContinueModal(streamResult.continuationToken, streamResult.orchMeta || {});
+            }
+        } catch (e) {
+            aiRow.remove();
+            showError(`网络错误: ${e.message}`);
+        } finally {
+            stopStreamTimer();
+            if (streamResult.doneReceived && reasoningPanel && reasoningPanel.isConnected) {
+                finalizeReasoningPanelUI(reasoningPanel, streamStartTs);
+            }
+            setStreamingLocked(false);
+            isStreaming = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+            messageInput.focus();
+            loadSessions();
+        }
+    }
+
+    function showError(msg) {
+        const errDiv = document.createElement('div');
+        errDiv.className = 'message-error';
+        errDiv.textContent = msg;
+        chatContainer.appendChild(errDiv);
+        scrollToBottom();
+    }
+
+    // ==================== Boot ====================
+    loadSessions();
+    </script>
+</body>
+</html>

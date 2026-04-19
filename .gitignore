@@ -1,0 +1,29 @@
+# 运行时数据与用户内容（勿提交）
+cache/
+backups/
+logs/
+feedback/
+
+# 本地配置（仓库内用 *.example 作为模板）
+config.ini
+claude_web_paths.config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+
+# 杂项日志
+debug.log
+*.log
+
+# IDE / 系统
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store
