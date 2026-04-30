@@ -7,6 +7,8 @@
       "id": "example-skills",
       "title": "示例技能包",
       "summary": "两三句话说明：本包解决什么问题、包含哪类技能文档或代码；模型默认只读这段摘要，需要时再 Read/Grep 下列路径。",
+      "keywords": ["示例业务名", "常见缩写", "模块关键词"],
+      "always_mount": false,
       "paths": [
         "D:/path/to/skills",
         "D:/path/to/docs"

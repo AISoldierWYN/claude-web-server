@@ -76,6 +76,7 @@
 | `permission_mode` | `bypassPermissions` | 传给 CLI 的 `--permission-mode`。环境变量：`CLAUDE_WEB_PERMISSION_MODE` |
 | `dangerously_skip_permissions` | `false` | 为 `true` 时追加彻底跳过权限相关参数（仅可信环境）。环境变量：`CLAUDE_WEB_DANGEROUSLY_SKIP_PERMISSIONS` |
 | `isolate_home` | `false` | 为 `true` 时会话子进程 HOME 指向会话目录，隔离 `~/.claude`，有副作用，见下文。环境变量：`CLAUDE_WEB_ISOLATE_HOME` |
+| `fork_claude_home` | `true` | 为每个对话创建会话 HOME，继承父机 Claude 配置/skills/凭证，但跳过全局记忆文件。环境变量：`CLAUDE_WEB_FORK_CLAUDE_HOME` |
 | `orch_max_rounds` | `20` | 外环编排单轮用户消息最多启动多少次完整 `claude` 子进程。环境变量：`CLAUDE_WEB_ORCH_MAX_ROUNDS` |
 | `extra_args` | 空 | 附加 CLI 参数（按 shell 规则拆分），例如需传递其它官方开关时。环境变量：`CLAUDE_WEB_EXTRA_CLI_ARGS` |
 
@@ -90,7 +91,7 @@
 
 | 键 | 默认值 | 说明 |
 |----|--------|------|
-| `max_size_mb` | `10` | 单文件上传上限（MB）。环境变量：`CLAUDE_WEB_UPLOAD_MAX_MB` |
+| `max_size_mb` | `100` | 单文件上传上限（MB）。环境变量：`CLAUDE_WEB_UPLOAD_MAX_MB` |
 
 ### `[proxy]` — 反向代理
 
@@ -213,7 +214,11 @@ Claude Code 通过 **`--add-dir`** 限定工具可访问的目录，通过 **`--
 
 ### 长期记忆 `memory.md`
 
-每个会话目录下会自动维护 **`memory.md`**。服务端在每条请求中注入规则：要求模型通过 **Read / Edit / Write** 更新该文件来保存长期记忆，**不要**依赖 Claude 内置「记忆」写全局 `~/.claude`（易在无交互环境下失败）。
+每个会话目录下会自动维护 **`memory.md`**。服务端在每条请求中注入规则：要求模型通过 **Read / Edit / Write** 更新该文件来保存长期记忆，**不要**依赖 Claude 内置「记忆」写全局 `~/.claude`。
+
+默认 `fork_claude_home = true` 时，每次对话都会使用 `cache/<ip>/<user_id>/<session_id>/.claude_web_home` 作为 Claude CLI 的 HOME。服务会从父机 HOME 继承 `~/.claude` 中的 skills、命令、设置、凭证等能力，并复制 `~/.claude.json` 这类根配置文件；但会跳过 `CLAUDE.md`、`memory*`、`projects`、`todos`、`logs` 等全局记忆/历史目录，使“父机只提供能力，不提供记忆”。
+
+同时，`/chat` 会把当前会话 `messages.json` 中最近的历史消息压缩注入为「会话历史快照」，用于久未打开后的上下文恢复；这不会跨会话读取其它目录。
 
 ### `CLAUDE_WEB_PERMISSION_MODE`
 
@@ -256,7 +261,7 @@ python server.py
 - **Claude Code 默认**：在本机未启用 `CLAUDE_WEB_ISOLATE_HOME` 时，**skills、配置、凭证** 仍来自当前系统用户下的 **`~/.claude`**（Windows 一般为 `%USERPROFILE%\.claude`）。这是 **Claude CLI 自身行为**，不是本仓库单独实现的。
 - **本服务额外放行目录**：在**仓库根目录**放置 **`claude_web_paths.config.json`**（可复制 `claude_web_paths.config.example.json` 改名）。
   - **`readonly_dirs`**：扁平路径列表（与旧版兼容），与 **`CLAUDE_WEB_READONLY_DIRS`** 合并去重后全部进入 **`--add-dir`**。
-  - **`bundles`（技能包）**：按类分组；每包含 **`id`**、**`title`**、**`summary`**、**`paths`**。所有 **`paths`** 同样合并进 **`--add-dir`**；**默认注入模型的主要是各包的 `summary` 与路径列表**，便于先理解「哪类问题用哪包」，需要时再 Read/Grep 具体文件，而不是默认加载整目录内容。
+  - **`bundles`（技能包）**：按类分组；每包含 **`id`**、**`title`**、**`summary`**、**`paths`**，可选 **`keywords`** 与 **`always_mount`**。服务端默认只注入各包摘要；每轮根据用户问题与少量会话历史匹配 `id/title/summary/keywords`，只把命中的包路径加入 **`--add-dir`**。未命中的包仅作为摘要索引出现，模型不会获得其目录读取权限。
 - 可选 **`notes`**：全局字符串，追加在沙箱提示末尾（与各包的 `summary` 不同）。
 
 示例（节选）：
@@ -271,6 +276,7 @@ python server.py
       "id": "my-team",
       "title": "团队技能与文档",
       "summary": "本包涵盖某某业务；用户问到相关问题时再深入下列路径。",
+      "keywords": ["业务名", "模块名", "常见缩写"],
       "paths": ["D:/Tools/skills", "D:/Docs/api"]
     }
   ]
@@ -285,6 +291,10 @@ python server.py
 
 **副作用**：子进程 **不再** 使用系统用户主目录，**可能无法继承** 本机已有的全局 Claude 配置、API、skills，甚至导致 CLI 异常退出。**默认关闭**；仅在明确需要「记忆文件物理隔离」且可接受上述代价时开启。
 
+### `CLAUDE_WEB_FORK_CLAUDE_HOME`（默认推荐）
+
+设为 **`1` / `true` / `yes` / `on`** 时，子进程 HOME 指向会话内 `.claude_web_home`，并继承父机 Claude 配置能力但不继承全局记忆。若你确实希望完全沿用父机 HOME（包括全局 Claude 记忆），可设为 **`0` / `false`**，但多对话记忆隔离会变弱。
+
 ### 其它
 
 | 变量 | 说明 |
@@ -294,11 +304,12 @@ python server.py
 | `CLAUDE_WEB_V3_LINUX_DEPLOY` | 为 `1`/`true` 时等同 `config.ini` `[features]` → `v3_linux_deploy` |
 | `CLAUDE_WEB_HOST` / `CLAUDE_WEB_PORT` | 监听地址与端口，同 `config.ini` `[server]` |
 | `CLAUDE_WEB_CLI_PATH` / `CLAUDE_WEB_MODEL` / `CLAUDE_WEB_EXTRA_CLI_ARGS` | 同 `config.ini` `[claude]` |
+| `CLAUDE_WEB_FORK_CLAUDE_HOME` | 同 `config.ini` `[claude] fork_claude_home` |
 | `CLAUDE_WEB_CACHE_DIR` 等 | 数据目录，同 `config.ini` `[paths]` |
 
 ## 注意事项
 
 - 需要本机已安装 Claude CLI（或于 `config.ini` 的 `cli_path` 指定路径）；若未在 PATH 中，请配置 `cli_path`。
-- 文件上传大小上限见 **`config.ini` → `[upload]` → `max_size_mb`**（默认 10MB）。
+- 文件上传大小上限见 **`config.ini` → `[upload]` → `max_size_mb`**（默认 100MB）。
 - 局域网内无认证时，任何人都可使用你的 Claude API 额度；生产或公网前请设置 `token`。
 - `cache/`、`backups/`、`feedback/`、`logs/` 可能包含用户数据，注意备份与权限。

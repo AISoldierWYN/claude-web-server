@@ -64,6 +64,7 @@ CLAUDE_WEB_DANGEROUSLY_SKIP_PERMISSIONS = _bool(
     'claude', 'dangerously_skip_permissions', False, env='CLAUDE_WEB_DANGEROUSLY_SKIP_PERMISSIONS'
 )
 CLAUDE_WEB_ISOLATE_HOME = _bool('claude', 'isolate_home', False, env='CLAUDE_WEB_ISOLATE_HOME')
+CLAUDE_WEB_FORK_CLAUDE_HOME = _bool('claude', 'fork_claude_home', True, env='CLAUDE_WEB_FORK_CLAUDE_HOME')
 CLAUDE_WEB_ORCH_MAX_ROUNDS = _int('claude', 'orch_max_rounds', 20, env='CLAUDE_WEB_ORCH_MAX_ROUNDS', minimum=1)
 CLAUDE_EXTRA_CLI_ARGS = _sl.split_extra_cli_args(
     _str('claude', 'extra_args', '', env='CLAUDE_WEB_EXTRA_CLI_ARGS')
@@ -83,7 +84,7 @@ BACKUPS_DIR = _sl.resolve_optional_dir(ROOT, _str('paths', 'backups_dir', '', en
 FEEDBACK_DIR = _sl.resolve_optional_dir(ROOT, _str('paths', 'feedback_dir', '', env='CLAUDE_WEB_FEEDBACK_DIR'), 'feedback')
 
 # ---------- 上传 ----------
-UPLOAD_MAX_SIZE = _int('upload', 'max_size_mb', 10, env='CLAUDE_WEB_UPLOAD_MAX_MB', minimum=1) * 1024 * 1024
+UPLOAD_MAX_SIZE = _int('upload', 'max_size_mb', 100, env='CLAUDE_WEB_UPLOAD_MAX_MB', minimum=1) * 1024 * 1024
 
 # ---------- V2：局域网每用户 API（Host 非本机时读用户保存的 env + model）----------
 FEATURE_V2_MULTI_USER_API = _bool(
@@ -194,7 +195,6 @@ def load_paths_config_file(log) -> Tuple[List[str], str, List[Dict[str, Any]]]:
                     continue
                 r = _resolve_dir_entry(p, log)
                 if r:
-                    path_acc.append(r)
                     try:
                         resolved_posix.append(Path(r).resolve().as_posix())
                     except OSError:
@@ -204,14 +204,16 @@ def load_paths_config_file(log) -> Tuple[List[str], str, List[Dict[str, Any]]]:
                     'id': bid,
                     'title': title,
                     'summary': summary,
+                    'keywords': b.get('keywords') if isinstance(b.get('keywords'), list) else [],
+                    'always_mount': bool(b.get('always_mount')),
                     'paths': resolved_posix,
                 }
             )
 
     if path_acc:
-        log.info('[Config] %s: %s 个只读路径（含技能包内路径）', path.name, len(path_acc))
+        log.info('[Config] %s: %s 个全局只读路径', path.name, len(path_acc))
     if bundles_out:
-        log.info('[Config] %s: %s 个技能包', path.name, len(bundles_out))
+        log.info('[Config] %s: %s 个技能包（路径按需挂载，不默认加入 --add-dir）', path.name, len(bundles_out))
     return path_acc, notes, bundles_out
 
 
@@ -242,6 +244,7 @@ def log_config_summary(log: logging.Logger) -> None:
         log.info('[Config] Claude --model: %s', CLAUDE_MODEL)
     if CLAUDE_EXTRA_CLI_ARGS:
         log.info('[Config] Claude 附加参数: %s', CLAUDE_EXTRA_CLI_ARGS)
+    log.info('[Config] 会话 fork Claude HOME（共享父配置但隔离全局记忆）: %s', CLAUDE_WEB_FORK_CLAUDE_HOME)
     log.info('[Config] V2 每用户 API（局域网）: %s', FEATURE_V2_MULTI_USER_API)
     if FEATURE_V3_LINUX_DEPLOY:
         log.info('[Config] V3 Linux 部署标记: 已开启（文档/运维提示；与 sys.platform 自动兼容并存）')

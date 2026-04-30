@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 import threading
 from pathlib import Path
 
@@ -51,6 +52,86 @@ def register_routes(app, sm: SessionManager):
 
     def _readonly_bundles():
         return app.config.get(PATHS_BUNDLES_KEY) or []
+
+    def _bundle_terms(bundle: dict):
+        raw = [
+            bundle.get('id') or '',
+            bundle.get('title') or bundle.get('name') or '',
+            bundle.get('summary') or bundle.get('description') or '',
+        ]
+        raw.extend(str(x) for x in (bundle.get('keywords') or []) if x)
+        terms = []
+        for s in raw:
+            s = str(s).strip().lower()
+            if not s:
+                continue
+            if len(s) <= 80:
+                terms.append(s)
+            for part in re.findall(r'[a-z0-9_./+-]{3,}|[\u4e00-\u9fff]{2,}', s):
+                if part not in terms:
+                    terms.append(part)
+                if re.fullmatch(r'[\u4e00-\u9fff]{2,}', part):
+                    for n in (2, 3, 4):
+                        for i in range(0, max(0, len(part) - n + 1)):
+                            sub = part[i:i + n]
+                            if sub not in terms:
+                                terms.append(sub)
+        return terms
+
+    def _recent_history_text(messages: list, limit: int = 4000) -> str:
+        chunks = []
+        total = 0
+        for m in reversed(messages or []):
+            if not isinstance(m, dict):
+                continue
+            c = str(m.get('content') or '').strip()
+            if not c:
+                continue
+            chunks.append(c[:800])
+            total += min(len(c), 800)
+            if total >= limit:
+                break
+        return '\n'.join(reversed(chunks))
+
+    def _select_skill_bundles(message: str, prior_messages=None, bundle_ids=None):
+        bundles = _readonly_bundles()
+        wanted_ids = {str(x) for x in (bundle_ids or []) if x}
+        text = f'{message or ""}\n{_recent_history_text(prior_messages or [])}'.lower()
+        selected = []
+        rendered = []
+        for b in bundles:
+            bid = str(b.get('id') or '')
+            mounted = False
+            reason = ''
+            if b.get('always_mount'):
+                mounted = True
+                reason = 'always_mount'
+            elif wanted_ids and bid in wanted_ids:
+                mounted = True
+                reason = 'continuation'
+            else:
+                for term in _bundle_terms(b):
+                    if term and term in text:
+                        mounted = True
+                        reason = f'keyword: {term[:40]}'
+                        break
+            bb = dict(b)
+            bb['mounted'] = mounted
+            bb['mount_reason'] = reason
+            rendered.append(bb)
+            if mounted:
+                selected.append(bb)
+        return rendered, selected
+
+    def _bundle_paths(selected_bundles):
+        out = []
+        seen = set()
+        for b in selected_bundles or []:
+            for p in b.get('paths') or []:
+                if p and p not in seen:
+                    seen.add(p)
+                    out.append(p)
+        return out
 
     def _v2_orch_kwargs(rt: dict) -> dict:
         return {
@@ -137,9 +218,9 @@ def register_routes(app, sm: SessionManager):
             log.info('[Chat] V2 使用每用户 API 环境（Host 非本机）')
 
         claude_sid = session.get('claude_session_id')
+        prior_messages = sm.get_messages(client_ip, user_id, session_id)
         if not claude_sid:
-            prior = sm.get_messages(client_ip, user_id, session_id)
-            if any(m.get('role') == 'assistant' for m in prior):
+            if any(m.get('role') == 'assistant' for m in prior_messages):
                 claude_sid = session_id
                 sm.update_session(client_ip, user_id, session_id, claude_session_id=claude_sid)
                 log.info(f'[Chat] 补全 claude_session_id 用于 --resume: {claude_sid}')
@@ -161,6 +242,12 @@ def register_routes(app, sm: SessionManager):
         file_paths = resolve_session_upload_paths(upload_dir, uploaded_files)
         if file_paths:
             log.info(f'[Chat] 附件文件（服务端解析）: {file_paths}')
+
+        skill_bundles, selected_bundles = _select_skill_bundles(message, prior_messages)
+        selected_bundle_ids = [str(b.get('id')) for b in selected_bundles if b.get('id')]
+        readonly_dirs = _readonly() + _bundle_paths(selected_bundles)
+        if selected_bundle_ids:
+            log.info('[Chat] 本轮按需挂载技能包: %s', selected_bundle_ids)
 
         collected_text = []
         collected_thinking = []
@@ -206,10 +293,12 @@ def register_routes(app, sm: SessionManager):
                     max_rounds=config.CLAUDE_WEB_ORCH_MAX_ROUNDS,
                     upload_dir=str(upload_dir),
                     session_workspace_dir=str(session_workspace.resolve()),
-                    readonly_dirs=_readonly(),
+                    readonly_dirs=readonly_dirs,
                     readonly_dirs_notes=_readonly_notes(),
-                    skill_bundles=_readonly_bundles(),
+                    skill_bundles=skill_bundles,
                     cli_log_context=cli_ctx,
+                    conversation_history=prior_messages,
+                    mounted_bundle_ids=selected_bundle_ids,
                     **_v2_orch_kwargs(rt),
                 )
             )
@@ -272,6 +361,9 @@ def register_routes(app, sm: SessionManager):
         session_workspace.mkdir(parents=True, exist_ok=True)
 
         claude_sid = (state or {}).get('claude_session_id') or session_id
+        mounted_ids = (state or {}).get('mounted_bundle_ids') or []
+        skill_bundles, selected_bundles = _select_skill_bundles('', [], bundle_ids=mounted_ids)
+        readonly_dirs = _readonly() + _bundle_paths(selected_bundles)
         try:
             total_offset = int((state or {}).get('total_rounds_all_segments') or 0)
         except (TypeError, ValueError):
@@ -322,9 +414,9 @@ def register_routes(app, sm: SessionManager):
                         claude_session_id=claude_sid,
                         upload_dir=str(upload_dir),
                         session_workspace_dir=str(session_workspace.resolve()),
-                        readonly_dirs=_readonly(),
+                        readonly_dirs=readonly_dirs,
                         readonly_dirs_notes=_readonly_notes(),
-                        skill_bundles=_readonly_bundles(),
+                        skill_bundles=skill_bundles,
                         cli_log_context=cli_ctx,
                         **_v2_orch_kwargs(rt),
                     )
@@ -339,11 +431,12 @@ def register_routes(app, sm: SessionManager):
                         max_rounds=config.CLAUDE_WEB_ORCH_MAX_ROUNDS,
                         upload_dir=str(upload_dir),
                         session_workspace_dir=str(session_workspace.resolve()),
-                        readonly_dirs=_readonly(),
+                        readonly_dirs=readonly_dirs,
                         readonly_dirs_notes=_readonly_notes(),
-                        skill_bundles=_readonly_bundles(),
+                        skill_bundles=skill_bundles,
                         cli_log_context=cli_ctx,
                         total_rounds_offset=total_offset,
+                        mounted_bundle_ids=mounted_ids,
                         **_v2_orch_kwargs(rt),
                     )
                 )

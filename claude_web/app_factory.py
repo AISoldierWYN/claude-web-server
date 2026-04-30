@@ -36,7 +36,7 @@ def create_app():
     if paths_notes:
         log.info('[Config] claude_web_paths.config.json 含 notes，将注入沙箱提示')
     if paths_bundles:
-        log.info('[Config] 技能包 bundles: %s 个（摘要注入提示词，路径已合并至 --add-dir）', len(paths_bundles))
+        log.info('[Config] 技能包 bundles: %s 个（摘要注入提示词，路径按需加入 --add-dir）', len(paths_bundles))
     if config.CLAUDE_WEB_PERMISSION_MODE:
         log.info(f'[Config] CLAUDE_WEB_PERMISSION_MODE={config.CLAUDE_WEB_PERMISSION_MODE}')
     if config.CLAUDE_WEB_DANGEROUSLY_SKIP_PERMISSIONS:
@@ -44,6 +44,8 @@ def create_app():
             '[Config] CLAUDE_WEB_DANGEROUSLY_SKIP_PERMISSIONS=1：已启用 --dangerously-skip-permissions，'
             '所有工具操作将不再询问，请仅在可信环境使用'
         )
+    if getattr(config, 'CLAUDE_WEB_FORK_CLAUDE_HOME', True):
+        log.info('[Config] CLAUDE_WEB_FORK_CLAUDE_HOME=1：每个对话使用会话 HOME，继承父机 Claude 能力但隔离全局记忆')
     if config.TRUST_X_FORWARDED:
         log.info('[Config] CLAUDE_WEB_TRUST_X_FORWARDED=1：将使用 X-Forwarded-For 首跳作为客户端 IP')
 

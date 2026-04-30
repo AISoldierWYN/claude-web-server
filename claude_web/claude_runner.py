@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import queue
+import shutil
 from collections import deque
 import subprocess
 import sys
@@ -142,18 +143,68 @@ def _memory_prompt_block(session_workspace: str, shrink: bool = False) -> str:
         return ''
 
 
+def _truncate_for_prompt(text: str, limit: int) -> str:
+    s = (text or '').strip()
+    if len(s) <= limit:
+        return s
+    return s[:limit] + f'\n...[已截断，原文约 {len(s)} 字符]'
+
+
+def _conversation_history_prompt_block(messages: Optional[List[Dict[str, Any]]], max_chars: int = 14000) -> str:
+    """
+    从 Web 侧持久化的 messages.json 注入一份紧凑历史，让久未打开的会话也能先恢复上下文。
+    不替代 Claude --resume，只作为服务端可控的会话级记忆输入。
+    """
+    if not messages:
+        return ''
+    items = []
+    total = 0
+    usable = [m for m in messages if isinstance(m, dict) and (m.get('content') or '').strip()]
+    if not usable:
+        return ''
+    tail = usable[-16:]
+    omitted = max(0, len(usable) - len(tail))
+    for m in tail:
+        role = '用户' if m.get('role') == 'user' else '助手'
+        ts = (m.get('timestamp') or '').strip()
+        files = m.get('files') or []
+        file_hint = ''
+        if files:
+            names = []
+            for f in files[:6]:
+                names.append(str(f.get('display_name') or f.get('name') or f) if isinstance(f, dict) else str(f))
+            file_hint = f'（附件: {", ".join(names)}）'
+        content = _truncate_for_prompt(str(m.get('content') or ''), 1200)
+        line = f'[{role}{(" " + ts) if ts else ""}]{file_hint}\n{content}'
+        total += len(line)
+        if total > max_chars:
+            items.append('[历史摘要截断] 更早或更长的消息已省略，请结合当前问题回答。')
+            break
+        items.append(line)
+    prefix = ''
+    if omitted:
+        prefix = f'（已省略更早的 {omitted} 条消息；下方为最近 {len(tail)} 条）\n'
+    return (
+        '【会话历史快照 — Web 服务从 messages.json 注入】\n'
+        '请先基于下列历史在心里做一个快速摘要，恢复本对话上下文，再回答用户最新问题。'
+        '除非用户要求，不要机械复述这段历史；只把相关信息用于回答。\n'
+        f'{prefix}'
+        + '\n\n'.join(items)
+        + '\n\n'
+    )
+
+
 def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
     """
-    技能包：仅注入各包 id/title/summary 与路径索引，引导按需 Read/Grep，不内联文件内容。
+    技能包：仅注入各包 id/title/summary；仅对本轮已挂载的包展示路径索引。
     """
     if not bundles:
         return ''
     lines = [
         '【技能包索引 — Web 服务注入】',
         '以下为管理员在 `claude_web_paths.config.json` 的 `bundles` 中配置的**技能包**。',
-        '**默认只需理解各包的摘要与适用场景**；**不要**在未确认需要时通读整个目录树。',
-        '当用户问题与某包相关时，再对该包下列路径使用 Read/Grep/Glob **按需**加载具体文件（如 SKILL.md、源码）。',
-        '下列路径已加入 `--add-dir`，工具可读；若上游对绝对路径敏感，可优先用相对路径或按包内目录结构描述。',
+        '**默认只需理解各包的摘要与适用场景**；服务端只会把本轮命中的包路径加入 `--add-dir`。',
+        '若某包显示为“本轮已挂载”，可按需 Read/Grep/Glob 其路径；若显示为“仅摘要”，说明本轮未授权读取该包目录，不要尝试访问其路径。',
         '',
     ]
     for b in bundles:
@@ -161,13 +212,18 @@ def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
         title = str(b.get('title') or bid).strip()
         summary = (b.get('summary') or '').strip() or '（无摘要）'
         paths = b.get('paths') or []
+        mounted = bool(b.get('mounted'))
+        reason = (b.get('mount_reason') or '').strip()
         lines.append(f'### 包 `{bid}`：{title}')
+        lines.append(f'- **状态**：{"本轮已挂载，可按需读取" if mounted else "仅摘要，本轮未挂载路径"}')
+        if mounted and reason:
+            lines.append(f'- **命中原因**：{reason}')
         lines.append(f'- **摘要**：{summary}')
-        if paths:
+        if mounted and paths:
             lines.append('- **按需深入路径**（有明确需求时再 Read/Grep）：')
             for p in paths:
                 lines.append(f'  - `{p}`')
-        else:
+        elif mounted:
             lines.append('- **路径**：（本包未配置有效目录）')
         lines.append('')
     lines.append('')
@@ -184,7 +240,7 @@ def _sandbox_instruction(session_workspace: str, readonly_dirs: list, extra_note
     lines = [
         '【沙箱与目录约束】',
         f'当前 CLI 工作目录（优先在此会话目录内创建/修改文件，以下路径为 POSIX/正斜杠形式）: {ws}',
-        '全局 Claude Code 配置、API 凭证、skills 仍使用系统用户目录下的 ~/.claude（本服务默认不修改 HOME）。',
+        'Claude CLI 能力来自服务端父机配置（skills、API、model、环境变量等），但本对话的长期记忆必须与其它对话隔离。',
         f'长期记忆请只使用本目录下的 `{SESSION_MEMORY_FILENAME}`（见下方「记忆规则」）。',
         '',
         '【工具与路径权限策略 — Web 服务注入】',
@@ -197,6 +253,7 @@ def _sandbox_instruction(session_workspace: str, readonly_dirs: list, extra_note
         '5. **Read 的 file_path（必遵）**：只写**相对路径**，形如 `uploads/文件名.ext`，单段或多段均以 `uploads/` 开头、用 `/` 分隔。',
         '**禁止**使用绝对路径（含 `D:/`、`C:/`、`/home/` 等）；部分上游会对带盘符的 file_path 返回 invalid params（20024）。会话 cwd 即上述工作目录。',
         '6. 若用户消息中已内联某附件的全文或提取文本，**不要再对该附件调用 Read**；仅当未内联且确需读文件时再使用 Read＋相对路径。',
+        '7. **记忆隔离**：不要读取、引用或写入父机/全局 Claude 记忆（例如用户 HOME 下的 CLAUDE.md、全局 memory、其它会话 cache）。',
     ]
     if readonly_dirs:
         lines.append('下列为只读目录（仅可读）：')
@@ -389,6 +446,120 @@ def _isolate_home_enabled() -> bool:
     return bool(config.CLAUDE_WEB_ISOLATE_HOME)
 
 
+def _fork_claude_home_enabled() -> bool:
+    return bool(getattr(config, 'CLAUDE_WEB_FORK_CLAUDE_HOME', True))
+
+
+_PARENT_CLAUDE_MEMORY_NAMES = frozenset({
+    'claude.md',
+    'memory.md',
+    'memories',
+    'projects',
+    'todos',
+    'shell-snapshots',
+    'logs',
+    'statsig',
+})
+
+
+def _is_parent_memory_entry(path: Path) -> bool:
+    name = path.name.strip().lower()
+    if name in _PARENT_CLAUDE_MEMORY_NAMES:
+        return True
+    return name.startswith('memory') or name.endswith('.memory')
+
+
+def _mirror_parent_claude_config(parent_claude: Path, session_claude: Path) -> None:
+    """
+    继承父机 Claude 能力，但刻意不继承全局记忆。
+    优先符号链接目录，失败时复制；普通文件按 mtime 刷新复制。
+    """
+    if not parent_claude.is_dir():
+        return
+    session_claude.mkdir(parents=True, exist_ok=True)
+    for src in parent_claude.iterdir():
+        if _is_parent_memory_entry(src):
+            continue
+        dst = session_claude / src.name
+        try:
+            if src.is_dir():
+                if dst.exists():
+                    continue
+                try:
+                    dst.symlink_to(src, target_is_directory=True)
+                except OSError:
+                    shutil.copytree(
+                        src, dst, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns('CLAUDE.md', 'memory*', 'projects', 'todos', 'logs'),
+                    )
+            elif src.is_file():
+                if dst.exists():
+                    try:
+                        if dst.stat().st_mtime >= src.stat().st_mtime and dst.stat().st_size == src.stat().st_size:
+                            continue
+                    except OSError:
+                        pass
+                shutil.copy2(src, dst)
+        except OSError as e:
+            log.warning(f'[CLI] 继承父 Claude 配置项失败（跳过） {src}: {e}')
+
+
+def _copy_parent_home_claude_files(parent_home: Path, session_home: Path) -> None:
+    for name in ('.claude.json', '.claude.json.backup'):
+        src = parent_home / name
+        dst = session_home / name
+        try:
+            if not src.is_file():
+                continue
+            if dst.exists():
+                try:
+                    if dst.stat().st_mtime >= src.stat().st_mtime and dst.stat().st_size == src.stat().st_size:
+                        continue
+                except OSError:
+                    pass
+            shutil.copy2(src, dst)
+        except OSError as e:
+            log.warning(f'[CLI] 继承父 Claude 根配置失败（跳过） {src}: {e}')
+
+
+def _build_claude_child_env_fork_parent_config(session_workspace_dir: str) -> dict:
+    env = os.environ.copy()
+    parent_home = Path.home()
+    parent_claude = parent_home / '.claude'
+    sw = Path(session_workspace_dir).resolve()
+    session_home = sw / '.claude_web_home'
+    session_claude = session_home / '.claude'
+    session_home.mkdir(parents=True, exist_ok=True)
+    _mirror_parent_claude_config(parent_claude, session_claude)
+    _copy_parent_home_claude_files(parent_home, session_home)
+    guard = session_claude / 'CLAUDE.md'
+    if not guard.exists():
+        guard.write_text(
+            '# Session-local Claude memory guard\n\n'
+            'This HOME is created by Claude Web Server for one chat session. '
+            'Do not store or read long-term memory here; use the working directory memory.md only.\n',
+            encoding='utf-8',
+        )
+
+    env['HOME'] = str(session_home)
+    env['USERPROFILE'] = str(session_home)
+    if sys.platform == 'win32':
+        local_app = session_home / 'AppData' / 'Local'
+        roaming = session_home / 'AppData' / 'Roaming'
+        local_app.mkdir(parents=True, exist_ok=True)
+        roaming.mkdir(parents=True, exist_ok=True)
+        env['LOCALAPPDATA'] = str(local_app)
+        env['APPDATA'] = str(roaming)
+    else:
+        xdg_config = session_home / '.config'
+        xdg_cache = session_home / '.cache'
+        xdg_config.mkdir(parents=True, exist_ok=True)
+        xdg_cache.mkdir(parents=True, exist_ok=True)
+        env['XDG_CONFIG_HOME'] = str(xdg_config)
+        env['XDG_CACHE_HOME'] = str(xdg_cache)
+    return env
+
+
 def _build_claude_child_env_isolate_home(session_workspace_dir: str) -> dict:
     env = os.environ.copy()
     sw = str(Path(session_workspace_dir).resolve())
@@ -427,6 +598,7 @@ def stream_claude_output(
     cli_log_context: Optional[Dict[str, Any]] = None,
     child_env_extra: Optional[Dict[str, str]] = None,
     model_override: Optional[str] = None,
+    conversation_history: Optional[List[Dict[str, Any]]] = None,
 ):
     """
     调用 Claude CLI 并流式转发输出。
@@ -514,6 +686,7 @@ def stream_claude_output(
         _skill_bundles_instruction(skill_bundles)
         + _sandbox_instruction(sw_str, readonly_dirs, extra_notes=readonly_dirs_notes or '')
         + _memory_prompt_block(sw_str, shrink=bool(file_paths))
+        + _conversation_history_prompt_block(conversation_history)
         + _language_alignment_block(message)
         + full_message
     )
@@ -543,6 +716,12 @@ def stream_claude_output(
             log.info('[CLI] 已启用 CLAUDE_WEB_ISOLATE_HOME：记忆将写入会话目录，但全局 Claude 配置不再继承')
         except Exception as e:
             log.warning(f'[CLI] 构建隔离 HOME 环境失败，使用默认环境: {e}')
+    elif session_workspace_dir and _fork_claude_home_enabled():
+        try:
+            popen_kw['env'] = _build_claude_child_env_fork_parent_config(session_workspace_dir)
+            log.info('[CLI] 已启用 fork Claude HOME：共享父机 Claude 能力，隔离父机全局记忆')
+        except Exception as e:
+            log.warning(f'[CLI] 构建 fork Claude HOME 环境失败，使用默认环境: {e}')
     if 'env' not in popen_kw:
         popen_kw['env'] = os.environ.copy()
     popen_kw['env'].setdefault('PYTHONIOENCODING', 'utf-8')
@@ -631,6 +810,7 @@ def stream_claude_output(
     # stream_event 已用 delta 推过思考/正文时，勿再转发 assistant 汇总里的同一块（否则前端会重复展示）
     streamed_thinking_delta = False
     streamed_text_delta = False
+    streamed_tool_block = False
 
     def _tool_start_payload(cb: dict) -> dict:
         name = cb.get('name') or cb.get('tool_name') or ''
@@ -682,6 +862,7 @@ def stream_claude_output(
                         yield f'data: {json.dumps({"type": "text_start"})}\n\n'
                     elif cb_type in ('tool_use', 'tool_use_block', 'server_tool_use', 'tool_calls'):
                         stream_open_block = 'tool'
+                        streamed_tool_block = True
                         yield f'data: {json.dumps(_tool_start_payload(cb))}\n\n'
                     elif cb_type:
                         log.debug(f'[CLI] content_block_start 未识别类型: {cb_type}')
@@ -723,6 +904,7 @@ def stream_claude_output(
                 elif event_type == 'message_start':
                     streamed_thinking_delta = False
                     streamed_text_delta = False
+                    streamed_tool_block = False
                     yield f'data: {json.dumps({"type": "message_start"})}\n\n'
 
                 elif event_type == 'message_stop':
@@ -745,6 +927,8 @@ def stream_claude_output(
                             continue
                         yield f'data: {json.dumps({"type": "text", "content": content["text"]})}\n\n'
                     elif ctype in ('tool_use', 'tool_use_block', 'server_tool_use'):
+                        if streamed_tool_block:
+                            continue
                         yield f'data: {json.dumps(_tool_start_payload(content))}\n\n'
                         inp = content.get('input')
                         if isinstance(inp, dict):

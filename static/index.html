@@ -169,7 +169,7 @@
             margin-top: 2px;
         }
 
-        .session-item .session-delete {
+        .session-item .session-menu-btn {
             opacity: 0;
             background: none;
             border: none;
@@ -181,8 +181,54 @@
             flex-shrink: 0;
         }
 
-        .session-item:hover .session-delete { opacity: 1; }
-        .session-item .session-delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+        .session-item:hover .session-menu-btn,
+        .session-item.menu-open .session-menu-btn { opacity: 1; }
+        .session-item .session-menu-btn:hover,
+        .session-item.menu-open .session-menu-btn {
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.08);
+        }
+
+        .session-menu {
+            display: none;
+            position: absolute;
+            right: 8px;
+            top: 34px;
+            min-width: 128px;
+            padding: 6px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+            z-index: 120;
+        }
+
+        .session-item.menu-open .session-menu { display: block; }
+
+        .session-menu button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 9px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .session-menu button:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .session-menu button.danger:hover {
+            color: #fecaca;
+            background: rgba(239,68,68,0.16);
+        }
 
         .sidebar-footer {
             padding: 12px 16px;
@@ -418,6 +464,114 @@
 
         .message-bubble.answer-bubble {
             min-height: 1.2em;
+        }
+
+        .message-bubble.markdown-body {
+            white-space: normal;
+        }
+
+        .markdown-body > :first-child { margin-top: 0; }
+        .markdown-body > :last-child { margin-bottom: 0; }
+
+        .markdown-body p,
+        .markdown-body ul,
+        .markdown-body ol,
+        .markdown-body pre,
+        .markdown-body blockquote,
+        .markdown-body .markdown-table-wrap {
+            margin: 0 0 0.85em;
+        }
+
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3,
+        .markdown-body h4 {
+            margin: 1em 0 0.45em;
+            line-height: 1.35;
+            font-weight: 700;
+        }
+
+        .markdown-body h1 { font-size: 1.35em; }
+        .markdown-body h2 { font-size: 1.22em; }
+        .markdown-body h3 { font-size: 1.1em; }
+        .markdown-body h4 { font-size: 1em; }
+
+        .markdown-body ul,
+        .markdown-body ol {
+            padding-left: 1.35em;
+        }
+
+        .markdown-body li + li { margin-top: 0.25em; }
+
+        .markdown-body code {
+            padding: 0.1em 0.35em;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.08);
+            font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+            font-size: 0.92em;
+        }
+
+        .markdown-body pre {
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.28);
+            overflow: auto;
+            white-space: pre;
+        }
+
+        .markdown-body pre code {
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+            font-size: 0.92em;
+        }
+
+        .markdown-body blockquote {
+            padding: 0.2em 0 0.2em 0.9em;
+            border-left: 3px solid rgba(196,181,253,0.55);
+            color: var(--text-secondary);
+        }
+
+        .markdown-body a {
+            color: #c4b5fd;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(196,181,253,0.35);
+        }
+
+        .markdown-body .markdown-table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: max-content;
+            background: rgba(0,0,0,0.12);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+            padding: 8px 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+            vertical-align: top;
+            white-space: nowrap;
+        }
+
+        .markdown-body th {
+            background: rgba(124,58,237,0.22);
+            color: #f3edff;
+            font-weight: 700;
+            text-align: left;
+        }
+
+        .markdown-body tr:nth-child(even) td {
+            background: rgba(255,255,255,0.035);
         }
 
         /* 整块思考区折叠（DeepSeek 风格） */
@@ -795,6 +949,21 @@
             margin-bottom: 10px;
         }
 
+        .markdown-preview {
+            display: none;
+            max-width: 900px;
+            margin: 0 auto 10px;
+            padding: 12px 14px;
+            border: 1px solid rgba(124,58,237,0.28);
+            border-radius: var(--radius);
+            background: rgba(15,15,26,0.72);
+            color: var(--text-primary);
+            max-height: 260px;
+            overflow: auto;
+        }
+
+        .markdown-preview.show { display: block; }
+
         .upload-tag {
             display: inline-flex;
             align-items: center;
@@ -844,7 +1013,29 @@
         }
 
         .input-action-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .input-action-btn.active {
+            background: rgba(124,58,237,0.18);
+            border-color: rgba(196,181,253,0.45);
+            color: #f3edff;
+        }
         .input-action-btn svg { width: 18px; height: 18px; }
+
+        .markdown-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 9px;
+            user-select: none;
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .markdown-toggle input {
+            width: 13px;
+            height: 13px;
+            accent-color: var(--accent);
+            margin: 0;
+        }
 
         .input-wrapper textarea {
             flex: 1;
@@ -1028,11 +1219,16 @@
 
             <div class="input-area">
                 <div class="upload-preview" id="uploadPreview"></div>
+                <div class="markdown-preview markdown-body" id="markdownPreview"></div>
                 <div class="input-wrapper">
                     <div class="input-actions">
                         <button class="input-action-btn" onclick="document.getElementById('fileInput').click()" title="上传文件">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                         </button>
+                        <label class="input-action-btn markdown-toggle" id="markdownToggleWrap" title="实时预览 Markdown">
+                            <input type="checkbox" id="markdownToggle">
+                            <span>Markdown</span>
+                        </label>
                     </div>
                     <textarea id="messageInput" placeholder="输入消息... (Enter 发送, Shift+Enter 换行)" rows="1" autofocus></textarea>
                     <button class="send-btn" id="sendBtn" onclick="handleSend()">发送</button>
@@ -1122,6 +1318,7 @@
     let sessions = [];
     let isStreaming = false;
     let pendingFiles = []; // {name, size} 文件名须与 /upload 返回的 name 一致，供 /chat 在服务端解析
+    let markdownPreviewEnabled = localStorage.getItem('claude_markdown_preview') === '1';
 
     // ==================== DOM ====================
     const chatContainer = document.getElementById('chatContainer');
@@ -1131,6 +1328,9 @@
     const sessionListEl = document.getElementById('sessionList');
     const headerTitle = document.getElementById('headerTitle');
     const uploadPreview = document.getElementById('uploadPreview');
+    const markdownPreview = document.getElementById('markdownPreview');
+    const markdownToggle = document.getElementById('markdownToggle');
+    const markdownToggleWrap = document.getElementById('markdownToggleWrap');
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     const dropZone = document.getElementById('dropZone');
@@ -1139,12 +1339,31 @@
     messageInput.addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+        updateMarkdownPreview();
     });
+
+    if (markdownToggle) {
+        markdownToggle.checked = markdownPreviewEnabled;
+        markdownToggleWrap.classList.toggle('active', markdownPreviewEnabled);
+        markdownToggle.addEventListener('change', function() {
+            markdownPreviewEnabled = !!this.checked;
+            localStorage.setItem('claude_markdown_preview', markdownPreviewEnabled ? '1' : '0');
+            markdownToggleWrap.classList.toggle('active', markdownPreviewEnabled);
+            updateMarkdownPreview();
+        });
+    }
+    updateMarkdownPreview();
 
     messageInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.session-menu') && !e.target.closest('.session-menu-btn')) {
+            closeAllSessionMenus();
         }
     });
 
@@ -1346,7 +1565,7 @@
             const item = document.createElement('div');
             item.className = 'session-item' + (s.id === currentSessionId ? ' active' : '');
             item.onclick = (e) => {
-                if (e.target.closest('.session-delete')) return;
+                if (e.target.closest('.session-menu-btn') || e.target.closest('.session-menu')) return;
                 switchSession(s.id);
             };
             item.innerHTML = `
@@ -1355,12 +1574,28 @@
                     <div class="session-title">${escapeHtml(s.title)}</div>
                     <div class="session-time">${s.updated_at || ''}</div>
                 </div>
-                <button class="session-delete" title="删除" onclick="confirmDeleteSessionById('${s.id}')">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <button class="session-menu-btn" title="更多" onclick="toggleSessionMenu(event, '${s.id}')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
                 </button>
+                <div class="session-menu" data-session-menu="${s.id}">
+                    <button type="button" onclick="exportSessionHtml(event, '${s.id}')">导出 HTML</button>
+                    <button type="button" class="danger" onclick="confirmDeleteSessionById('${s.id}')">删除</button>
+                </div>
             `;
             sessionListEl.appendChild(item);
         }
+    }
+
+    function closeAllSessionMenus() {
+        document.querySelectorAll('.session-item.menu-open').forEach(el => el.classList.remove('menu-open'));
+    }
+
+    function toggleSessionMenu(event, sessionId) {
+        event.stopPropagation();
+        const item = event.target.closest('.session-item');
+        const isOpen = item && item.classList.contains('menu-open');
+        closeAllSessionMenus();
+        if (item && !isOpen) item.classList.add('menu-open');
     }
 
     async function createNewSession() {
@@ -1470,14 +1705,15 @@
     }
 
     function appendMessage(role, content, thinking, files) {
+        const isAi = role === 'ai' || role === 'assistant';
         const row = document.createElement('div');
-        row.className = 'message-row ' + (role === 'user' ? 'user' : 'ai');
+        row.className = 'message-row ' + (isAi ? 'ai' : 'user');
 
         let avatarHtml = '';
         let filesHtml = '';
         let thinkingHtml = '';
 
-        if (role === 'ai') {
+        if (isAi) {
             avatarHtml = '<div class="message-avatar ai">C</div>';
         } else {
             avatarHtml = '<div class="message-avatar user-av">U</div>';
@@ -1507,7 +1743,15 @@
 
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.innerHTML = filesHtml + thinkingHtml + `<div class="message-bubble">${escapeHtml(content)}</div>`;
+        contentDiv.innerHTML = filesHtml + thinkingHtml;
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble markdown-body';
+        if (isAi || role === 'user') {
+            renderMarkdownInto(bubble, content || '');
+        } else {
+            bubble.textContent = content || '';
+        }
+        contentDiv.appendChild(bubble);
 
         row.innerHTML = avatarHtml;
         row.appendChild(contentDiv);
@@ -1533,6 +1777,459 @@
         return d.innerHTML;
     }
 
+    function escapeAttr(str) {
+        return escapeHtml(str).replace(/"/g, '&quot;');
+    }
+
+    function safeFilename(str) {
+        const cleaned = String(str || 'claude-chat')
+            .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 80);
+        return cleaned || 'claude-chat';
+    }
+
+    function renderInlineMarkdown(str) {
+        let s = String(str || '');
+        const codes = [];
+        const links = [];
+        s = s.replace(/`([^`]+)`/g, (_, code) => {
+            const key = `@@CODE${codes.length}@@`;
+            codes.push(`<code>${escapeHtml(code)}</code>`);
+            return key;
+        });
+        s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, label, url) => {
+            const key = `@@LINK${links.length}@@`;
+            links.push(`<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`);
+            return key;
+        });
+        s = escapeHtml(s);
+        s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+        s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+        s = s.replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+        for (let i = 0; i < codes.length; i++) {
+            s = s.replace(`@@CODE${i}@@`, codes[i]);
+        }
+        for (let i = 0; i < links.length; i++) {
+            s = s.replace(`@@LINK${i}@@`, links[i]);
+        }
+        return s;
+    }
+
+    function splitMarkdownTableRow(row) {
+        let s = String(row || '').trim();
+        if (s.startsWith('|')) s = s.slice(1);
+        if (s.endsWith('|')) s = s.slice(0, -1);
+        const cells = [];
+        let cur = '';
+        for (let i = 0; i < s.length; i++) {
+            const ch = s[i];
+            if (ch === '\\' && s[i + 1] === '|') {
+                cur += '|';
+                i++;
+            } else if (ch === '|') {
+                cells.push(cur.trim());
+                cur = '';
+            } else {
+                cur += ch;
+            }
+        }
+        cells.push(cur.trim());
+        return cells;
+    }
+
+    function isMarkdownTableSeparator(row) {
+        const cells = splitMarkdownTableRow(row);
+        if (cells.length < 2) return false;
+        return cells.every(c => /^:?[-=]{3,}:?$/.test(c.trim()));
+    }
+
+    function tableAlignments(separatorRow) {
+        return splitMarkdownTableRow(separatorRow).map(c => {
+            const t = c.trim();
+            if (t.startsWith(':') && t.endsWith(':')) return 'center';
+            if (t.endsWith(':')) return 'right';
+            return 'left';
+        });
+    }
+
+    function renderMarkdownTable(rows) {
+        if (!rows || rows.length < 2) return '';
+        const header = splitMarkdownTableRow(rows[0]);
+        const aligns = tableAlignments(rows[1]);
+        const bodyRows = rows.slice(2).map(splitMarkdownTableRow);
+        const ths = header.map((cell, i) => {
+            const align = aligns[i] || 'left';
+            return `<th style="text-align:${align}">${renderInlineMarkdown(cell)}</th>`;
+        }).join('');
+        const trs = bodyRows.map(cells => {
+            const tds = header.map((_, i) => {
+                const align = aligns[i] || 'left';
+                return `<td style="text-align:${align}">${renderInlineMarkdown(cells[i] || '')}</td>`;
+            }).join('');
+            return `<tr>${tds}</tr>`;
+        }).join('');
+        return `<div class="markdown-table-wrap"><table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+    }
+
+    function renderMarkdownBlocks(markdown) {
+        const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
+        const out = [];
+        let para = [];
+        let listType = null;
+
+        const flushPara = () => {
+            if (!para.length) return;
+            out.push('<p>' + para.map(renderInlineMarkdown).join('<br>') + '</p>');
+            para = [];
+        };
+        const closeList = () => {
+            if (!listType) return;
+            out.push(`</${listType}>`);
+            listType = null;
+        };
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const raw = lines[lineIndex];
+            const line = raw.replace(/\s+$/g, '');
+            if (!line.trim()) {
+                flushPara();
+                closeList();
+                continue;
+            }
+            if (line.includes('|') && lineIndex + 1 < lines.length && isMarkdownTableSeparator(lines[lineIndex + 1])) {
+                flushPara();
+                closeList();
+                const tableRows = [line, lines[lineIndex + 1].replace(/\s+$/g, '')];
+                lineIndex += 2;
+                while (lineIndex < lines.length) {
+                    const next = lines[lineIndex].replace(/\s+$/g, '');
+                    if (!next.trim() || !next.includes('|')) break;
+                    tableRows.push(next);
+                    lineIndex++;
+                }
+                lineIndex--;
+                out.push(renderMarkdownTable(tableRows));
+                continue;
+            }
+            const heading = /^(#{1,4})\s+(.+)$/.exec(line);
+            if (heading) {
+                flushPara();
+                closeList();
+                const level = heading[1].length;
+                out.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+                continue;
+            }
+            if (/^---+$/.test(line.trim())) {
+                flushPara();
+                closeList();
+                out.push('<hr>');
+                continue;
+            }
+            const ul = /^\s*[-*]\s+(.+)$/.exec(line);
+            if (ul) {
+                flushPara();
+                if (listType !== 'ul') {
+                    closeList();
+                    out.push('<ul>');
+                    listType = 'ul';
+                }
+                out.push(`<li>${renderInlineMarkdown(ul[1])}</li>`);
+                continue;
+            }
+            const ol = /^\s*\d+\.\s+(.+)$/.exec(line);
+            if (ol) {
+                flushPara();
+                if (listType !== 'ol') {
+                    closeList();
+                    out.push('<ol>');
+                    listType = 'ol';
+                }
+                out.push(`<li>${renderInlineMarkdown(ol[1])}</li>`);
+                continue;
+            }
+            const quote = /^\s*>\s?(.*)$/.exec(line);
+            if (quote) {
+                flushPara();
+                closeList();
+                out.push(`<blockquote>${renderInlineMarkdown(quote[1])}</blockquote>`);
+                continue;
+            }
+            closeList();
+            para.push(line);
+        }
+        flushPara();
+        closeList();
+        return out.join('');
+    }
+
+    function renderMarkdown(markdown) {
+        const text = String(markdown || '');
+        const out = [];
+        let idx = 0;
+        const fenceRe = /```([A-Za-z0-9_-]*)[ \t]*\n?([\s\S]*?)```/g;
+        let m;
+        while ((m = fenceRe.exec(text)) !== null) {
+            out.push(renderMarkdownBlocks(text.slice(idx, m.index)));
+            const lang = m[1] ? ` data-lang="${escapeAttr(m[1])}"` : '';
+            out.push(`<pre${lang}><code>${escapeHtml(m[2])}</code></pre>`);
+            idx = fenceRe.lastIndex;
+        }
+        out.push(renderMarkdownBlocks(text.slice(idx)));
+        return out.join('') || '';
+    }
+
+    function renderMarkdownInto(el, markdown) {
+        if (!el) return;
+        el.classList.add('markdown-body');
+        el.innerHTML = renderMarkdown(markdown || '');
+    }
+
+    function exportCss() {
+        return `
+            :root {
+                --bg-primary: #0F0F1A;
+                --bg-secondary: #1A1A2E;
+                --bg-input: #1E1E35;
+                --text-primary: #E6E6E6;
+                --text-secondary: #A5A5BC;
+                --text-muted: #777790;
+                --accent: #7C3AED;
+                --border: #2A2A4A;
+                --user-bubble: #5B2DA0;
+                --ai-bubble: #1A1A35;
+                --thinking-bg: #151530;
+            }
+            * { box-sizing: border-box; }
+            body {
+                margin: 0;
+                min-height: 100vh;
+                background: var(--bg-primary);
+                color: var(--text-primary);
+                font-family: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+                line-height: 1.6;
+            }
+            .export-page {
+                width: min(100%, 1100px);
+                margin: 0 auto;
+                padding: 28px 18px 40px;
+            }
+            .export-header {
+                margin-bottom: 22px;
+                padding-bottom: 16px;
+                border-bottom: 1px solid var(--border);
+            }
+            .export-header h1 { margin: 0 0 8px; font-size: 22px; line-height: 1.35; }
+            .export-meta { color: var(--text-secondary); font-size: 13px; }
+            .message-row { display: flex; gap: 12px; margin: 18px 0; align-items: flex-start; }
+            .message-row.user { justify-content: flex-end; }
+            .message-avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 13px;
+                font-weight: 700;
+                flex: 0 0 auto;
+                color: #fff;
+                background: linear-gradient(135deg, var(--accent), #6D28D9);
+            }
+            .message-row.user .message-avatar { order: 2; background: #5B2DA0; }
+            .message-content { max-width: 76%; min-width: 0; }
+            .message-bubble {
+                padding: 13px 16px;
+                border-radius: 16px;
+                word-wrap: break-word;
+                overflow-wrap: anywhere;
+                font-size: 14px;
+            }
+            .message-row.user .message-bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; }
+            .message-row.ai .message-bubble { background: var(--ai-bubble); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+            .thinking-block {
+                margin-bottom: 10px;
+                border-radius: 8px;
+                border: 1px solid rgba(124,58,237,0.28);
+                background: var(--thinking-bg);
+                overflow: hidden;
+            }
+            .thinking-header {
+                padding: 8px 12px;
+                color: #c4b5fd;
+                font-size: 12px;
+                font-weight: 700;
+                border-bottom: 1px solid rgba(255,255,255,0.08);
+            }
+            .thinking-body {
+                padding: 10px 12px;
+                color: var(--text-secondary);
+                white-space: pre-wrap;
+                font-size: 13px;
+            }
+            .message-files { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+            .file-tag {
+                display: inline-flex;
+                padding: 3px 9px;
+                border-radius: 999px;
+                border: 1px solid rgba(124,58,237,0.3);
+                color: #c4b5fd;
+                font-size: 12px;
+                background: rgba(124,58,237,0.15);
+            }
+            .markdown-body { white-space: normal; }
+            .markdown-body > :first-child { margin-top: 0; }
+            .markdown-body > :last-child { margin-bottom: 0; }
+            .markdown-body p, .markdown-body ul, .markdown-body ol, .markdown-body pre, .markdown-body blockquote, .markdown-body .markdown-table-wrap { margin: 0 0 0.85em; }
+            .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 1em 0 0.45em; line-height: 1.35; font-weight: 700; }
+            .markdown-body h1 { font-size: 1.35em; }
+            .markdown-body h2 { font-size: 1.22em; }
+            .markdown-body h3 { font-size: 1.1em; }
+            .markdown-body h4 { font-size: 1em; }
+            .markdown-body ul, .markdown-body ol { padding-left: 1.35em; }
+            .markdown-body li + li { margin-top: 0.25em; }
+            .markdown-body code { padding: 0.1em 0.35em; border-radius: 5px; background: rgba(255,255,255,0.08); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.92em; }
+            .markdown-body pre { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.28); overflow: auto; white-space: pre; }
+            .markdown-body pre code { padding: 0; background: transparent; border-radius: 0; }
+            .markdown-body blockquote { padding: 0.2em 0 0.2em 0.9em; border-left: 3px solid rgba(196,181,253,0.55); color: var(--text-secondary); }
+            .markdown-body a { color: #c4b5fd; text-decoration: none; border-bottom: 1px solid rgba(196,181,253,0.35); }
+            .markdown-table-wrap { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+            .markdown-body table { width: 100%; border-collapse: collapse; min-width: max-content; background: rgba(0,0,0,0.12); font-size: 13px; line-height: 1.55; }
+            .markdown-body th, .markdown-body td { padding: 8px 10px; border: 1px solid rgba(255,255,255,0.12); vertical-align: top; white-space: nowrap; }
+            .markdown-body th { background: rgba(124,58,237,0.22); color: #f3edff; font-weight: 700; text-align: left; }
+            .markdown-body tr:nth-child(even) td { background: rgba(255,255,255,0.035); }
+            @media (max-width: 720px) {
+                .export-page { padding: 18px 10px 28px; }
+                .message-row { gap: 8px; margin: 14px 0; }
+                .message-avatar { width: 28px; height: 28px; border-radius: 8px; font-size: 12px; }
+                .message-content { max-width: 88%; }
+                .message-bubble { padding: 11px 12px; font-size: 13px; }
+                .export-header h1 { font-size: 18px; }
+            }
+            @media print {
+                body { background: #fff; color: #111; }
+                .message-row.ai .message-bubble, .message-row.user .message-bubble, .thinking-block { background: #fff; color: #111; border-color: #bbb; }
+                .thinking-body, .export-meta { color: #444; }
+            }
+        `;
+    }
+
+    function renderExportMessage(m) {
+        const role = m && m.role;
+        const isAi = role === 'ai' || role === 'assistant';
+        const files = (m && m.files) || [];
+        let filesHtml = '';
+        if (files && files.length) {
+            filesHtml = '<div class="message-files">' + files.map(f => {
+                const name = typeof f === 'string' ? f : (f.display_name || f.name || '');
+                return `<span class="file-tag">${escapeHtml(name)}</span>`;
+            }).join('') + '</div>';
+        }
+        let thinkingHtml = '';
+        if (isAi && m.thinking) {
+            thinkingHtml = `
+                <div class="thinking-block">
+                    <div class="thinking-header">思考过程</div>
+                    <div class="thinking-body">${escapeHtml(m.thinking)}</div>
+                </div>`;
+        }
+        const bubble = `<div class="message-bubble markdown-body">${renderMarkdown((m && m.content) || '')}</div>`;
+        const avatar = `<div class="message-avatar">${isAi ? 'C' : 'U'}</div>`;
+        return `<div class="message-row ${isAi ? 'ai' : 'user'}">${avatar}<div class="message-content">${filesHtml}${thinkingHtml}${bubble}</div></div>`;
+    }
+
+    function buildExportHtml(session, messages) {
+        const title = (session && session.title) || 'Claude Chat';
+        const generatedAt = new Date().toLocaleString();
+        const body = (messages || []).map(renderExportMessage).join('\n');
+        return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)} - Claude Chat Export</title>
+  <style>${exportCss()}</style>
+</head>
+<body>
+  <main class="export-page">
+    <header class="export-header">
+      <h1>${escapeHtml(title)}</h1>
+      <div class="export-meta">导出时间：${escapeHtml(generatedAt)} · 消息数：${(messages || []).length}</div>
+    </header>
+    <section class="export-chat">
+      ${body || '<p class="export-meta">当前对话暂无内容。</p>'}
+    </section>
+  </main>
+</body>
+</html>`;
+    }
+
+    async function saveHtmlFile(html, filename, existingHandle) {
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        if (existingHandle || window.showSaveFilePicker) {
+            const handle = existingHandle || await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{ description: 'HTML 文件', accept: { 'text/html': ['.html'] } }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            return 'saved';
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return 'downloaded';
+    }
+
+    async function exportSessionHtml(event, sessionId) {
+        if (event) event.stopPropagation();
+        closeAllSessionMenus();
+        if (isStreaming) {
+            showToast('当前正在回复，结束后再导出');
+            return;
+        }
+        const session = sessions.find(s => s.id === sessionId) || { id: sessionId, title: 'Claude Chat' };
+        const filename = safeFilename(session.title || sessionId) + '.html';
+        let saveHandle = null;
+        try {
+            if (window.showSaveFilePicker) {
+                saveHandle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{ description: 'HTML 文件', accept: { 'text/html': ['.html'] } }],
+                });
+            }
+            showToast('正在准备导出...', 1600);
+            const messages = await apiGet(`/sessions/${sessionId}/messages?user_id=${encodeURIComponent(userId)}`);
+            const html = buildExportHtml(session, messages);
+            await saveHtmlFile(html, filename, saveHandle);
+            showToast('已导出 HTML');
+        } catch (e) {
+            if (e && e.name === 'AbortError') return;
+            console.error('导出失败:', e);
+            showToast('导出失败: ' + (e.message || e));
+        }
+    }
+
+    function updateMarkdownPreview() {
+        if (!markdownPreview) return;
+        const text = messageInput ? messageInput.value : '';
+        if (!markdownPreviewEnabled || !text.trim()) {
+            markdownPreview.classList.remove('show');
+            markdownPreview.innerHTML = '';
+            return;
+        }
+        renderMarkdownInto(markdownPreview, text);
+        markdownPreview.classList.add('show');
+    }
+
     // ==================== File Upload ====================
     async function handleFileSelect(fileList) {
         if (isStreaming) return;
@@ -1542,8 +2239,8 @@
         }
 
         for (const file of fileList) {
-            if (file.size > 10 * 1024 * 1024) {
-                alert(`文件 ${file.name} 超过 10MB 限制`);
+            if (file.size > 100 * 1024 * 1024) {
+                alert(`文件 ${file.name} 超过 100MB 限制`);
                 continue;
             }
 
@@ -1796,7 +2493,7 @@
                                 firstText = false;
                             }
                             fullText += (data.content || '');
-                            aiBubble.textContent = fullText;
+                            renderMarkdownInto(aiBubble, fullText);
                             scrollToBottom();
                             break;
 
@@ -1804,11 +2501,11 @@
                             doneReceived = true;
                             if (data.paused) orchestrationPaused = true;
                             if (!fullText.trim() && data.ok !== false && !data.paused) {
-                                aiBubble.textContent = '（无回复内容）';
+                                renderMarkdownInto(aiBubble, '（无回复内容）');
                             } else if (!fullText.trim() && data.ok === false && !data.paused) {
-                                aiBubble.textContent = '（见上方错误说明）';
+                                renderMarkdownInto(aiBubble, '（见上方错误说明）');
                             } else if (!fullText.trim() && data.paused) {
-                                aiBubble.textContent = '（已达本段外环轮数上限，请使用下方按钮继续或总结）';
+                                renderMarkdownInto(aiBubble, '（已达本段外环轮数上限，请使用下方按钮继续或总结）');
                             }
                             break;
 
@@ -1847,7 +2544,7 @@
                 const data = JSON.parse(buffer.trim().slice(6));
                 if (data.type === 'text') {
                     fullText += (data.content || '');
-                    aiBubble.textContent = fullText;
+                    renderMarkdownInto(aiBubble, fullText);
                 }
             } catch (_) {}
         }
@@ -1936,8 +2633,8 @@
         reasoningPanel.appendChild(reasoningHead);
         reasoningPanel.appendChild(reasoningDetail);
         const aiBubble = document.createElement('div');
-        aiBubble.className = 'message-bubble answer-bubble';
-        aiBubble.textContent = '';
+        aiBubble.className = 'message-bubble answer-bubble markdown-body';
+        renderMarkdownInto(aiBubble, '');
         contentEl.appendChild(reasoningPanel);
         contentEl.appendChild(aiBubble);
         aiRow.innerHTML = '<div class="message-avatar ai">C</div>';
@@ -2025,6 +2722,7 @@
         // Clear input
         messageInput.value = '';
         messageInput.style.height = 'auto';
+        updateMarkdownPreview();
         pendingFiles = [];
         renderUploadPreview();
 
@@ -2061,8 +2759,8 @@
         reasoningPanel.appendChild(reasoningHead);
         reasoningPanel.appendChild(reasoningDetail);
         const aiBubble = document.createElement('div');
-        aiBubble.className = 'message-bubble answer-bubble';
-        aiBubble.textContent = '';
+        aiBubble.className = 'message-bubble answer-bubble markdown-body';
+        renderMarkdownInto(aiBubble, '');
         contentEl.appendChild(reasoningPanel);
         contentEl.appendChild(aiBubble);
         aiRow.innerHTML = '<div class="message-avatar ai">C</div>';

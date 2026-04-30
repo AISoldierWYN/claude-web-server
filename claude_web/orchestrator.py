@@ -54,6 +54,7 @@ def write_pause_state(
     rounds_used_segment: int,
     total_rounds_all_segments: int,
     last_error_preview: str,
+    mounted_bundle_ids: Optional[List[str]] = None,
 ) -> str:
     token = secrets.token_urlsafe(24)
     data = {
@@ -63,6 +64,7 @@ def write_pause_state(
         'rounds_used_segment': rounds_used_segment,
         'total_rounds_all_segments': total_rounds_all_segments,
         'last_error_preview': (last_error_preview or '')[:2000],
+        'mounted_bundle_ids': mounted_bundle_ids or [],
     }
     path = session_dir / PAUSE_FILENAME
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -111,6 +113,8 @@ def stream_orchestrated_turns(
     total_rounds_offset: int = 0,
     child_env_extra: Optional[Dict[str, str]] = None,
     model_override: Optional[str] = None,
+    conversation_history: Optional[List[Dict[str, Any]]] = None,
+    mounted_bundle_ids: Optional[List[str]] = None,
 ) -> Iterator[str]:
     """
     外环：最多 max_rounds 次完整 claude 子进程；任一轮成功则结束。
@@ -132,6 +136,7 @@ def stream_orchestrated_turns(
         cli_log_context=cli_log_context,
         child_env_extra=child_env_extra,
         model_override=model_override,
+        conversation_history=conversation_history,
     )
 
     for round_idx in range(1, max_rounds + 1):
@@ -209,6 +214,7 @@ def stream_orchestrated_turns(
                     rounds_used_segment=round_idx,
                     total_rounds_all_segments=total_rounds,
                     last_error_preview=last_soft or '',
+                    mounted_bundle_ids=mounted_bundle_ids or [],
                 )
                 yield _sse(
                     {
