@@ -1,7 +1,10 @@
 import io
 import json
 import logging
+import os
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -25,6 +28,14 @@ class BackendSmokeTests(unittest.TestCase):
         config.TAVILY_API_KEY = ''
         config.FEATURE_V2_MULTI_USER_API = False
         config.FEATURE_MOBILE_REMOTE_DEVELOPMENT = False
+        config.FEATURE_GEMINI_SUPPORT = False
+        config.GEMINI_CLI_PATH = 'gemini'
+        config.GEMINI_MODEL = ''
+        config.GEMINI_APPROVAL_MODE = 'plan'
+        config.GEMINI_SANDBOX = False
+        config.GEMINI_SKIP_TRUST = True
+        config.GEMINI_PROXY = ''
+        config.GEMINI_REQUEST_TIMEOUT_SECONDS = 10
         config.DEV_PROJECTS_CONFIG_FILE = root / 'claude_web_projects.config.json'
         config.DEV_TEST_TIMEOUT_SECONDS = 10
         config.DEV_PERMISSION_MODE = 'acceptEdits'
@@ -47,6 +58,41 @@ class BackendSmokeTests(unittest.TestCase):
         self.assertIn('id', data)
         return data
 
+    def make_fake_gemini_cli(self):
+        fake_dir = Path(self.tmp.name) / 'fake-gemini'
+        fake_dir.mkdir()
+        script = fake_dir / 'fake_gemini.py'
+        script.write_text(
+            '\n'.join(
+                [
+                    'import json, os, pathlib, sys',
+                    'args = sys.argv[1:]',
+                    'pathlib.Path(os.environ["FAKE_GEMINI_ARGS_FILE"]).write_text(json.dumps(args), encoding="utf-8")',
+                    'pathlib.Path(os.environ["FAKE_GEMINI_PROMPT_FILE"]).write_text(sys.stdin.read(), encoding="utf-8")',
+                    'sid = "fake-gemini-session"',
+                    'if "--resume" in args:',
+                    '    sid = args[args.index("--resume") + 1]',
+                    'print(json.dumps({"type": "init", "session_id": sid, "model": "fake"}), flush=True)',
+                    'print(json.dumps({"type": "tool_use", "tool_name": "read_file", "tool_id": "t1", "parameters": {"path": "uploads/a.txt"}}), flush=True)',
+                    'print(json.dumps({"type": "tool_result", "tool_id": "t1", "status": "success"}), flush=True)',
+                    'print(json.dumps({"type": "message", "role": "assistant", "content": "Gemini ", "delta": True}), flush=True)',
+                    'print(json.dumps({"type": "message", "role": "assistant", "content": "OK", "delta": True}), flush=True)',
+                    'print(json.dumps({"type": "result", "status": "success", "stats": {}}), flush=True)',
+                ]
+            ),
+            encoding='utf-8',
+        )
+        if os.name == 'nt':
+            launcher = fake_dir / 'fake_gemini.cmd'
+            launcher.write_text(f'@echo off\r\n"{sys.executable}" "{script}" %*\r\n', encoding='utf-8')
+        else:
+            launcher = fake_dir / 'fake_gemini'
+            launcher.write_text(f'#!{sys.executable}\nimport runpy\nrunpy.run_path({str(script)!r}, run_name="__main__")\n', encoding='utf-8')
+            launcher.chmod(0o755)
+        os.environ['FAKE_GEMINI_ARGS_FILE'] = str(fake_dir / 'args.json')
+        os.environ['FAKE_GEMINI_PROMPT_FILE'] = str(fake_dir / 'prompt.txt')
+        return launcher
+
     def test_features_endpoint_reports_core_flags(self):
         resp = self.client.get('/api/features')
         self.assertEqual(resp.status_code, 200)
@@ -55,8 +101,12 @@ class BackendSmokeTests(unittest.TestCase):
         self.assertIn('v3_linux_deploy', data)
         self.assertIn('tavily_search_configured', data)
         self.assertIn('mobile_remote_development', data)
+        self.assertIn('gemini_support', data)
+        self.assertIn('gemini_configured', data)
         self.assertFalse(data['tavily_search_configured'])
         self.assertFalse(data['mobile_remote_development'])
+        self.assertFalse(data['gemini_support'])
+        self.assertFalse(data['gemini_configured'])
 
     def test_dev_api_is_hidden_when_feature_disabled(self):
         resp = self.client.get('/api/dev/projects')
@@ -119,6 +169,8 @@ class BackendSmokeTests(unittest.TestCase):
 
         session = self.create_session()
         session_id = session['id']
+        self.assertEqual(session['provider'], 'claude')
+        self.assertEqual(session['provider_session_ids'], {})
 
         list_resp = self.client.get(f'/sessions?user_id={self.user_id}')
         self.assertEqual(list_resp.status_code, 200)
@@ -138,6 +190,123 @@ class BackendSmokeTests(unittest.TestCase):
 
         list_after = self.client.get(f'/sessions?user_id={self.user_id}')
         self.assertEqual(list_after.get_json(), [])
+
+    def test_legacy_session_records_default_to_claude_provider(self):
+        user_dir = config.CACHE_DIR / '127_0_0_1' / self.user_id
+        user_dir.mkdir(parents=True)
+        session_id = 'legacy-session'
+        (user_dir / 'sessions.json').write_text(
+            json.dumps(
+                [
+                    {
+                        'id': session_id,
+                        'claude_session_id': 'claude-legacy-id',
+                        'title': 'Legacy',
+                        'created_at': '2026-01-01 00:00:00',
+                        'updated_at': '2026-01-01 00:00:00',
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+
+        resp = self.client.get(f'/sessions?user_id={self.user_id}')
+        self.assertEqual(resp.status_code, 200)
+        session = resp.get_json()[0]
+        self.assertEqual(session['provider'], 'claude')
+        self.assertEqual(session['provider_session_ids']['claude'], 'claude-legacy-id')
+
+    def test_gemini_session_creation_requires_feature_flag(self):
+        unsupported = self.client.post('/sessions', json={'user_id': self.user_id, 'provider': 'unknown'})
+        self.assertEqual(unsupported.status_code, 400)
+        self.assertEqual(unsupported.get_json()['code'], 'unsupported_provider')
+
+        resp = self.client.post('/sessions', json={'user_id': self.user_id, 'provider': 'gemini'})
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.get_json()['code'], 'gemini_disabled')
+
+    def test_gemini_session_metadata_when_feature_enabled(self):
+        config.FEATURE_GEMINI_SUPPORT = True
+        config.GEMINI_CLI_PATH = str(self.make_fake_gemini_cli())
+        resp = self.client.post('/sessions', json={'user_id': self.user_id, 'provider': 'gemini'})
+        self.assertEqual(resp.status_code, 200, resp.get_data(as_text=True))
+        session = resp.get_json()
+        self.assertEqual(session['provider'], 'gemini')
+        self.assertEqual(session['provider_session_ids'], {})
+
+        chat = self.client.post(
+            '/chat',
+            json={'user_id': self.user_id, 'session_id': session['id'], 'message': 'hello'},
+        )
+        self.assertEqual(chat.status_code, 200, chat.get_data(as_text=True))
+        body = chat.get_data(as_text=True)
+        self.assertIn('"type": "session"', body)
+        self.assertIn('"provider": "gemini"', body)
+        self.assertIn('"type": "tool_start"', body)
+        self.assertIn('"content": "Gemini "', body)
+        self.assertIn('"content": "OK"', body)
+
+        updated = self.client.get(f'/sessions?user_id={self.user_id}').get_json()[0]
+        self.assertEqual(updated['provider_session_ids']['gemini'], 'fake-gemini-session')
+
+        second = self.client.post(
+            '/chat',
+            json={'user_id': self.user_id, 'session_id': session['id'], 'message': 'again'},
+        )
+        self.assertEqual(second.status_code, 200, second.get_data(as_text=True))
+        args_file = Path(os.environ['FAKE_GEMINI_ARGS_FILE'])
+        args = json.loads(args_file.read_text(encoding='utf-8'))
+        self.assertIn('--resume', args)
+        self.assertEqual(args[args.index('--resume') + 1], 'fake-gemini-session')
+        self.assertNotIn('latest', args)
+
+        # call_on_close 保存助手消息在测试客户端中异步触发，留一小段时间避免慢机器抖动。
+        second.close()
+        time.sleep(0.05)
+
+    def test_explicit_user_memory_is_saved_without_model_tool_call(self):
+        config.FEATURE_GEMINI_SUPPORT = True
+        config.GEMINI_CLI_PATH = str(self.make_fake_gemini_cli())
+        session = self.client.post('/sessions', json={'user_id': self.user_id, 'provider': 'gemini'}).get_json()
+
+        chat = self.client.post(
+            '/chat',
+            json={'user_id': self.user_id, 'session_id': session['id'], 'message': '我叫王亚宁，以后记得叫我宁哥。'},
+        )
+        self.assertEqual(chat.status_code, 200, chat.get_data(as_text=True))
+        chat.get_data(as_text=True)
+
+        memory_path = config.CACHE_DIR / '127_0_0_1' / self.user_id / session['id'] / 'memory.md'
+        memory = memory_path.read_text(encoding='utf-8')
+        self.assertIn('- 用户姓名：王亚宁', memory)
+        self.assertIn('- 偏好称呼：宁哥', memory)
+
+    def test_explicit_user_memory_fallback_does_not_apply_to_claude(self):
+        session = self.create_session()
+        memory_path = config.CACHE_DIR / '127_0_0_1' / self.user_id / session['id'] / 'memory.md'
+        before = memory_path.read_text(encoding='utf-8')
+        from claude_web import orchestrator
+
+        old_stream = orchestrator.stream_orchestrated_turns
+
+        def fake_stream(**kwargs):
+            yield 'data: {"type":"text","content":"ok"}\n\n'
+            yield 'data: {"type":"done","ok":true}\n\n'
+            yield 'data: {"type":"orchestration_complete","ok":true}\n\n'
+
+        try:
+            orchestrator.stream_orchestrated_turns = fake_stream
+            chat = self.client.post(
+                '/chat',
+                json={'user_id': self.user_id, 'session_id': session['id'], 'message': '我叫王亚宁，以后记得叫我宁哥。'},
+            )
+            self.assertEqual(chat.status_code, 200, chat.get_data(as_text=True))
+            chat.get_data(as_text=True)
+        finally:
+            orchestrator.stream_orchestrated_turns = old_stream
+
+        self.assertEqual(memory_path.read_text(encoding='utf-8'), before)
 
     def test_upload_accepts_small_files_and_rejects_over_limit(self):
         session = self.create_session()

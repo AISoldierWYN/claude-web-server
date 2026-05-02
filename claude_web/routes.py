@@ -26,8 +26,9 @@ from .dev_projects import (
 )
 from .feedback_service import save_feedback_package
 from .filename_sanitize import ascii_storage_filename, is_ascii_filename, safe_client_filename
+from .gemini_runner import stop_gemini_session_process, stream_gemini_output
 from .paths import get_client_ip
-from .session_manager import SessionManager
+from .session_manager import SESSION_MEMORY_FILENAME, SessionManager, SUPPORTED_PROVIDERS, normalize_provider
 from .tavily_search import TavilySearchError, format_tavily_for_prompt, search_tavily
 from .user_claude_credentials import (
     delete_credentials,
@@ -152,6 +153,53 @@ def register_routes(app, sm: SessionManager):
             'model_override': rt.get('model_override'),
         }
 
+    def _set_memory_line(existing: str, key: str, value: str) -> str:
+        lines = [ln for ln in (existing or '').splitlines() if not ln.strip().startswith(f'- {key}：')]
+        while lines and not lines[-1].strip():
+            lines.pop()
+        lines.extend(['', f'- {key}：{value}'])
+        return '\n'.join(lines).rstrip() + '\n'
+
+    def _apply_explicit_user_memory(message: str, session_dir: Path) -> bool:
+        text = (message or '').strip()
+        if not text or not session_dir:
+            return False
+        updates = []
+        name_match = re.search(r'(?:我叫|我的名字是)\s*([\u4e00-\u9fffA-Za-z][\u4e00-\u9fffA-Za-z·._ -]{0,30})', text)
+        if name_match:
+            name = re.split(r'[，,。.!！?？；;\s]', name_match.group(1).strip(), maxsplit=1)[0].strip()
+            if 1 <= len(name) <= 30:
+                updates.append(('用户姓名', name))
+        call_match = re.search(r'(?:以后|今后|之后)?(?:都)?(?:请)?(?:记得)?(?:叫我|称呼我|喊我)\s*([^\s，,。.!！?？；;]{1,20})', text)
+        if call_match:
+            call = call_match.group(1).strip()
+            if 1 <= len(call) <= 20:
+                updates.append(('偏好称呼', call))
+        if not updates:
+            return False
+        try:
+            session_resolved = session_dir.resolve()
+            memory_path = (session_resolved / SESSION_MEMORY_FILENAME).resolve()
+            if memory_path.parent != session_resolved:
+                return False
+            existing = memory_path.read_text(encoding='utf-8') if memory_path.exists() else ''
+            new_text = existing
+            for key, value in updates:
+                new_text = _set_memory_line(new_text, key, value)
+            if new_text != existing:
+                memory_path.write_text(new_text, encoding='utf-8')
+                log.info('[Memory] 已根据用户显式偏好更新 %s: %s', memory_path, ', '.join(f'{k}={v}' for k, v in updates))
+                return True
+        except Exception as e:
+            log.warning('[Memory] 根据用户显式偏好更新 memory.md 失败: %s', e)
+        return False
+
+    def _provider_runner(provider: str):
+        return stream_gemini_output if provider == 'gemini' else None
+
+    def _provider_label(provider: str) -> str:
+        return 'Gemini' if provider == 'gemini' else 'Claude'
+
     def _dev_enabled():
         return bool(getattr(config, 'FEATURE_MOBILE_REMOTE_DEVELOPMENT', False))
 
@@ -191,6 +239,8 @@ def register_routes(app, sm: SessionManager):
                 'v3_linux_deploy': bool(config.FEATURE_V3_LINUX_DEPLOY),
                 'tavily_search_configured': bool(config.TAVILY_API_KEY),
                 'mobile_remote_development': _dev_enabled(),
+                'gemini_support': bool(config.FEATURE_GEMINI_SUPPORT),
+                'gemini_configured': bool(config.FEATURE_GEMINI_SUPPORT and (config.GEMINI_CLI_PATH or '').strip()),
             }
         )
 
@@ -306,7 +356,7 @@ def register_routes(app, sm: SessionManager):
         _, err = _session_for_user(client_ip, user_id, session_id)
         if err:
             return err
-        return jsonify({'ok': True, 'stopped': stop_session_process(session_id)})
+        return jsonify({'ok': True, 'stopped': stop_session_process(session_id) or stop_gemini_session_process(session_id)})
 
     @app.route('/api/user/claude-credentials', methods=['GET'])
     @optional_token
@@ -371,28 +421,38 @@ def register_routes(app, sm: SessionManager):
         session = sm.get_session(client_ip, user_id, session_id)
         if not session:
             return jsonify({'error': 'Session not found'}), 404
+        provider = normalize_provider(session.get('provider'))
+        if provider == 'gemini' and not config.FEATURE_GEMINI_SUPPORT:
+            return jsonify({'error': 'Gemini support disabled', 'code': 'gemini_disabled'}), 400
 
         dev_meta, dev_project = _attached_dev_project(client_ip, user_id, session_id)
         if dev_meta and not dev_project:
             return jsonify({'error': 'Development project no longer exists in whitelist', 'code': 'dev_project_missing'}), 400
+        if provider == 'gemini' and dev_meta:
+            return jsonify({'error': 'Gemini 第一版暂不支持开发模式', 'code': 'gemini_dev_not_supported'}), 400
 
-        rt = resolve_claude_runtime_for_request(request, sm, client_ip, user_id)
-        if rt.get('error'):
-            return jsonify({'error': rt['error'], 'code': 'v2_claude_config_required'}), 400
-        if rt.get('use_per_user'):
-            log.info('[Chat] V2 使用每用户 API 环境（Host 非本机）')
+        rt = {}
+        if provider == 'claude':
+            rt = resolve_claude_runtime_for_request(request, sm, client_ip, user_id)
+            if rt.get('error'):
+                return jsonify({'error': rt['error'], 'code': 'v2_claude_config_required'}), 400
+            if rt.get('use_per_user'):
+                log.info('[Chat] V2 使用每用户 API 环境（Host 非本机）')
         if web_search_enabled and not config.TAVILY_API_KEY:
             return jsonify({'error': 'Tavily API key 未配置', 'code': 'tavily_config_required'}), 400
 
-        claude_sid = session.get('claude_session_id')
+        provider_sid = sm.get_provider_session_id(client_ip, user_id, session_id, provider)
         prior_messages = sm.get_messages(client_ip, user_id, session_id)
-        if not claude_sid:
+        if provider == 'claude' and not provider_sid:
             if any(m.get('role') == 'assistant' for m in prior_messages):
-                claude_sid = session_id
-                sm.update_session(client_ip, user_id, session_id, claude_session_id=claude_sid)
-                log.info(f'[Chat] 补全 claude_session_id 用于 --resume: {claude_sid}')
+                provider_sid = session_id
+                sm.update_provider_session_id(client_ip, user_id, session_id, provider, provider_sid)
+                log.info(f'[Chat] 补全 claude_session_id 用于 --resume: {provider_sid}')
 
-        log.info(f'[Chat] user={user_id}, session={session_id}, claude_sid={claude_sid}, msg_len={len(message)}')
+        log.info(
+            '[Chat] user=%s, session=%s, provider=%s, provider_sid=%s, msg_len=%s',
+            user_id, session_id, provider, provider_sid, len(message),
+        )
 
         if session.get('title') == '新对话':
             title = message[:20] + ('...' if len(message) > 20 else '')
@@ -405,6 +465,8 @@ def register_routes(app, sm: SessionManager):
         upload_dir = sm.get_upload_dir(client_ip, user_id, session_id)
         session_workspace = sm.get_session_dir(client_ip, user_id, session_id)
         session_workspace.mkdir(parents=True, exist_ok=True)
+        if provider == 'gemini':
+            _apply_explicit_user_memory(message, session_workspace)
         uploaded_files = data.get('files', []) or []
         file_paths = resolve_session_upload_paths(upload_dir, uploaded_files)
         if file_paths:
@@ -460,8 +522,8 @@ def register_routes(app, sm: SessionManager):
                         sid = evt.get('session_id')
                         new_claude_sid[0] = sid
                         if sid:
-                            sm.update_session(client_ip, user_id, session_id, claude_session_id=sid)
-                            log.info(f'[Chat] 保存 claude_session_id={sid}（流内）')
+                            sm.update_provider_session_id(client_ip, user_id, session_id, provider, sid)
+                            log.info('[Chat] 保存 %s session_id=%s（流内）', provider, sid)
                 except json.JSONDecodeError:
                     pass
 
@@ -477,7 +539,7 @@ def register_routes(app, sm: SessionManager):
                         search_depth=config.TAVILY_SEARCH_DEPTH,
                     )
                     web_search_context = format_tavily_for_prompt(tavily_data, message)
-                    yield 'data: ' + json.dumps({'type': 'info', 'message': '联网搜索完成，正在交给 Claude 整理…'}, ensure_ascii=False) + '\n\n'
+                    yield 'data: ' + json.dumps({'type': 'info', 'message': f'联网搜索完成，正在交给 {_provider_label(provider)} 整理…'}, ensure_ascii=False) + '\n\n'
                     log.info('[Chat] Tavily 搜索完成 user=%s session=%s', user_id, session_id)
                 except TavilySearchError as e:
                     msg = f'联网搜索失败：{e}'
@@ -506,7 +568,7 @@ def register_routes(app, sm: SessionManager):
                     first_message=message,
                     file_paths=file_paths,
                     session_id=session_id,
-                    initial_claude_session_id=claude_sid,
+                    initial_claude_session_id=provider_sid,
                     max_rounds=config.CLAUDE_WEB_ORCH_MAX_ROUNDS,
                     upload_dir=str(upload_dir),
                     session_workspace_dir=str(session_workspace.resolve()),
@@ -521,6 +583,7 @@ def register_routes(app, sm: SessionManager):
                     permission_mode_override=dev_permission_mode,
                     dangerously_skip_permissions_override=dev_dangerous_skip,
                     development_context=dev_context,
+                    stream_output_func=_provider_runner(provider),
                     **_v2_orch_kwargs(rt),
                 )
             )
@@ -531,8 +594,8 @@ def register_routes(app, sm: SessionManager):
             if full_text:
                 sm.add_message(client_ip, user_id, session_id, 'assistant', full_text, thinking=full_thinking)
             if new_claude_sid[0]:
-                sm.update_session(client_ip, user_id, session_id, claude_session_id=new_claude_sid[0])
-                log.info(f'[Chat] 保存 claude_session_id={new_claude_sid[0]}（收尾）')
+                sm.update_provider_session_id(client_ip, user_id, session_id, provider, new_claude_sid[0])
+                log.info('[Chat] 保存 %s session_id=%s（收尾）', provider, new_claude_sid[0])
 
         response = Response(
             stream_with_context(generate()),
@@ -565,12 +628,17 @@ def register_routes(app, sm: SessionManager):
         sess = sm.get_session(client_ip, user_id, session_id)
         if not sess:
             return jsonify({'error': 'Session not found'}), 404
+        provider = normalize_provider(sess.get('provider'))
+        if provider == 'gemini' and not config.FEATURE_GEMINI_SUPPORT:
+            return jsonify({'error': 'Gemini support disabled', 'code': 'gemini_disabled'}), 400
 
-        rt = resolve_claude_runtime_for_request(request, sm, client_ip, user_id)
-        if rt.get('error'):
-            return jsonify({'error': rt['error'], 'code': 'v2_claude_config_required'}), 400
-        if rt.get('use_per_user'):
-            log.info('[Orchestration/continue] V2 使用每用户 API 环境')
+        rt = {}
+        if provider == 'claude':
+            rt = resolve_claude_runtime_for_request(request, sm, client_ip, user_id)
+            if rt.get('error'):
+                return jsonify({'error': rt['error'], 'code': 'v2_claude_config_required'}), 400
+            if rt.get('use_per_user'):
+                log.info('[Orchestration/continue] V2 使用每用户 API 环境')
 
         session_workspace = sm.get_session_dir(client_ip, user_id, session_id)
         state = orchestrator.read_pause_state(session_workspace)
@@ -582,7 +650,7 @@ def register_routes(app, sm: SessionManager):
         upload_dir = sm.get_upload_dir(client_ip, user_id, session_id)
         session_workspace.mkdir(parents=True, exist_ok=True)
 
-        claude_sid = (state or {}).get('claude_session_id') or session_id
+        provider_sid = (state or {}).get('claude_session_id') or sm.get_provider_session_id(client_ip, user_id, session_id, provider) or session_id
         mounted_ids = (state or {}).get('mounted_bundle_ids') or []
         skill_bundles, selected_bundles = _select_skill_bundles('', [], bundle_ids=mounted_ids)
         readonly_dirs = _readonly() + _bundle_paths(selected_bundles)
@@ -592,6 +660,8 @@ def register_routes(app, sm: SessionManager):
             total_offset = 0
 
         dev_meta, dev_project = _attached_dev_project(client_ip, user_id, session_id)
+        if provider == 'gemini' and dev_meta:
+            return jsonify({'error': 'Gemini 第一版暂不支持开发模式', 'code': 'gemini_dev_not_supported'}), 400
         dev_context = None
         dev_cli_cwd = None
         dev_permission_mode = None
@@ -641,8 +711,8 @@ def register_routes(app, sm: SessionManager):
                         sid = evt.get('session_id')
                         new_claude_sid[0] = sid
                         if sid:
-                            sm.update_session(client_ip, user_id, session_id, claude_session_id=sid)
-                            log.info(f'[Orchestration/continue] 保存 claude_session_id={sid}（流内）')
+                            sm.update_provider_session_id(client_ip, user_id, session_id, provider, sid)
+                            log.info('[Orchestration/continue] 保存 %s session_id=%s（流内）', provider, sid)
                 except json.JSONDecodeError:
                     pass
 
@@ -652,7 +722,7 @@ def register_routes(app, sm: SessionManager):
                     orchestrator.stream_summarize_only(
                         message=orchestrator.build_summarize_after_pause_prompt(),
                         session_id=session_id,
-                        claude_session_id=claude_sid,
+                        claude_session_id=provider_sid,
                         upload_dir=str(upload_dir),
                         session_workspace_dir=str(session_workspace.resolve()),
                         readonly_dirs=readonly_dirs,
@@ -663,6 +733,7 @@ def register_routes(app, sm: SessionManager):
                         permission_mode_override=dev_permission_mode,
                         dangerously_skip_permissions_override=dev_dangerous_skip,
                         development_context=dev_context,
+                        stream_output_func=_provider_runner(provider),
                         **_v2_orch_kwargs(rt),
                     )
                 )
@@ -672,7 +743,7 @@ def register_routes(app, sm: SessionManager):
                         first_message=orchestrator.build_continue_segment_prompt(),
                         file_paths=None,
                         session_id=session_id,
-                        initial_claude_session_id=claude_sid,
+                        initial_claude_session_id=provider_sid,
                         max_rounds=config.CLAUDE_WEB_ORCH_MAX_ROUNDS,
                         upload_dir=str(upload_dir),
                         session_workspace_dir=str(session_workspace.resolve()),
@@ -686,6 +757,7 @@ def register_routes(app, sm: SessionManager):
                         permission_mode_override=dev_permission_mode,
                         dangerously_skip_permissions_override=dev_dangerous_skip,
                         development_context=dev_context,
+                        stream_output_func=_provider_runner(provider),
                         **_v2_orch_kwargs(rt),
                     )
                 )
@@ -698,8 +770,8 @@ def register_routes(app, sm: SessionManager):
                     client_ip, user_id, session_id, 'assistant', full_text, thinking=full_thinking,
                 )
             if new_claude_sid[0]:
-                sm.update_session(client_ip, user_id, session_id, claude_session_id=new_claude_sid[0])
-                log.info(f'[Orchestration/continue] 保存 claude_session_id={new_claude_sid[0]}（收尾）')
+                sm.update_provider_session_id(client_ip, user_id, session_id, provider, new_claude_sid[0])
+                log.info('[Orchestration/continue] 保存 %s session_id=%s（收尾）', provider, new_claude_sid[0])
 
         response = Response(
             stream_with_context(generate()),
@@ -730,8 +802,14 @@ def register_routes(app, sm: SessionManager):
         user_id = data.get('user_id', '').strip()
         if not user_id:
             return jsonify({'error': 'user_id required'}), 400
+        raw_provider = (data.get('provider') or 'claude').strip().lower()
+        if raw_provider not in SUPPORTED_PROVIDERS:
+            return jsonify({'error': 'Unsupported provider', 'code': 'unsupported_provider'}), 400
+        provider = normalize_provider(raw_provider)
+        if provider == 'gemini' and not config.FEATURE_GEMINI_SUPPORT:
+            return jsonify({'error': 'Gemini support disabled', 'code': 'gemini_disabled'}), 400
         client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
-        session = sm.create_session(client_ip, user_id)
+        session = sm.create_session(client_ip, user_id, provider=provider)
         return jsonify(session)
 
     @app.route('/sessions/<session_id>', methods=['DELETE'])

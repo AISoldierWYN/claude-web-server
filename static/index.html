@@ -119,6 +119,36 @@
 
         .new-chat-btn svg { width: 16px; height: 16px; }
 
+        .provider-picker {
+            display: none;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 4px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .provider-picker.show { display: flex; }
+
+        .provider-option {
+            flex: 1;
+            border: none;
+            border-radius: 6px;
+            padding: 7px 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .provider-option.active {
+            background: var(--bg-active);
+            color: var(--text-primary);
+            box-shadow: inset 0 0 0 1px rgba(124,58,237,0.35);
+        }
+
         .sidebar-list {
             flex: 1;
             overflow-y: auto;
@@ -148,6 +178,24 @@
             height: 18px;
             color: var(--text-secondary);
             flex-shrink: 0;
+        }
+
+        .session-provider-badge {
+            width: 22px;
+            height: 22px;
+            border-radius: 7px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 11px;
+            font-weight: 800;
+            color: #fff;
+            background: rgba(124,58,237,0.8);
+        }
+
+        .session-provider-badge.gemini {
+            background: rgba(20,184,166,0.85);
         }
 
         .session-item .session-info {
@@ -713,6 +761,11 @@
             color: var(--accent-light);
             border-color: rgba(124, 58, 237, 0.55);
             background: rgba(124, 58, 237, 0.16);
+        }
+
+        .dev-project-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
 
         .dev-project-bar {
@@ -1420,6 +1473,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     新对话
                 </button>
+                <div class="provider-picker" id="providerPicker" aria-label="新对话模型">
+                    <button type="button" class="provider-option active" data-provider="claude" onclick="setNewSessionProvider('claude')">Claude</button>
+                    <button type="button" class="provider-option" data-provider="gemini" onclick="setNewSessionProvider('gemini')">Gemini</button>
+                </div>
             </div>
             <div class="sidebar-list" id="sessionList"></div>
             <div class="sidebar-footer">
@@ -1587,6 +1644,8 @@
     let markdownPreviewEnabled = localStorage.getItem('claude_markdown_preview') === '1';
     let webSearchEnabled = localStorage.getItem('claude_web_search_enabled') === '1';
     let devFeatureEnabled = false;
+    let geminiFeatureEnabled = false;
+    let newSessionProvider = localStorage.getItem('claude_new_session_provider') || 'claude';
     let devProjects = [];
     let currentDevStatus = { mode: 'chat', attached: false };
 
@@ -1604,6 +1663,7 @@
     const webSearchToggle = document.getElementById('webSearchToggle');
     const webSearchToggleWrap = document.getElementById('webSearchToggleWrap');
     const devProjectBtn = document.getElementById('devProjectBtn');
+    const providerPicker = document.getElementById('providerPicker');
     const devProjectBar = document.getElementById('devProjectBar');
     const devProjectMeta = document.getElementById('devProjectMeta');
     const devProjectList = document.getElementById('devProjectList');
@@ -1737,6 +1797,12 @@
             window.__featuresV2 = !!j.v2_multi_user_api;
             window.__tavilySearchConfigured = !!j.tavily_search_configured;
             devFeatureEnabled = !!j.mobile_remote_development;
+            geminiFeatureEnabled = !!j.gemini_support;
+            if (!geminiFeatureEnabled && newSessionProvider === 'gemini') {
+                newSessionProvider = 'claude';
+                localStorage.setItem('claude_new_session_provider', newSessionProvider);
+            }
+            updateProviderPicker();
             updateDevUi();
             updateApiConfigButtonVisibility();
             updateWebSearchToggleAvailability();
@@ -1744,15 +1810,48 @@
             window.__featuresV2 = false;
             window.__tavilySearchConfigured = false;
             devFeatureEnabled = false;
+            geminiFeatureEnabled = false;
+            updateProviderPicker();
             updateDevUi();
             updateWebSearchToggleAvailability();
         }
     }
 
+    function normalizeProvider(provider) {
+        return provider === 'gemini' ? 'gemini' : 'claude';
+    }
+
+    function currentSession() {
+        return sessions.find(s => s.id === currentSessionId) || null;
+    }
+
+    function currentSessionProvider() {
+        const s = currentSession();
+        return normalizeProvider(s && s.provider);
+    }
+
+    function updateProviderPicker() {
+        if (!providerPicker) return;
+        providerPicker.classList.toggle('show', !!geminiFeatureEnabled);
+        providerPicker.querySelectorAll('.provider-option').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.provider === newSessionProvider);
+        });
+    }
+
+    function setNewSessionProvider(provider) {
+        newSessionProvider = normalizeProvider(provider);
+        if (newSessionProvider === 'gemini' && !geminiFeatureEnabled) newSessionProvider = 'claude';
+        localStorage.setItem('claude_new_session_provider', newSessionProvider);
+        updateProviderPicker();
+    }
+
     function updateDevUi() {
+        const geminiSession = currentSessionProvider() === 'gemini';
         if (devProjectBtn) {
             devProjectBtn.classList.toggle('show', !!devFeatureEnabled);
             devProjectBtn.classList.toggle('active', !!(currentDevStatus && currentDevStatus.attached));
+            devProjectBtn.disabled = !!geminiSession;
+            devProjectBtn.title = geminiSession ? 'Gemini 第一版暂不支持开发模式' : '开发项目';
         }
         const attached = !!(devFeatureEnabled && currentDevStatus && currentDevStatus.attached && currentDevStatus.project);
         if (devProjectBar) devProjectBar.classList.toggle('show', attached);
@@ -1790,6 +1889,10 @@
 
     async function openDevProjectPicker() {
         if (!devFeatureEnabled) return;
+        if (currentSessionProvider() === 'gemini') {
+            showToast('Gemini 第一版暂不支持开发模式');
+            return;
+        }
         if (!currentSessionId) {
             await createNewSession();
             if (!currentSessionId) return;
@@ -2023,16 +2126,19 @@
         sessionListEl.innerHTML = '';
         for (const s of sessions) {
             const item = document.createElement('div');
+            const provider = normalizeProvider(s.provider);
+            const providerLabel = provider === 'gemini' ? 'Gemini' : 'Claude';
+            const providerShort = provider === 'gemini' ? 'G' : 'C';
             item.className = 'session-item' + (s.id === currentSessionId ? ' active' : '');
             item.onclick = (e) => {
                 if (e.target.closest('.session-menu-btn') || e.target.closest('.session-menu')) return;
                 switchSession(s.id);
             };
             item.innerHTML = `
-                <svg class="session-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span class="session-provider-badge ${provider === 'gemini' ? 'gemini' : ''}" title="${providerLabel}">${providerShort}</span>
                 <div class="session-info">
                     <div class="session-title">${escapeHtml(s.title)}</div>
-                    <div class="session-time">${s.updated_at || ''}</div>
+                    <div class="session-time">${providerLabel} · ${s.updated_at || ''}</div>
                 </div>
                 <button class="session-menu-btn" title="更多" onclick="toggleSessionMenu(event, '${s.id}')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
@@ -2061,7 +2167,8 @@
     async function createNewSession() {
         if (isStreaming) return;
         try {
-            const session = await apiPost('/sessions', { user_id: userId });
+            const provider = geminiFeatureEnabled ? newSessionProvider : 'claude';
+            const session = await apiPost('/sessions', { user_id: userId, provider });
             sessions.unshift(session);
             currentSessionId = session.id;
             renderSessionList();
@@ -2176,7 +2283,7 @@
         let thinkingHtml = '';
 
         if (isAi) {
-            avatarHtml = '<div class="message-avatar ai">C</div>';
+            avatarHtml = `<div class="message-avatar ai">${currentSessionProvider() === 'gemini' ? 'G' : 'C'}</div>`;
         } else {
             avatarHtml = '<div class="message-avatar user-av">U</div>';
         }
@@ -2822,6 +2929,7 @@
         let toolInputBuf = '';
         let firstText = true;
         let fullText = '';
+        let activeInfoEl = null;
 
         function appendThinkingSegment() {
             const thinkId = 'think-live-' + Math.random().toString(36).substr(2, 8);
@@ -2909,11 +3017,14 @@
 
                         case 'info':
                             if (data.message) {
-                                const infoEl = document.createElement('div');
-                                infoEl.className = 'stream-info';
-                                infoEl.style.cssText = 'opacity:0.85;font-size:0.9em;margin:8px 0;padding:6px 10px;border-radius:6px;background:rgba(128,128,128,0.12);';
-                                infoEl.textContent = data.message;
-                                contentEl.appendChild(infoEl);
+                                if (!activeInfoEl || !activeInfoEl.isConnected) {
+                                    activeInfoEl = document.createElement('div');
+                                    activeInfoEl.className = 'stream-info';
+                                    activeInfoEl.style.cssText = 'opacity:0.85;font-size:0.9em;margin:8px 0;padding:6px 10px;border-radius:6px;background:rgba(128,128,128,0.12);';
+                                    contentEl.appendChild(activeInfoEl);
+                                }
+                                activeInfoEl.textContent = data.message;
+                                activeInfoEl.dataset.done = '0';
                                 scrollToBottom();
                             }
                             break;
@@ -2962,6 +3073,11 @@
                         case 'done':
                             doneReceived = true;
                             if (data.paused) orchestrationPaused = true;
+                            if (activeInfoEl && activeInfoEl.isConnected && activeInfoEl.dataset.done !== '1') {
+                                activeInfoEl.textContent = data.paused ? '等待继续处理' : (data.ok === false ? '处理未完成' : '处理完成');
+                                activeInfoEl.dataset.done = '1';
+                                activeInfoEl.style.opacity = '0.55';
+                            }
                             if (!fullText.trim() && data.ok !== false && !data.paused) {
                                 renderMarkdownInto(aiBubble, '（无回复内容）');
                             } else if (!fullText.trim() && data.ok === false && !data.paused) {
@@ -3063,6 +3179,7 @@
 
     async function runOrchestrationContinue(action, token) {
         if (!currentSessionId || !userId) return;
+        const isGeminiSession = currentSessionProvider() === 'gemini';
         isStreaming = true;
         setStreamingLocked(true);
         sendBtn.disabled = true;
@@ -3077,7 +3194,9 @@
         statusBar.innerHTML = '<span class="stream-timer" id="liveStreamTimerOrch">思考中… (0s)</span>';
         const timelineEl = document.createElement('div');
         timelineEl.className = 'ai-stream-timeline';
-        const reasoningPanel = document.createElement('div');
+        let reasoningPanel = null;
+        if (!isGeminiSession) {
+        reasoningPanel = document.createElement('div');
         reasoningPanel.className = 'reasoning-panel open';
         const reasoningHead = document.createElement('button');
         reasoningHead.type = 'button';
@@ -3094,12 +3213,21 @@
         reasoningDetail.appendChild(timelineEl);
         reasoningPanel.appendChild(reasoningHead);
         reasoningPanel.appendChild(reasoningDetail);
+        }
         const aiBubble = document.createElement('div');
         aiBubble.className = 'message-bubble answer-bubble markdown-body';
         renderMarkdownInto(aiBubble, '');
-        contentEl.appendChild(reasoningPanel);
+        if (reasoningPanel) {
+            contentEl.appendChild(reasoningPanel);
+        } else {
+            const providerNote = document.createElement('div');
+            providerNote.className = 'stream-status-bar';
+            providerNote.textContent = 'Gemini 会话不提供可见思考过程';
+            contentEl.appendChild(providerNote);
+            contentEl.appendChild(timelineEl);
+        }
         contentEl.appendChild(aiBubble);
-        aiRow.innerHTML = '<div class="message-avatar ai">C</div>';
+        aiRow.innerHTML = `<div class="message-avatar ai">${isGeminiSession ? 'G' : 'C'}</div>`;
         aiRow.appendChild(contentEl);
         chatContainer.appendChild(aiRow);
         scrollToBottom();
@@ -3170,6 +3298,8 @@
             await createNewSession();
             if (!currentSessionId) return;
         }
+        const activeProvider = currentSessionProvider();
+        const isGeminiSession = activeProvider === 'gemini';
 
         // Build full message including file references
         let fullMessage = message;
@@ -3206,7 +3336,9 @@
         statusBar.innerHTML = '<span class="stream-timer" id="liveStreamTimer">思考中… (0s)</span>';
         const timelineEl = document.createElement('div');
         timelineEl.className = 'ai-stream-timeline';
-        const reasoningPanel = document.createElement('div');
+        let reasoningPanel = null;
+        if (!isGeminiSession) {
+        reasoningPanel = document.createElement('div');
         reasoningPanel.className = 'reasoning-panel open';
         const reasoningHead = document.createElement('button');
         reasoningHead.type = 'button';
@@ -3223,12 +3355,21 @@
         reasoningDetail.appendChild(timelineEl);
         reasoningPanel.appendChild(reasoningHead);
         reasoningPanel.appendChild(reasoningDetail);
+        }
         const aiBubble = document.createElement('div');
         aiBubble.className = 'message-bubble answer-bubble markdown-body';
         renderMarkdownInto(aiBubble, '');
-        contentEl.appendChild(reasoningPanel);
+        if (reasoningPanel) {
+            contentEl.appendChild(reasoningPanel);
+        } else {
+            const providerNote = document.createElement('div');
+            providerNote.className = 'stream-status-bar';
+            providerNote.textContent = 'Gemini 会话不提供可见思考过程';
+            contentEl.appendChild(providerNote);
+            contentEl.appendChild(timelineEl);
+        }
         contentEl.appendChild(aiBubble);
-        aiRow.innerHTML = '<div class="message-avatar ai">C</div>';
+        aiRow.innerHTML = `<div class="message-avatar ai">${isGeminiSession ? 'G' : 'C'}</div>`;
         aiRow.appendChild(contentEl);
         chatContainer.appendChild(aiRow);
         scrollToBottom();

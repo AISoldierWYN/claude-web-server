@@ -9,7 +9,7 @@ import json
 import logging
 import secrets
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Callable, Dict, Iterator, List, Optional
 
 from .claude_runner import build_api_error_retry_user_message, stream_claude_output
 
@@ -120,12 +120,14 @@ def stream_orchestrated_turns(
     permission_mode_override: Optional[str] = None,
     dangerously_skip_permissions_override: Optional[bool] = None,
     development_context: Optional[Dict[str, Any]] = None,
+    stream_output_func: Optional[Callable[..., Iterator[str]]] = None,
 ) -> Iterator[str]:
     """
     外环：最多 max_rounds 次完整 claude 子进程；任一轮成功则结束。
     用尽仍失败：若 max_rounds>1 则写入暂停并 yield needs_continue；若 max_rounds==1 则仅结束（不暂停）。
     """
     resume_id = initial_claude_session_id
+    runner = stream_output_func or stream_claude_output
     sw = Path(session_workspace_dir).resolve()
     current_message = first_message
     current_files = file_paths
@@ -167,7 +169,7 @@ def stream_orchestrated_turns(
                 }
             )
 
-        inner = stream_claude_output(
+        inner = runner(
             current_message,
             claude_session_id=resume_id,
             file_paths=current_files,
@@ -178,6 +180,7 @@ def stream_orchestrated_turns(
         last_soft = None
         last_sid = None
         done_seen = False
+        fatal_error = False
 
         for event_str in inner:
             yield event_str
@@ -194,6 +197,8 @@ def stream_orchestrated_turns(
                     last_sid = sid
             elif t == 'error' and evt.get('soft'):
                 last_soft = evt.get('message') or ''
+                if evt.get('fatal'):
+                    fatal_error = True
             elif t == 'done':
                 done_seen = True
                 last_ok = evt.get('ok') is not False
@@ -211,6 +216,18 @@ def stream_orchestrated_turns(
                     'rounds_used': round_idx,
                     'total_rounds': total_rounds,
                     'ok': True,
+                }
+            )
+            return
+
+        if fatal_error:
+            yield _sse(
+                {
+                    'type': 'orchestration_complete',
+                    'rounds_used': round_idx,
+                    'total_rounds': total_rounds,
+                    'ok': False,
+                    'fatal': True,
                 }
             )
             return
@@ -269,10 +286,12 @@ def stream_summarize_only(
     permission_mode_override: Optional[str] = None,
     dangerously_skip_permissions_override: Optional[bool] = None,
     development_context: Optional[Dict[str, Any]] = None,
+    stream_output_func: Optional[Callable[..., Iterator[str]]] = None,
 ) -> Iterator[str]:
     """单轮总结（用户选择「结束并总结」）。"""
     yield _sse({'type': 'info', 'message': '正在生成结束总结…'})
-    yield from stream_claude_output(
+    runner = stream_output_func or stream_claude_output
+    yield from runner(
         message,
         session_id=session_id,
         claude_session_id=claude_session_id,

@@ -13,6 +13,28 @@ from .paths import sanitize_ip_for_path
 log = logging.getLogger('claude-web')
 
 SESSION_MEMORY_FILENAME = 'memory.md'
+DEFAULT_PROVIDER = 'claude'
+SUPPORTED_PROVIDERS = {'claude', 'gemini'}
+
+
+def normalize_provider(provider: str) -> str:
+    p = (provider or DEFAULT_PROVIDER).strip().lower()
+    return p if p in SUPPORTED_PROVIDERS else DEFAULT_PROVIDER
+
+
+def normalize_session_record(session: dict) -> dict:
+    if not isinstance(session, dict):
+        return session
+    provider = normalize_provider(session.get('provider') or DEFAULT_PROVIDER)
+    session['provider'] = provider
+    ids = session.get('provider_session_ids')
+    if not isinstance(ids, dict):
+        ids = {}
+    claude_sid = session.get('claude_session_id')
+    if claude_sid and not ids.get('claude'):
+        ids['claude'] = claude_sid
+    session['provider_session_ids'] = ids
+    return session
 
 
 def ensure_session_memory_file(session_dir: Path) -> Path:
@@ -72,22 +94,26 @@ class SessionManager:
     def list_sessions(self, client_ip: str, user_id: str) -> list:
         user_dir = self._get_user_dir(client_ip, user_id)
         sessions_file = user_dir / 'sessions.json'
-        sessions = self._read_json(sessions_file, [])
+        sessions = self._read_json(sessions_file, []) or []
+        sessions = [normalize_session_record(s) for s in sessions if isinstance(s, dict)]
         if sessions:
             sessions.sort(key=lambda s: s.get('updated_at', ''), reverse=True)
         return sessions if sessions else []
 
-    def create_session(self, client_ip: str, user_id: str) -> dict:
+    def create_session(self, client_ip: str, user_id: str, provider: str = DEFAULT_PROVIDER) -> dict:
         user_dir = self._get_user_dir(client_ip, user_id)
         sessions_file = user_dir / 'sessions.json'
         lock = self._get_user_lock(client_ip, user_id)
+        provider = normalize_provider(provider)
 
         with lock:
             sessions = self._read_json(sessions_file, []) or []
             now = time.strftime('%Y-%m-%d %H:%M:%S')
             session = {
                 'id': str(uuid.uuid4()),
+                'provider': provider,
                 'claude_session_id': None,
+                'provider_session_ids': {},
                 'title': '新对话',
                 'created_at': now,
                 'updated_at': now,
@@ -121,9 +147,42 @@ class SessionManager:
                 if s['id'] == session_id:
                     for k, v in kwargs.items():
                         s[k] = v
+                    normalize_session_record(s)
                     s['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
                     break
             self._write_json(sessions_file, sessions)
+
+    def update_provider_session_id(
+        self, client_ip: str, user_id: str, session_id: str, provider: str, provider_session_id: str
+    ):
+        provider = normalize_provider(provider)
+        if not provider_session_id:
+            return
+        user_dir = self._get_user_dir(client_ip, user_id)
+        sessions_file = user_dir / 'sessions.json'
+        lock = self._get_user_lock(client_ip, user_id)
+
+        with lock:
+            sessions = self._read_json(sessions_file, []) or []
+            for s in sessions:
+                if s['id'] == session_id:
+                    normalize_session_record(s)
+                    s['provider_session_ids'][provider] = provider_session_id
+                    if provider == DEFAULT_PROVIDER:
+                        s['claude_session_id'] = provider_session_id
+                    s['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
+                    break
+            self._write_json(sessions_file, sessions)
+
+    def get_provider_session_id(self, client_ip: str, user_id: str, session_id: str, provider: str):
+        session = self.get_session(client_ip, user_id, session_id)
+        if not session:
+            return None
+        provider = normalize_provider(provider)
+        ids = session.get('provider_session_ids') or {}
+        if provider == DEFAULT_PROVIDER:
+            return ids.get(provider) or session.get('claude_session_id')
+        return ids.get(provider)
 
     def delete_session(self, client_ip: str, user_id: str, session_id: str) -> bool:
         user_dir = self._get_user_dir(client_ip, user_id)

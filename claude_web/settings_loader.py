@@ -136,6 +136,20 @@ def find_claude_cli_explicit(cli_path: str) -> Optional[str]:
     return w
 
 
+def find_cli_explicit(cli_path: str) -> Optional[str]:
+    """Resolve an explicitly configured CLI path or command through PATH."""
+    p = (cli_path or '').strip()
+    if not p:
+        return None
+    cand = Path(p).expanduser()
+    try:
+        if cand.is_file():
+            return str(cand.resolve())
+    except OSError:
+        pass
+    return shutil.which(p)
+
+
 def _candidate_claude_paths_posix() -> List[Path]:
     """Linux/macOS 常见安装位置（在 shutil.which 之前）。"""
     out: List[Path] = []
@@ -173,6 +187,26 @@ def find_claude_cli_auto() -> str:
     if path:
         return path
     return 'claude'
+
+
+def find_gemini_cli_auto() -> str:
+    if sys.platform == 'win32':
+        npm_prefix = os.environ.get('APPDATA', '')
+        if npm_prefix:
+            for ext in ('.cmd', '.exe'):
+                candidate = os.path.join(npm_prefix, 'npm', 'gemini' + ext)
+                if os.path.isfile(candidate):
+                    return candidate
+    path = shutil.which('gemini')
+    if path:
+        # Prefer .cmd over extensionless shim on Windows because subprocess with
+        # shell=False cannot reliably execute shell shims by bare command name.
+        if sys.platform == 'win32':
+            cmd_path = path + '.cmd' if not path.lower().endswith('.cmd') else path
+            if os.path.isfile(cmd_path):
+                return cmd_path
+        return path
+    return 'gemini'
 
 
 def split_extra_cli_args(raw: str) -> List[str]:

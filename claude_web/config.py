@@ -70,6 +70,23 @@ CLAUDE_EXTRA_CLI_ARGS = _sl.split_extra_cli_args(
     _str('claude', 'extra_args', '', env='CLAUDE_WEB_EXTRA_CLI_ARGS')
 )
 
+# ---------- Gemini CLI（可选，默认关闭） ----------
+GEMINI_CLI_PATH_RAW = _str('gemini', 'cli_path', '', env='CLAUDE_WEB_GEMINI_CLI_PATH')
+_gemini_explicit = _sl.find_cli_explicit(GEMINI_CLI_PATH_RAW)
+GEMINI_CLI_PATH = _gemini_explicit if _gemini_explicit else _sl.find_gemini_cli_auto()
+GEMINI_MODEL = _str('gemini', 'model', '', env='CLAUDE_WEB_GEMINI_MODEL')
+GEMINI_APPROVAL_MODE = _str('gemini', 'approval_mode', 'plan', env='CLAUDE_WEB_GEMINI_APPROVAL_MODE')
+GEMINI_SANDBOX = _bool('gemini', 'sandbox', False, env='CLAUDE_WEB_GEMINI_SANDBOX')
+GEMINI_SKIP_TRUST = _bool('gemini', 'skip_trust', True, env='CLAUDE_WEB_GEMINI_SKIP_TRUST')
+GEMINI_PROXY = _str('gemini', 'proxy', '', env='CLAUDE_WEB_GEMINI_PROXY')
+GEMINI_REQUEST_TIMEOUT_SECONDS = _int(
+    'gemini',
+    'request_timeout_seconds',
+    300,
+    env='CLAUDE_WEB_GEMINI_REQUEST_TIMEOUT_SECONDS',
+    minimum=1,
+)
+
 # ---------- 路径（目录） ----------
 _paths_json_rel = _str('paths', 'paths_config_file', 'claude_web_paths.config.json', env='CLAUDE_WEB_PATHS_CONFIG_FILE')
 PATHS_CONFIG_FILE = (
@@ -107,6 +124,12 @@ FEATURE_MOBILE_REMOTE_DEVELOPMENT = _bool(
     'mobile_remote_development',
     False,
     env='CLAUDE_WEB_MOBILE_REMOTE_DEVELOPMENT',
+)
+FEATURE_GEMINI_SUPPORT = _bool(
+    'features',
+    'gemini_support',
+    False,
+    env='CLAUDE_WEB_GEMINI_SUPPORT',
 )
 
 # ---------- 开发模式（手机端远程控制 PC 项目） ----------
@@ -294,6 +317,12 @@ def log_config_summary(log: logging.Logger) -> None:
     log.info('[Config] Tavily 联网搜索: %s', bool(TAVILY_API_KEY))
     log.info('[Config] V2 每用户 API（局域网）: %s', FEATURE_V2_MULTI_USER_API)
     log.info('[Config] 移动端远程开发控制: %s', FEATURE_MOBILE_REMOTE_DEVELOPMENT)
+    log.info('[Config] Gemini CLI 支持: %s', FEATURE_GEMINI_SUPPORT)
+    if FEATURE_GEMINI_SUPPORT:
+        log.info('[Config] Gemini CLI: %s', GEMINI_CLI_PATH)
+        log.info('[Config] Gemini approval_mode: %s', GEMINI_APPROVAL_MODE)
+        if GEMINI_PROXY:
+            log.info('[Config] Gemini proxy: %s', GEMINI_PROXY)
     if FEATURE_MOBILE_REMOTE_DEVELOPMENT:
         log.info('[Config] 开发项目白名单: %s', DEV_PROJECTS_CONFIG_FILE)
         log.info('[Config] 开发模式 CLI permission_mode: %s', DEV_PERMISSION_MODE)
