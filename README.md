@@ -93,6 +93,16 @@
 |----|--------|------|
 | `max_size_mb` | `100` | 单文件上传上限（MB）。环境变量：`CLAUDE_WEB_UPLOAD_MAX_MB` |
 
+### `[tavily]` — 联网搜索
+
+| 键 | 默认值 | 说明 |
+|----|--------|------|
+| `api_key` | 空 | Tavily API Key；配置后前端显示「联网」开关。环境变量：`TAVILY_API_KEY`（兼容 `TABILY_API_KEY`） |
+| `search_depth` | `basic` | Tavily 搜索深度；`basic` 更省额度，`advanced` 更深入。环境变量：`TAVILY_SEARCH_DEPTH` |
+| `max_results` | `5` | 每次联网搜索注入给 Claude 的结果数量。环境变量：`TAVILY_MAX_RESULTS` |
+
+使用方式：用户在输入框左侧勾选「联网」后，本轮 `/chat` 会先由服务端调用 Tavily 搜索，再把搜索摘要和来源链接注入 Claude CLI，由 Claude 负责整理回答。未勾选时不会联网，也不会消耗 Tavily 额度。
+
 ### `[proxy]` — 反向代理
 
 | 键 | 默认值 | 说明 |
@@ -305,6 +315,7 @@ python server.py
 | `CLAUDE_WEB_HOST` / `CLAUDE_WEB_PORT` | 监听地址与端口，同 `config.ini` `[server]` |
 | `CLAUDE_WEB_CLI_PATH` / `CLAUDE_WEB_MODEL` / `CLAUDE_WEB_EXTRA_CLI_ARGS` | 同 `config.ini` `[claude]` |
 | `CLAUDE_WEB_FORK_CLAUDE_HOME` | 同 `config.ini` `[claude] fork_claude_home` |
+| `TAVILY_API_KEY` / `TAVILY_SEARCH_DEPTH` / `TAVILY_MAX_RESULTS` | 同 `config.ini` `[tavily]` |
 | `CLAUDE_WEB_CACHE_DIR` 等 | 数据目录，同 `config.ini` `[paths]` |
 
 ## 注意事项

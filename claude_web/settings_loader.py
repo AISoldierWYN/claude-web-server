@@ -26,7 +26,8 @@ def _get_env_str(key: str) -> Optional[str]:
 def load_configparser(ini_path: Path) -> configparser.ConfigParser:
     p = configparser.ConfigParser(interpolation=None)
     if ini_path.is_file():
-        p.read(ini_path, encoding='utf-8')
+        # utf-8-sig 同时兼容无 BOM 与带 BOM 的 UTF-8 配置文件。
+        p.read(ini_path, encoding='utf-8-sig')
     return p
 
 

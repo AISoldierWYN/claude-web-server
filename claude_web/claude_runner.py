@@ -194,6 +194,12 @@ def _conversation_history_prompt_block(messages: Optional[List[Dict[str, Any]]],
     )
 
 
+def _web_search_prompt_block(web_search_context: str) -> str:
+    if not (web_search_context or '').strip():
+        return ''
+    return web_search_context.strip() + '\n\n'
+
+
 def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
     """
     技能包：仅注入各包 id/title/summary；仅对本轮已挂载的包展示路径索引。
@@ -599,6 +605,7 @@ def stream_claude_output(
     child_env_extra: Optional[Dict[str, str]] = None,
     model_override: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
+    web_search_context: str = '',
 ):
     """
     调用 Claude CLI 并流式转发输出。
@@ -687,6 +694,7 @@ def stream_claude_output(
         + _sandbox_instruction(sw_str, readonly_dirs, extra_notes=readonly_dirs_notes or '')
         + _memory_prompt_block(sw_str, shrink=bool(file_paths))
         + _conversation_history_prompt_block(conversation_history)
+        + _web_search_prompt_block(web_search_context)
         + _language_alignment_block(message)
         + full_message
     )

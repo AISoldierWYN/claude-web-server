@@ -1157,16 +1157,159 @@
 
         /* ============ Mobile ============ */
         @media (max-width: 768px) {
+            body {
+                height: 100dvh;
+            }
+
+            .app {
+                height: 100dvh;
+            }
+
             .sidebar {
                 position: fixed;
                 left: 0;
                 top: 0;
                 bottom: 0;
                 transform: translateX(-100%);
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+                width: min(86vw, var(--sidebar-width));
             }
             .sidebar.open { transform: translateX(0); }
-            .menu-toggle { display: flex; }
+            .sidebar-header {
+                padding-top: 14px;
+            }
+
+            .main-header {
+                padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+                min-height: calc(52px + env(safe-area-inset-top));
+            }
+
+            .menu-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 36px;
+                height: 36px;
+                padding: 0;
+                flex: 0 0 auto;
+            }
+
+            .main-header .header-title {
+                font-size: 16px;
+            }
+
+            .header-actions .icon-btn {
+                width: 36px;
+                height: 36px;
+                padding: 0;
+                justify-content: center;
+            }
+
+            .chat-container {
+                padding: 14px 10px;
+            }
+
             .message-content { max-width: 85%; }
+
+            .message-row {
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+
+            .message-avatar {
+                width: 28px;
+                height: 28px;
+                border-radius: 8px;
+                font-size: 12px;
+            }
+
+            .message-bubble {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+
+            .input-area {
+                padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+            }
+
+            .input-wrapper {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                grid-template-areas:
+                    "actions actions"
+                    "text send";
+                gap: 8px;
+                align-items: stretch;
+                max-width: none;
+            }
+
+            .input-actions {
+                grid-area: actions;
+                display: grid;
+                grid-template-columns: 42px minmax(0, 1fr) minmax(0, 1fr);
+                gap: 8px;
+            }
+
+            .input-action-btn {
+                min-height: 38px;
+                justify-content: center;
+            }
+
+            .markdown-toggle {
+                padding: 8px 10px;
+                min-width: 0;
+                overflow: hidden;
+            }
+
+            .markdown-toggle span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .input-wrapper textarea {
+                grid-area: text;
+                min-height: 44px;
+                max-height: 120px;
+                width: 100%;
+                padding: 10px 12px;
+            }
+
+            .send-btn {
+                grid-area: send;
+                min-width: 72px;
+                padding: 10px 14px;
+            }
+
+            .upload-preview,
+            .markdown-preview {
+                max-width: none;
+            }
+
+            .markdown-preview {
+                max-height: 180px;
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .input-actions {
+                grid-template-columns: 38px 1fr 1fr;
+                gap: 6px;
+            }
+
+            .markdown-toggle {
+                font-size: 11px;
+                gap: 4px;
+                padding: 7px 7px;
+            }
+
+            .send-btn {
+                min-width: 64px;
+                padding: 10px 12px;
+            }
         }
     </style>
 </head>
@@ -1228,6 +1371,10 @@
                         <label class="input-action-btn markdown-toggle" id="markdownToggleWrap" title="实时预览 Markdown">
                             <input type="checkbox" id="markdownToggle">
                             <span>Markdown</span>
+                        </label>
+                        <label class="input-action-btn markdown-toggle" id="webSearchToggleWrap" title="使用 Tavily 联网搜索">
+                            <input type="checkbox" id="webSearchToggle">
+                            <span>联网</span>
                         </label>
                     </div>
                     <textarea id="messageInput" placeholder="输入消息... (Enter 发送, Shift+Enter 换行)" rows="1" autofocus></textarea>
@@ -1319,6 +1466,7 @@
     let isStreaming = false;
     let pendingFiles = []; // {name, size} 文件名须与 /upload 返回的 name 一致，供 /chat 在服务端解析
     let markdownPreviewEnabled = localStorage.getItem('claude_markdown_preview') === '1';
+    let webSearchEnabled = localStorage.getItem('claude_web_search_enabled') === '1';
 
     // ==================== DOM ====================
     const chatContainer = document.getElementById('chatContainer');
@@ -1331,6 +1479,8 @@
     const markdownPreview = document.getElementById('markdownPreview');
     const markdownToggle = document.getElementById('markdownToggle');
     const markdownToggleWrap = document.getElementById('markdownToggleWrap');
+    const webSearchToggle = document.getElementById('webSearchToggle');
+    const webSearchToggleWrap = document.getElementById('webSearchToggleWrap');
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     const dropZone = document.getElementById('dropZone');
@@ -1353,6 +1503,16 @@
         });
     }
     updateMarkdownPreview();
+
+    if (webSearchToggle) {
+        webSearchToggle.checked = webSearchEnabled;
+        webSearchToggleWrap.classList.toggle('active', webSearchEnabled);
+        webSearchToggle.addEventListener('change', function() {
+            webSearchEnabled = !!this.checked;
+            localStorage.setItem('claude_web_search_enabled', webSearchEnabled ? '1' : '0');
+            webSearchToggleWrap.classList.toggle('active', webSearchEnabled);
+        });
+    }
 
     messageInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -1432,14 +1592,30 @@
         btn.style.display = (!isLocalAccessHostname()) ? 'block' : 'none';
     }
 
+    function updateWebSearchToggleAvailability() {
+        if (!webSearchToggle || !webSearchToggleWrap) return;
+        const ok = !!window.__tavilySearchConfigured;
+        webSearchToggle.disabled = !ok;
+        webSearchToggleWrap.style.display = ok ? 'inline-flex' : 'none';
+        if (!ok) {
+            webSearchEnabled = false;
+            webSearchToggle.checked = false;
+            webSearchToggleWrap.classList.remove('active');
+        }
+    }
+
     async function loadFeatures() {
         try {
             const r = await fetch('/api/features');
             const j = await r.json();
             window.__featuresV2 = !!j.v2_multi_user_api;
+            window.__tavilySearchConfigured = !!j.tavily_search_configured;
             updateApiConfigButtonVisibility();
+            updateWebSearchToggleAvailability();
         } catch (_) {
             window.__featuresV2 = false;
+            window.__tavilySearchConfigured = false;
+            updateWebSearchToggleAvailability();
         }
     }
 
@@ -2666,6 +2842,8 @@
                     errorMsg = err.error || errorMsg;
                     if (err.code === 'v2_claude_config_required') {
                         errorMsg += '（请打开侧栏「API 配置」保存密钥与模型）';
+                    } else if (err.code === 'tavily_config_required') {
+                        errorMsg += '（请在服务端 config.ini 的 [tavily] 中配置 api_key）';
                     }
                 } catch (_) {}
                 aiRow.remove();
@@ -2784,7 +2962,8 @@
                     message: fullMessage,
                     user_id: userId,
                     session_id: currentSessionId,
-                    files: fileNamesForApi
+                    files: fileNamesForApi,
+                    web_search: !!webSearchEnabled
                 })
             });
 
@@ -2795,6 +2974,8 @@
                     errorMsg = err.error || errorMsg;
                     if (err.code === 'v2_claude_config_required') {
                         errorMsg += '（请打开侧栏「API 配置」保存密钥与模型）';
+                    } else if (err.code === 'tavily_config_required') {
+                        errorMsg += '（请在服务端 config.ini 的 [tavily] 中配置 api_key）';
                     }
                 } catch (_) {}
                 aiRow.remove();

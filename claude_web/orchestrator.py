@@ -115,6 +115,7 @@ def stream_orchestrated_turns(
     model_override: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
     mounted_bundle_ids: Optional[List[str]] = None,
+    web_search_context: str = '',
 ) -> Iterator[str]:
     """
     外环：最多 max_rounds 次完整 claude 子进程；任一轮成功则结束。
@@ -137,6 +138,7 @@ def stream_orchestrated_turns(
         child_env_extra=child_env_extra,
         model_override=model_override,
         conversation_history=conversation_history,
+        web_search_context=web_search_context,
     )
 
     for round_idx in range(1, max_rounds + 1):

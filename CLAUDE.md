@@ -199,3 +199,4 @@ python server.py
 - `/chat` 会把本会话 `messages.json` 中最近历史压缩为「会话历史快照」注入 prompt，帮助久未打开的会话先恢复上下文；不会读取其它会话。
 - 前端 AI 回复改为轻量 Markdown 渲染，并在 SSE text delta 到来时实时重渲染，保留流式输出体验。
 - `claude_web_paths.config.json` 的 `bundles[].paths` 已改为按需挂载：默认只注入 bundle 摘要，服务端用用户问题/少量历史匹配 `id/title/summary/keywords`，命中的包才进入 `--add-dir`；`readonly_dirs` 仍是全局始终挂载。
+- 新增 Tavily 联网搜索：`config.ini [tavily] api_key/search_depth/max_results` 或环境变量配置；前端输入区有「联网」开关，勾选后服务端先搜索并把结果注入 Claude prompt。

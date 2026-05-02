@@ -16,6 +16,7 @@ from .feedback_service import save_feedback_package
 from .filename_sanitize import ascii_storage_filename, is_ascii_filename, safe_client_filename
 from .paths import get_client_ip
 from .session_manager import SessionManager
+from .tavily_search import TavilySearchError, format_tavily_for_prompt, search_tavily
 from .user_claude_credentials import (
     delete_credentials,
     load_credentials,
@@ -145,6 +146,7 @@ def register_routes(app, sm: SessionManager):
             {
                 'v2_multi_user_api': bool(config.FEATURE_V2_MULTI_USER_API),
                 'v3_linux_deploy': bool(config.FEATURE_V3_LINUX_DEPLOY),
+                'tavily_search_configured': bool(config.TAVILY_API_KEY),
             }
         )
 
@@ -198,6 +200,7 @@ def register_routes(app, sm: SessionManager):
         message = data.get('message', '').strip()
         user_id = data.get('user_id', '').strip()
         session_id = data.get('session_id', '').strip()
+        web_search_enabled = bool(data.get('web_search'))
         client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
 
         if not message:
@@ -216,6 +219,8 @@ def register_routes(app, sm: SessionManager):
             return jsonify({'error': rt['error'], 'code': 'v2_claude_config_required'}), 400
         if rt.get('use_per_user'):
             log.info('[Chat] V2 使用每用户 API 环境（Host 非本机）')
+        if web_search_enabled and not config.TAVILY_API_KEY:
+            return jsonify({'error': 'Tavily API key 未配置', 'code': 'tavily_config_required'}), 400
 
         claude_sid = session.get('claude_session_id')
         prior_messages = sm.get_messages(client_ip, user_id, session_id)
@@ -280,6 +285,28 @@ def register_routes(app, sm: SessionManager):
                     pass
 
         def generate():
+            web_search_context = ''
+            if web_search_enabled:
+                yield 'data: ' + json.dumps({'type': 'info', 'message': '正在使用 Tavily 联网搜索…'}, ensure_ascii=False) + '\n\n'
+                try:
+                    tavily_data = search_tavily(
+                        api_key=config.TAVILY_API_KEY,
+                        query=message,
+                        max_results=config.TAVILY_MAX_RESULTS,
+                        search_depth=config.TAVILY_SEARCH_DEPTH,
+                    )
+                    web_search_context = format_tavily_for_prompt(tavily_data, message)
+                    yield 'data: ' + json.dumps({'type': 'info', 'message': '联网搜索完成，正在交给 Claude 整理…'}, ensure_ascii=False) + '\n\n'
+                    log.info('[Chat] Tavily 搜索完成 user=%s session=%s', user_id, session_id)
+                except TavilySearchError as e:
+                    msg = f'联网搜索失败：{e}'
+                    yield 'data: ' + json.dumps({'type': 'error', 'message': msg, 'soft': True}, ensure_ascii=False) + '\n\n'
+                    web_search_context = (
+                        '【联网搜索资料 — Tavily】\n'
+                        f'用户请求了联网搜索，但 Tavily 搜索失败：{e}\n'
+                        '请明确告知用户联网搜索未成功，不要编造最新信息。\n\n'
+                    )
+
             log.info(
                 '[Chat] 外环编排 max_rounds=%s',
                 config.CLAUDE_WEB_ORCH_MAX_ROUNDS,
@@ -299,6 +326,7 @@ def register_routes(app, sm: SessionManager):
                     cli_log_context=cli_ctx,
                     conversation_history=prior_messages,
                     mounted_bundle_ids=selected_bundle_ids,
+                    web_search_context=web_search_context,
                     **_v2_orch_kwargs(rt),
                 )
             )

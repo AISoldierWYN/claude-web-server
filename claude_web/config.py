@@ -86,6 +86,14 @@ FEEDBACK_DIR = _sl.resolve_optional_dir(ROOT, _str('paths', 'feedback_dir', '', 
 # ---------- 上传 ----------
 UPLOAD_MAX_SIZE = _int('upload', 'max_size_mb', 100, env='CLAUDE_WEB_UPLOAD_MAX_MB', minimum=1) * 1024 * 1024
 
+# ---------- Tavily 联网搜索 ----------
+TAVILY_API_KEY = _str('tavily', 'api_key', '', env='TAVILY_API_KEY')
+if not TAVILY_API_KEY:
+    # 兼容常见拼写误差：Tavily 容易被写成 Tabil(y)。
+    TAVILY_API_KEY = _get_env_str('TABILY_API_KEY') or _str('tavily', 'tabily_api_key', '')
+TAVILY_MAX_RESULTS = _int('tavily', 'max_results', 5, env='TAVILY_MAX_RESULTS', minimum=1)
+TAVILY_SEARCH_DEPTH = _str('tavily', 'search_depth', 'basic', env='TAVILY_SEARCH_DEPTH')
+
 # ---------- V2：局域网每用户 API（Host 非本机时读用户保存的 env + model）----------
 FEATURE_V2_MULTI_USER_API = _bool(
     'features', 'v2_multi_user_api', False, env='CLAUDE_WEB_V2_MULTI_USER_API'
@@ -245,6 +253,7 @@ def log_config_summary(log: logging.Logger) -> None:
     if CLAUDE_EXTRA_CLI_ARGS:
         log.info('[Config] Claude 附加参数: %s', CLAUDE_EXTRA_CLI_ARGS)
     log.info('[Config] 会话 fork Claude HOME（共享父配置但隔离全局记忆）: %s', CLAUDE_WEB_FORK_CLAUDE_HOME)
+    log.info('[Config] Tavily 联网搜索: %s', bool(TAVILY_API_KEY))
     log.info('[Config] V2 每用户 API（局域网）: %s', FEATURE_V2_MULTI_USER_API)
     if FEATURE_V3_LINUX_DEPLOY:
         log.info('[Config] V3 Linux 部署标记: 已开启（文档/运维提示；与 sys.platform 自动兼容并存）')
