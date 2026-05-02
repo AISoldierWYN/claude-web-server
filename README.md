@@ -318,6 +318,21 @@ python server.py
 | `TAVILY_API_KEY` / `TAVILY_SEARCH_DEPTH` / `TAVILY_MAX_RESULTS` | 同 `config.ini` `[tavily]` |
 | `CLAUDE_WEB_CACHE_DIR` 等 | 数据目录，同 `config.ini` `[paths]` |
 
+## 自动化测试
+
+第一阶段冒烟测试不依赖真实 Claude CLI 或真实 Tavily API Key，适合在本地改动后快速验证核心功能。
+
+```powershell
+# Python 语法与后端 API 冒烟
+python -m compileall -q server.py claude_web
+python -m unittest tests.test_smoke_backend
+
+# 前端 Markdown、导出 HTML、移动端关键结构冒烟
+node tests/smoke_frontend.mjs
+```
+
+测试覆盖范围与后续计划见 `docs/plan/automated-testing-plan.md`。
+
 ## 注意事项
 
 - 需要本机已安装 Claude CLI（或于 `config.ini` 的 `cli_path` 指定路径）；若未在 PATH 中，请配置 `cli_path`。

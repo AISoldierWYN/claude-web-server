@@ -18,6 +18,7 @@ def setup_logging():
         level=logging.INFO,
         format='%(asctime)s [%(levelname)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
+        force=True,
         handlers=[
             logging.StreamHandler(sys.stdout),
             logging.FileHandler(config.LOG_DIR / 'server.log', encoding='utf-8'),

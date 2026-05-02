@@ -1,5 +1,21 @@
 # 自动化测试建设计划
 
+## 实施状态
+
+第一阶段已落地：
+
+- 后端冒烟测试：`tests/test_smoke_backend.py`
+- 前端静态/函数级冒烟测试：`tests/smoke_frontend.mjs`
+- 测试命令已补充到 `README.md`
+
+当前测试命令：
+
+```powershell
+python -m compileall -q server.py claude_web
+python -m unittest tests.test_smoke_backend
+node tests/smoke_frontend.mjs
+```
+
 ## 目标
 
 为当前 Claude Web Server 建立一套轻量但稳定的自动化验证流程，优先覆盖用户最常用、也最容易在后续开发中回归的功能：服务启动、会话收发、Markdown 渲染、上传、联网搜索、导出、移动端布局。
