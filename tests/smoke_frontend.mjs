@@ -14,6 +14,11 @@ function assertIncludes(needle, label = needle) {
 assertIncludes('id="messageInput"', 'message input');
 assertIncludes('id="markdownToggle"', 'Markdown toggle');
 assertIncludes('id="webSearchToggle"', 'web search toggle');
+assertIncludes('id="devProjectBtn"', 'development project button');
+assertIncludes('id="devProjectBar"', 'development project status bar');
+assertIncludes('openDevProjectPicker', 'development project picker');
+assertIncludes('showDevDiff', 'development diff action');
+assertIncludes('runDevPresetTest', 'development test action');
 assertIncludes('function renderMarkdown', 'Markdown renderer');
 assertIncludes('function buildExportHtml', 'HTML export builder');
 assertIncludes('session-menu', 'session action menu');

@@ -1,5 +1,17 @@
 # 手机端远程开发控制计划
 
+## 实施状态
+
+第一版已落地：
+
+- 默认关闭的功能开关：`[features] mobile_remote_development = false`
+- 白名单配置：`claude_web_projects.config.json`
+- 示例配置：`claude_web_projects.config.example.json`
+- 后端 API：`/api/dev/projects`、绑定/解绑项目、状态、diff、运行预设测试、停止任务
+- 开发模式下 CLI `cwd` 指向真实项目目录，会话 cache 仍保存记忆和运行状态
+- 前端入口：顶部“开发项目”按钮、项目选择面板、项目状态栏、Diff/运行测试/停止/退出
+- 冒烟测试已覆盖默认关闭、启用后白名单读取、绑定项目、状态、diff 和预设测试
+
 ## 背景
 
 目标是在当前 Web 版 Claude Chat 中增加一个“开发项目”能力：用户可以在手机浏览器里选择 PC 上白名单内的代码项目，让 AI 在 PC 本地执行阅读、修改、测试、提交等开发工作。手机端只负责展示和控制，真实代码仍保存在 PC 上，真实执行也发生在 PC 上。

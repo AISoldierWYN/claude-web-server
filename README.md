@@ -333,6 +333,32 @@ node tests/smoke_frontend.mjs
 
 测试覆盖范围与后续计划见 `docs/plan/automated-testing-plan.md`。
 
+## 移动端远程开发控制
+
+该能力默认关闭，不影响现有普通聊天。需要使用时在 `config.ini` 中开启：
+
+```ini
+[features]
+mobile_remote_development = true
+
+[development]
+projects_config_file = claude_web_projects.config.json
+permission_mode = acceptEdits
+dangerously_skip_permissions = false
+test_timeout_seconds = 300
+```
+
+再复制 `claude_web_projects.config.example.json` 为 `claude_web_projects.config.json`，只把允许手机端控制的 PC 本地代码项目加入白名单。真实白名单文件已被 `.gitignore` 忽略，不会提交到仓库。
+
+开启后前端顶部会显示“开发项目”入口，用户可以把当前聊天会话绑定到白名单项目。绑定后：
+
+- Claude CLI 的真实工作目录会切到项目根目录。
+- 会话记忆、上传、运行状态仍保存在当前 session 的 cache 中。
+- 页面可查看当前 diff、运行项目预设测试、停止正在运行的 CLI 任务。
+- 开发模式默认使用 `acceptEdits`，且默认不追加 `--dangerously-skip-permissions`，避免在真实项目目录里静默执行高风险操作。
+
+设计和后续迭代计划见 `docs/plan/mobile-remote-development-plan.md`。
+
 ## 注意事项
 
 - 需要本机已安装 Claude CLI（或于 `config.ini` 的 `cli_path` 指定路径）；若未在 PATH 中，请配置 `cli_path`。

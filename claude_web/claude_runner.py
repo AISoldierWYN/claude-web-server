@@ -20,6 +20,29 @@ from .user_session_log import append_cli_exit_summary, append_cli_line
 
 log = logging.getLogger('claude-web')
 
+_RUNNING_PROCESSES: Dict[str, subprocess.Popen] = {}
+_RUNNING_PROCESSES_LOCK = threading.Lock()
+
+
+def stop_session_process(session_id: str) -> bool:
+    sid = (session_id or '').strip()
+    if not sid:
+        return False
+    with _RUNNING_PROCESSES_LOCK:
+        proc = _RUNNING_PROCESSES.get(sid)
+    if not proc or proc.poll() is not None:
+        return False
+    try:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        return True
+    except Exception as e:
+        log.warning('[CLI] 停止会话进程失败 session=%s: %s', sid, e)
+        return False
+
 
 def _friendly_api_error_from_result(data: dict) -> str:
     """从 Claude Code result 行提取可读 API 错误（避免把整段 stdout 塞给用户）。"""
@@ -200,6 +223,39 @@ def _web_search_prompt_block(web_search_context: str) -> str:
     return web_search_context.strip() + '\n\n'
 
 
+def _development_prompt_block(development_context: Optional[Dict[str, Any]]) -> str:
+    if not development_context:
+        return ''
+    project_name = development_context.get('project_name') or development_context.get('project_id') or ''
+    project_path = development_context.get('project_path') or ''
+    cache_dir = development_context.get('session_cache_dir') or ''
+    git = development_context.get('git') or {}
+    tests = development_context.get('default_tests') or []
+    lines = [
+        '【开发模式 — Web 服务注入】',
+        '当前会话已绑定到 PC 本地白名单代码项目。手机端只是展示与控制台，真实读写发生在服务端 PC 的项目目录中。',
+        f'- 项目：{project_name}',
+        f'- 项目目录（真实可写）：{project_path}',
+        f'- 会话 cache（记忆/附件/日志）：{cache_dir}',
+        f'- Git 分支：{git.get("branch") or "unknown"}',
+        f'- Git 提交：{git.get("commit") or "unknown"}',
+        f'- 当前是否有未提交改动：{"是" if git.get("dirty") else "否"}',
+        '',
+        '开发模式规则：',
+        '1. 你可以读取、搜索并修改上述项目目录内的文件；修改会直接落到 PC 本地真实项目。',
+        '2. 不要访问或修改白名单项目目录之外的路径，除非它已经作为只读目录列出。',
+        '3. 长期记忆仍然写入会话 cache 下的 memory.md，不要在项目中创建会话记忆文件。',
+        '4. 高风险命令不要静默执行：不要执行 git reset --hard、git clean -fd、删除项目根目录、push、修改全局配置或系统环境变量。',
+        '5. 需要运行测试时，优先建议用户点击页面里的“运行测试”；不要自行发起安装依赖、迁移数据库、push 等高风险操作。',
+    ]
+    if tests:
+        lines.append('项目预设测试命令（用户可在页面触发）：')
+        for t in tests:
+            lines.append(f'- {t}')
+    lines.append('')
+    return '\n'.join(lines) + '\n'
+
+
 def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
     """
     技能包：仅注入各包 id/title/summary；仅对本轮已挂载的包展示路径索引。
@@ -236,16 +292,24 @@ def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
     return '\n'.join(lines)
 
 
-def _sandbox_instruction(session_workspace: str, readonly_dirs: list, extra_notes: str = '') -> str:
+def _sandbox_instruction(
+    session_workspace: str,
+    readonly_dirs: list,
+    extra_notes: str = '',
+    cli_cwd_dir: str = '',
+    writable_dirs: Optional[List[str]] = None,
+) -> str:
     try:
         ws = Path(session_workspace).resolve().as_posix() if session_workspace else ''
     except OSError:
         ws = (session_workspace or '').strip()
     if not ws:
         ws = '（未指定）'
+    cwd = (cli_cwd_dir or '').strip() or ws
     lines = [
         '【沙箱与目录约束】',
-        f'当前 CLI 工作目录（优先在此会话目录内创建/修改文件，以下路径为 POSIX/正斜杠形式）: {ws}',
+        f'当前 CLI 工作目录（以下路径为 POSIX/正斜杠形式）: {cwd}',
+        f'本会话 cache 目录（用于 uploads、memory.md、对话记录和运行状态）: {ws}',
         'Claude CLI 能力来自服务端父机配置（skills、API、model、环境变量等），但本对话的长期记忆必须与其它对话隔离。',
         f'长期记忆请只使用本目录下的 `{SESSION_MEMORY_FILENAME}`（见下方「记忆规则」）。',
         '',
@@ -274,6 +338,14 @@ def _sandbox_instruction(session_workspace: str, readonly_dirs: list, extra_note
             '当前未配置额外只读目录（环境变量与 claude_web_paths.config.json 均为空）：'
             '除本会话目录外不要访问其它会话或其它用户的 cache。'
         )
+    if writable_dirs:
+        lines.append('下列为本轮额外可写目录（仅在服务端明确启用的模式下出现）：')
+        for d in writable_dirs:
+            try:
+                d2 = Path(d).resolve().as_posix()
+            except OSError:
+                d2 = d
+            lines.append(f'  - {d2}')
     lines.append('不同浏览器会话（不同 session_id）彼此隔离；不要假设能访问其它对话的目录。')
     if (extra_notes or '').strip():
         lines.append('')
@@ -606,6 +678,10 @@ def stream_claude_output(
     model_override: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
     web_search_context: str = '',
+    cli_cwd_dir: Optional[str] = None,
+    permission_mode_override: Optional[str] = None,
+    dangerously_skip_permissions_override: Optional[bool] = None,
+    development_context: Optional[Dict[str, Any]] = None,
 ):
     """
     调用 Claude CLI 并流式转发输出。
@@ -624,9 +700,19 @@ def stream_claude_output(
         cmd.extend(['--model', model_eff])
     if config.CLAUDE_EXTRA_CLI_ARGS:
         cmd.extend(list(config.CLAUDE_EXTRA_CLI_ARGS))
-    if config.CLAUDE_WEB_PERMISSION_MODE:
-        cmd.extend(['--permission-mode', config.CLAUDE_WEB_PERMISSION_MODE])
-    if config.CLAUDE_WEB_DANGEROUSLY_SKIP_PERMISSIONS:
+    permission_mode = (
+        (permission_mode_override or '').strip()
+        if permission_mode_override is not None
+        else (config.CLAUDE_WEB_PERMISSION_MODE or '').strip()
+    )
+    if permission_mode:
+        cmd.extend(['--permission-mode', permission_mode])
+    dangerous_skip = (
+        bool(dangerously_skip_permissions_override)
+        if dangerously_skip_permissions_override is not None
+        else bool(config.CLAUDE_WEB_DANGEROUSLY_SKIP_PERMISSIONS)
+    )
+    if dangerous_skip:
         cmd.append('--allow-dangerously-skip-permissions')
         cmd.append('--dangerously-skip-permissions')
 
@@ -654,6 +740,16 @@ def stream_claude_output(
             sw = Path(session_workspace_dir).resolve()
             if sw.is_dir():
                 s = str(sw)
+                if s not in seen:
+                    seen.add(s)
+                    add_dirs.append(s)
+        except OSError:
+            pass
+    if cli_cwd_dir:
+        try:
+            wd = Path(cli_cwd_dir).resolve()
+            if wd.is_dir():
+                s = str(wd)
                 if s not in seen:
                     seen.add(s)
                     add_dirs.append(s)
@@ -689,9 +785,25 @@ def stream_claude_output(
             sw_str = Path(session_workspace_dir).resolve().as_posix()
         except OSError:
             sw_str = str(session_workspace_dir)
+    cwd_str = ''
+    if cli_cwd_dir:
+        try:
+            cwd_str = Path(cli_cwd_dir).resolve().as_posix()
+        except OSError:
+            cwd_str = str(cli_cwd_dir)
+    writable_dirs = []
+    if cli_cwd_dir:
+        writable_dirs.append(cli_cwd_dir)
     full_message = (
         _skill_bundles_instruction(skill_bundles)
-        + _sandbox_instruction(sw_str, readonly_dirs, extra_notes=readonly_dirs_notes or '')
+        + _sandbox_instruction(
+            sw_str,
+            readonly_dirs,
+            extra_notes=readonly_dirs_notes or '',
+            cli_cwd_dir=cwd_str,
+            writable_dirs=writable_dirs,
+        )
+        + _development_prompt_block(development_context)
         + _memory_prompt_block(sw_str, shrink=bool(file_paths))
         + _conversation_history_prompt_block(conversation_history)
         + _web_search_prompt_block(web_search_context)
@@ -704,14 +816,15 @@ def stream_claude_output(
     log.info('[CLI] 执行命令: claude ... --print ... -- （prompt 经 stdin 传入）')
     log.info(f'[CLI] session_id={session_id}, claude_session_id={claude_session_id}')
     log.info(
-        f'[CLI] session_workspace={session_workspace_dir}, add_dirs={add_dirs}, '
+        f'[CLI] session_workspace={session_workspace_dir}, cli_cwd={cli_cwd_dir}, add_dirs={add_dirs}, '
         f'upload_dir={upload_dir}, 文件数={len(file_paths) if file_paths else 0}, 消息长度={len(full_message)}'
     )
 
     cwd_kw = {}
-    if session_workspace_dir:
+    cwd_candidate = cli_cwd_dir or session_workspace_dir
+    if cwd_candidate:
         try:
-            cwp = Path(session_workspace_dir).resolve()
+            cwp = Path(cwd_candidate).resolve()
             if cwp.is_dir():
                 cwd_kw['cwd'] = str(cwp)
         except OSError:
@@ -752,6 +865,9 @@ def stream_claude_output(
             shell=False,
             **popen_kw,
         )
+        if session_id:
+            with _RUNNING_PROCESSES_LOCK:
+                _RUNNING_PROCESSES[str(session_id)] = process
     except FileNotFoundError:
         yield f'data: {json.dumps({"type": "error", "message": f"Claude CLI 未找到: {exe}"})}\n\n'
         return
@@ -974,6 +1090,10 @@ def stream_claude_output(
         except Exception:
             pass
         process.wait()
+        if session_id:
+            with _RUNNING_PROCESSES_LOCK:
+                if _RUNNING_PROCESSES.get(str(session_id)) is process:
+                    _RUNNING_PROCESSES.pop(str(session_id), None)
         if process.returncode and process.returncode != 0:
             if api_error_yet:
                 log.warning(

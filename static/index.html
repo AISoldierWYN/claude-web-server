@@ -695,7 +695,81 @@
             text-overflow: ellipsis;
         }
 
-        .header-actions { display: flex; gap: 6px; }
+        .header-actions { display: flex; gap: 6px; align-items: center; }
+
+        .dev-project-btn {
+            display: none;
+            height: 34px;
+            padding: 0 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .dev-project-btn.show { display: inline-flex; align-items: center; gap: 6px; }
+        .dev-project-btn.active {
+            color: var(--accent-light);
+            border-color: rgba(124, 58, 237, 0.55);
+            background: rgba(124, 58, 237, 0.16);
+        }
+
+        .dev-project-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(30, 30, 53, 0.72);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        .dev-project-bar.show { display: flex; }
+        .dev-project-meta {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dev-project-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+        .dev-mini-btn {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            padding: 5px 9px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .dev-mini-btn.danger {
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.45);
+        }
+        .dev-project-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 54vh;
+            overflow: auto;
+        }
+        .dev-project-card {
+            width: 100%;
+            text-align: left;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            padding: 12px;
+            cursor: pointer;
+        }
+        .dev-project-card:hover {
+            border-color: rgba(124, 58, 237, 0.55);
+            background: rgba(124, 58, 237, 0.12);
+        }
+        .dev-project-card-title { font-weight: 700; margin-bottom: 4px; }
+        .dev-project-card-sub { color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
 
         .icon-btn {
             background: none;
@@ -1206,6 +1280,26 @@
                 justify-content: center;
             }
 
+            .dev-project-btn {
+                width: 36px;
+                padding: 0;
+                justify-content: center;
+            }
+
+            .dev-project-btn span { display: none; }
+
+            .dev-project-bar {
+                padding: 8px 10px;
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .dev-project-actions {
+                width: 100%;
+                overflow-x: auto;
+                padding-bottom: 2px;
+            }
+
             .chat-container {
                 padding: 14px 10px;
             }
@@ -1346,9 +1440,23 @@
                 </button>
                 <div class="header-title" id="headerTitle">Claude Chat</div>
                 <div class="header-actions">
+                    <button class="dev-project-btn" id="devProjectBtn" onclick="openDevProjectPicker()" title="开发项目">
+                        <span>开发项目</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    </button>
                     <button class="icon-btn danger" onclick="confirmDeleteSession()" title="删除当前会话">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
+                </div>
+            </div>
+
+            <div class="dev-project-bar" id="devProjectBar">
+                <div class="dev-project-meta" id="devProjectMeta"></div>
+                <div class="dev-project-actions">
+                    <button type="button" class="dev-mini-btn" onclick="showDevDiff()">Diff</button>
+                    <button type="button" class="dev-mini-btn" onclick="runDevPresetTest()">运行测试</button>
+                    <button type="button" class="dev-mini-btn danger" onclick="stopDevTask()">停止</button>
+                    <button type="button" class="dev-mini-btn" onclick="detachDevProject()">退出</button>
                 </div>
             </div>
 
@@ -1427,6 +1535,17 @@
         </div>
     </div>
 
+    <div class="feedback-overlay" id="devProjectOverlay" onclick="if(event.target===this) closeDevProjectPicker()">
+        <div class="feedback-modal" onclick="event.stopPropagation()">
+            <h3>选择开发项目</h3>
+            <p class="footer-hint" style="margin-bottom:12px;">只显示服务端白名单中的 PC 本地项目。绑定后 AI 会在真实项目目录中工作。</p>
+            <div class="dev-project-list" id="devProjectList"></div>
+            <div class="feedback-actions">
+                <button type="button" class="btn-secondary" onclick="closeDevProjectPicker()">取消</button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <!-- Confirm Dialog -->
@@ -1467,6 +1586,9 @@
     let pendingFiles = []; // {name, size} 文件名须与 /upload 返回的 name 一致，供 /chat 在服务端解析
     let markdownPreviewEnabled = localStorage.getItem('claude_markdown_preview') === '1';
     let webSearchEnabled = localStorage.getItem('claude_web_search_enabled') === '1';
+    let devFeatureEnabled = false;
+    let devProjects = [];
+    let currentDevStatus = { mode: 'chat', attached: false };
 
     // ==================== DOM ====================
     const chatContainer = document.getElementById('chatContainer');
@@ -1481,6 +1603,10 @@
     const markdownToggleWrap = document.getElementById('markdownToggleWrap');
     const webSearchToggle = document.getElementById('webSearchToggle');
     const webSearchToggleWrap = document.getElementById('webSearchToggleWrap');
+    const devProjectBtn = document.getElementById('devProjectBtn');
+    const devProjectBar = document.getElementById('devProjectBar');
+    const devProjectMeta = document.getElementById('devProjectMeta');
+    const devProjectList = document.getElementById('devProjectList');
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     const dropZone = document.getElementById('dropZone');
@@ -1610,12 +1736,170 @@
             const j = await r.json();
             window.__featuresV2 = !!j.v2_multi_user_api;
             window.__tavilySearchConfigured = !!j.tavily_search_configured;
+            devFeatureEnabled = !!j.mobile_remote_development;
+            updateDevUi();
             updateApiConfigButtonVisibility();
             updateWebSearchToggleAvailability();
         } catch (_) {
             window.__featuresV2 = false;
             window.__tavilySearchConfigured = false;
+            devFeatureEnabled = false;
+            updateDevUi();
             updateWebSearchToggleAvailability();
+        }
+    }
+
+    function updateDevUi() {
+        if (devProjectBtn) {
+            devProjectBtn.classList.toggle('show', !!devFeatureEnabled);
+            devProjectBtn.classList.toggle('active', !!(currentDevStatus && currentDevStatus.attached));
+        }
+        const attached = !!(devFeatureEnabled && currentDevStatus && currentDevStatus.attached && currentDevStatus.project);
+        if (devProjectBar) devProjectBar.classList.toggle('show', attached);
+        if (devProjectMeta) {
+            if (attached) {
+                const p = currentDevStatus.project;
+                const git = p.git || {};
+                const dirty = git.dirty ? '有未提交改动' : '干净';
+                devProjectMeta.textContent = `开发中：${p.name || p.id} · ${git.branch || 'no-git'} · ${dirty}`;
+                devProjectMeta.title = p.path || '';
+            } else {
+                devProjectMeta.textContent = '';
+                devProjectMeta.title = '';
+            }
+        }
+    }
+
+    async function refreshDevStatus() {
+        if (!devFeatureEnabled || !currentSessionId) {
+            currentDevStatus = { mode: 'chat', attached: false };
+            updateDevUi();
+            return;
+        }
+        try {
+            currentDevStatus = await apiGet(`/api/dev/sessions/${currentSessionId}/status?user_id=${encodeURIComponent(userId)}`);
+        } catch (_) {
+            currentDevStatus = { mode: 'chat', attached: false };
+        }
+        updateDevUi();
+    }
+
+    function closeDevProjectPicker() {
+        document.getElementById('devProjectOverlay').classList.remove('show');
+    }
+
+    async function openDevProjectPicker() {
+        if (!devFeatureEnabled) return;
+        if (!currentSessionId) {
+            await createNewSession();
+            if (!currentSessionId) return;
+        }
+        document.getElementById('devProjectOverlay').classList.add('show');
+        if (devProjectList) devProjectList.innerHTML = '<div class="footer-hint">加载中...</div>';
+        try {
+            const data = await apiGet('/api/dev/projects');
+            devProjects = data.projects || [];
+            renderDevProjectList();
+        } catch (e) {
+            if (devProjectList) devProjectList.innerHTML = `<div class="message-error">${escapeHtml(e.message || '加载失败')}</div>`;
+        }
+    }
+
+    function renderDevProjectList() {
+        if (!devProjectList) return;
+        devProjectList.innerHTML = '';
+        if (!devProjects.length) {
+            devProjectList.innerHTML = '<div class="footer-hint">暂无白名单项目，请在服务端配置 claude_web_projects.config.json。</div>';
+            return;
+        }
+        for (const p of devProjects) {
+            const git = p.git || {};
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dev-project-card';
+            btn.onclick = () => attachDevProject(p.id);
+            btn.innerHTML = `
+                <div class="dev-project-card-title">${escapeHtml(p.name || p.id)}</div>
+                <div class="dev-project-card-sub">${escapeHtml(p.path || '')}</div>
+                <div class="dev-project-card-sub">${escapeHtml(git.branch || 'no-git')} · ${git.dirty ? '有未提交改动' : '干净'} · 测试 ${((p.default_tests || []).length)}</div>
+            `;
+            devProjectList.appendChild(btn);
+        }
+    }
+
+    async function attachDevProject(projectId) {
+        try {
+            const data = await apiPost(`/api/dev/sessions/${currentSessionId}/attach-project`, {
+                user_id: userId,
+                project_id: projectId,
+            });
+            currentDevStatus = { mode: 'development', attached: true, session: data.session, project: data.project };
+            updateDevUi();
+            closeDevProjectPicker();
+            showToast('已进入开发模式：' + ((data.project && data.project.name) || projectId));
+        } catch (e) {
+            showToast(e.message || '绑定项目失败');
+        }
+    }
+
+    async function detachDevProject() {
+        if (!currentSessionId || !currentDevStatus.attached) return;
+        if (isStreaming) {
+            showToast('任务执行中，请先停止或等待结束');
+            return;
+        }
+        try {
+            await apiPost(`/api/dev/sessions/${currentSessionId}/detach-project`, { user_id: userId });
+            currentDevStatus = { mode: 'chat', attached: false };
+            updateDevUi();
+            showToast('已退出开发模式');
+        } catch (e) {
+            showToast(e.message || '退出失败');
+        }
+    }
+
+    async function showDevDiff() {
+        if (!currentSessionId || !currentDevStatus.attached) return;
+        try {
+            const data = await apiGet(`/api/dev/sessions/${currentSessionId}/diff?user_id=${encodeURIComponent(userId)}`);
+            const files = (data.files || []).join('\n') || '无文件改动';
+            const diff = data.diff || '无 diff 内容（可能只有未跟踪文件或非 Git 项目）';
+            appendMessage('assistant', `### 当前项目 Diff\n\n**文件列表**\n\n\`\`\`text\n${files}\n\`\`\`\n\n**Patch**\n\n\`\`\`diff\n${diff}\n\`\`\``);
+        } catch (e) {
+            showToast(e.message || '获取 diff 失败');
+        }
+    }
+
+    async function runDevPresetTest() {
+        if (!currentSessionId || !currentDevStatus.attached) return;
+        const tests = (currentDevStatus.project && currentDevStatus.project.default_tests) || [];
+        if (!tests.length) {
+            showToast('该项目没有配置预设测试命令');
+            return;
+        }
+        const command = tests[0];
+        showToast('正在运行测试...');
+        try {
+            const result = await apiPost(`/api/dev/sessions/${currentSessionId}/run-test`, {
+                user_id: userId,
+                command,
+            });
+            const stdout = result.stdout || '';
+            const stderr = result.stderr || '';
+            appendMessage('assistant', `### 预设测试结果：${result.ok ? '通过' : '失败'}\n\n\`${command}\`\n\n返回码：${result.returncode == null ? 'timeout' : result.returncode}，用时：${result.duration_seconds}s\n\n**stdout**\n\n\`\`\`text\n${stdout || '(empty)'}\n\`\`\`\n\n**stderr**\n\n\`\`\`text\n${stderr || '(empty)'}\n\`\`\``);
+            await refreshDevStatus();
+        } catch (e) {
+            showToast(e.message || '运行测试失败');
+        }
+    }
+
+    async function stopDevTask() {
+        if (!currentSessionId || !devFeatureEnabled) return;
+        try {
+            const result = await apiPost(`/api/dev/sessions/${currentSessionId}/stop`, { user_id: userId });
+            showToast(result.stopped ? '已发送停止信号' : '当前没有运行中的开发任务');
+        } catch (e) {
+            showToast(e.message || '停止失败');
         }
     }
 
@@ -1783,6 +2067,7 @@
             renderSessionList();
             renderChat([]);
             headerTitle.textContent = session.title;
+            await refreshDevStatus();
             closeSidebar();
             messageInput.focus();
         } catch (e) {
@@ -1810,6 +2095,7 @@
             console.error('加载消息失败:', e);
             renderChat([]);
         }
+        await refreshDevStatus();
     }
 
     let deleteTargetId = null;
@@ -2870,6 +3156,7 @@
             sendBtn.textContent = '发送';
             messageInput.focus();
             loadSessions();
+            refreshDevStatus();
         }
     }
 

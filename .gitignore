@@ -7,6 +7,7 @@ feedback/
 # 本地配置（仓库内用 *.example 作为模板）
 config.ini
 claude_web_paths.config.json
+claude_web_projects.config.json
 
 # Python
 __pycache__/

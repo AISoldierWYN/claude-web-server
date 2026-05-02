@@ -116,6 +116,10 @@ def stream_orchestrated_turns(
     conversation_history: Optional[List[Dict[str, Any]]] = None,
     mounted_bundle_ids: Optional[List[str]] = None,
     web_search_context: str = '',
+    cli_cwd_dir: Optional[str] = None,
+    permission_mode_override: Optional[str] = None,
+    dangerously_skip_permissions_override: Optional[bool] = None,
+    development_context: Optional[Dict[str, Any]] = None,
 ) -> Iterator[str]:
     """
     外环：最多 max_rounds 次完整 claude 子进程；任一轮成功则结束。
@@ -139,6 +143,10 @@ def stream_orchestrated_turns(
         model_override=model_override,
         conversation_history=conversation_history,
         web_search_context=web_search_context,
+        cli_cwd_dir=cli_cwd_dir,
+        permission_mode_override=permission_mode_override,
+        dangerously_skip_permissions_override=dangerously_skip_permissions_override,
+        development_context=development_context,
     )
 
     for round_idx in range(1, max_rounds + 1):
@@ -257,6 +265,10 @@ def stream_summarize_only(
     skill_bundles: Optional[List[Dict[str, Any]]] = None,
     child_env_extra: Optional[Dict[str, str]] = None,
     model_override: Optional[str] = None,
+    cli_cwd_dir: Optional[str] = None,
+    permission_mode_override: Optional[str] = None,
+    dangerously_skip_permissions_override: Optional[bool] = None,
+    development_context: Optional[Dict[str, Any]] = None,
 ) -> Iterator[str]:
     """单轮总结（用户选择「结束并总结」）。"""
     yield _sse({'type': 'info', 'message': '正在生成结束总结…'})
@@ -273,4 +285,8 @@ def stream_summarize_only(
         cli_log_context=cli_log_context,
         child_env_extra=child_env_extra,
         model_override=model_override,
+        cli_cwd_dir=cli_cwd_dir,
+        permission_mode_override=permission_mode_override,
+        dangerously_skip_permissions_override=dangerously_skip_permissions_override,
+        development_context=development_context,
     )

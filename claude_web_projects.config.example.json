@@ -1,0 +1,16 @@
+{
+  "projects": [
+    {
+      "id": "claude-web-server",
+      "name": "Claude Web Server",
+      "path": "D:/Code/claude-web-server",
+      "default_tests": [
+        "python -m compileall -q server.py claude_web",
+        "python -m unittest tests.test_smoke_backend",
+        "node tests/smoke_frontend.mjs"
+      ],
+      "allow_git_commit": false,
+      "allow_git_push": false
+    }
+  ]
+}

@@ -102,6 +102,44 @@ FEATURE_V2_MULTI_USER_API = _bool(
 FEATURE_V3_LINUX_DEPLOY = _bool(
     'features', 'v3_linux_deploy', False, env='CLAUDE_WEB_V3_LINUX_DEPLOY'
 )
+FEATURE_MOBILE_REMOTE_DEVELOPMENT = _bool(
+    'features',
+    'mobile_remote_development',
+    False,
+    env='CLAUDE_WEB_MOBILE_REMOTE_DEVELOPMENT',
+)
+
+# ---------- 开发模式（手机端远程控制 PC 项目） ----------
+_dev_projects_rel = _str(
+    'development',
+    'projects_config_file',
+    'claude_web_projects.config.json',
+    env='CLAUDE_WEB_PROJECTS_CONFIG_FILE',
+)
+DEV_PROJECTS_CONFIG_FILE = (
+    Path(_dev_projects_rel).resolve()
+    if Path(_dev_projects_rel).is_absolute()
+    else (ROOT / _dev_projects_rel).resolve()
+)
+DEV_PERMISSION_MODE = _str(
+    'development',
+    'permission_mode',
+    'acceptEdits',
+    env='CLAUDE_WEB_DEV_PERMISSION_MODE',
+)
+DEV_DANGEROUSLY_SKIP_PERMISSIONS = _bool(
+    'development',
+    'dangerously_skip_permissions',
+    False,
+    env='CLAUDE_WEB_DEV_DANGEROUSLY_SKIP_PERMISSIONS',
+)
+DEV_TEST_TIMEOUT_SECONDS = _int(
+    'development',
+    'test_timeout_seconds',
+    300,
+    env='CLAUDE_WEB_DEV_TEST_TIMEOUT_SECONDS',
+    minimum=1,
+)
 
 
 def parse_readonly_dirs(log):
@@ -255,5 +293,9 @@ def log_config_summary(log: logging.Logger) -> None:
     log.info('[Config] 会话 fork Claude HOME（共享父配置但隔离全局记忆）: %s', CLAUDE_WEB_FORK_CLAUDE_HOME)
     log.info('[Config] Tavily 联网搜索: %s', bool(TAVILY_API_KEY))
     log.info('[Config] V2 每用户 API（局域网）: %s', FEATURE_V2_MULTI_USER_API)
+    log.info('[Config] 移动端远程开发控制: %s', FEATURE_MOBILE_REMOTE_DEVELOPMENT)
+    if FEATURE_MOBILE_REMOTE_DEVELOPMENT:
+        log.info('[Config] 开发项目白名单: %s', DEV_PROJECTS_CONFIG_FILE)
+        log.info('[Config] 开发模式 CLI permission_mode: %s', DEV_PERMISSION_MODE)
     if FEATURE_V3_LINUX_DEPLOY:
         log.info('[Config] V3 Linux 部署标记: 已开启（文档/运维提示；与 sys.platform 自动兼容并存）')

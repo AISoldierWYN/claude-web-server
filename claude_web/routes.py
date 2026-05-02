@@ -11,7 +11,19 @@ from . import config
 from .auth import optional_token
 from .backup_service import backup_session_before_delete
 from . import orchestrator
-from .claude_runner import CLAUDE_CLI_PATH, resolve_session_upload_paths, stream_claude_output
+from .claude_runner import CLAUDE_CLI_PATH, resolve_session_upload_paths, stop_session_process, stream_claude_output
+from .dev_projects import (
+    DevProjectError,
+    clear_dev_session,
+    diff_for_project,
+    find_project,
+    git_status,
+    load_dev_session,
+    load_projects,
+    project_public_info,
+    run_project_test,
+    save_dev_session,
+)
 from .feedback_service import save_feedback_package
 from .filename_sanitize import ascii_storage_filename, is_ascii_filename, safe_client_filename
 from .paths import get_client_ip
@@ -140,6 +152,37 @@ def register_routes(app, sm: SessionManager):
             'model_override': rt.get('model_override'),
         }
 
+    def _dev_enabled():
+        return bool(getattr(config, 'FEATURE_MOBILE_REMOTE_DEVELOPMENT', False))
+
+    def _dev_projects():
+        return load_projects(config.DEV_PROJECTS_CONFIG_FILE)
+
+    def _dev_disabled_response():
+        return jsonify({'error': 'mobile_remote_development disabled', 'code': 'dev_disabled'}), 404
+
+    def _session_for_user(client_ip: str, user_id: str, session_id: str):
+        if not user_id:
+            return None, (jsonify({'error': 'user_id required'}), 400)
+        if not session_id:
+            return None, (jsonify({'error': 'session_id required'}), 400)
+        session = sm.get_session(client_ip, user_id, session_id)
+        if not session:
+            return None, (jsonify({'error': 'Session not found'}), 404)
+        return session, None
+
+    def _attached_dev_project(client_ip: str, user_id: str, session_id: str):
+        if not _dev_enabled():
+            return None, None
+        meta = load_dev_session(sm.get_session_dir(client_ip, user_id, session_id))
+        if not meta or meta.get('mode') != 'development':
+            return None, None
+        try:
+            project = find_project(_dev_projects(), meta.get('project_id') or '')
+        except DevProjectError:
+            project = None
+        return meta, project
+
     @app.route('/api/features', methods=['GET'])
     def api_features():
         return jsonify(
@@ -147,8 +190,123 @@ def register_routes(app, sm: SessionManager):
                 'v2_multi_user_api': bool(config.FEATURE_V2_MULTI_USER_API),
                 'v3_linux_deploy': bool(config.FEATURE_V3_LINUX_DEPLOY),
                 'tavily_search_configured': bool(config.TAVILY_API_KEY),
+                'mobile_remote_development': _dev_enabled(),
             }
         )
+
+    @app.route('/api/dev/projects', methods=['GET'])
+    @optional_token
+    def api_dev_projects():
+        if not _dev_enabled():
+            return _dev_disabled_response()
+        try:
+            projects = [project_public_info(p) for p in _dev_projects()]
+        except DevProjectError as e:
+            return jsonify({'error': str(e), 'code': 'dev_projects_config_error'}), 400
+        return jsonify({'projects': projects})
+
+    @app.route('/api/dev/sessions/<session_id>/attach-project', methods=['POST'])
+    @optional_token
+    def api_dev_attach_project(session_id):
+        if not _dev_enabled():
+            return _dev_disabled_response()
+        data = request.json or {}
+        user_id = (data.get('user_id') or '').strip()
+        project_id = (data.get('project_id') or '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        if not project_id:
+            return jsonify({'error': 'project_id required'}), 400
+        try:
+            project = find_project(_dev_projects(), project_id)
+        except DevProjectError as e:
+            return jsonify({'error': str(e), 'code': 'dev_projects_config_error'}), 400
+        if not project:
+            return jsonify({'error': 'Project not found in whitelist'}), 404
+        meta = save_dev_session(sm.get_session_dir(client_ip, user_id, session_id), project)
+        return jsonify({'ok': True, 'session': meta, 'project': project_public_info(project)})
+
+    @app.route('/api/dev/sessions/<session_id>/detach-project', methods=['POST'])
+    @optional_token
+    def api_dev_detach_project(session_id):
+        if not _dev_enabled():
+            return _dev_disabled_response()
+        data = request.json or {}
+        user_id = (data.get('user_id') or '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        cleared = clear_dev_session(sm.get_session_dir(client_ip, user_id, session_id))
+        return jsonify({'ok': True, 'cleared': cleared})
+
+    @app.route('/api/dev/sessions/<session_id>/status', methods=['GET'])
+    @optional_token
+    def api_dev_status(session_id):
+        if not _dev_enabled():
+            return _dev_disabled_response()
+        user_id = request.args.get('user_id', '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        meta, project = _attached_dev_project(client_ip, user_id, session_id)
+        if not meta:
+            return jsonify({'mode': 'chat', 'attached': False})
+        if not project:
+            return jsonify({'mode': 'development', 'attached': False, 'error': 'Project no longer exists in whitelist'})
+        return jsonify({'mode': 'development', 'attached': True, 'session': meta, 'project': project_public_info(project)})
+
+    @app.route('/api/dev/sessions/<session_id>/diff', methods=['GET'])
+    @optional_token
+    def api_dev_diff(session_id):
+        if not _dev_enabled():
+            return _dev_disabled_response()
+        user_id = request.args.get('user_id', '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        meta, project = _attached_dev_project(client_ip, user_id, session_id)
+        if not meta or not project:
+            return jsonify({'error': 'No development project attached'}), 400
+        return jsonify(diff_for_project(Path(project['path'])))
+
+    @app.route('/api/dev/sessions/<session_id>/run-test', methods=['POST'])
+    @optional_token
+    def api_dev_run_test(session_id):
+        if not _dev_enabled():
+            return _dev_disabled_response()
+        data = request.json or {}
+        user_id = (data.get('user_id') or '').strip()
+        command = (data.get('command') or '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        meta, project = _attached_dev_project(client_ip, user_id, session_id)
+        if not meta or not project:
+            return jsonify({'error': 'No development project attached'}), 400
+        try:
+            result = run_project_test(project, command, config.DEV_TEST_TIMEOUT_SECONDS)
+        except DevProjectError as e:
+            return jsonify({'error': str(e)}), 400
+        return jsonify(result)
+
+    @app.route('/api/dev/sessions/<session_id>/stop', methods=['POST'])
+    @optional_token
+    def api_dev_stop(session_id):
+        if not _dev_enabled():
+            return _dev_disabled_response()
+        data = request.json or {}
+        user_id = (data.get('user_id') or '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        return jsonify({'ok': True, 'stopped': stop_session_process(session_id)})
 
     @app.route('/api/user/claude-credentials', methods=['GET'])
     @optional_token
@@ -214,6 +372,10 @@ def register_routes(app, sm: SessionManager):
         if not session:
             return jsonify({'error': 'Session not found'}), 404
 
+        dev_meta, dev_project = _attached_dev_project(client_ip, user_id, session_id)
+        if dev_meta and not dev_project:
+            return jsonify({'error': 'Development project no longer exists in whitelist', 'code': 'dev_project_missing'}), 400
+
         rt = resolve_claude_runtime_for_request(request, sm, client_ip, user_id)
         if rt.get('error'):
             return jsonify({'error': rt['error'], 'code': 'v2_claude_config_required'}), 400
@@ -253,6 +415,25 @@ def register_routes(app, sm: SessionManager):
         readonly_dirs = _readonly() + _bundle_paths(selected_bundles)
         if selected_bundle_ids:
             log.info('[Chat] 本轮按需挂载技能包: %s', selected_bundle_ids)
+
+        dev_context = None
+        dev_cli_cwd = None
+        dev_permission_mode = None
+        dev_dangerous_skip = None
+        if dev_project:
+            project_git = git_status(Path(dev_project['path']))
+            dev_cli_cwd = dev_project['path']
+            dev_permission_mode = config.DEV_PERMISSION_MODE
+            dev_dangerous_skip = config.DEV_DANGEROUSLY_SKIP_PERMISSIONS
+            dev_context = {
+                'project_id': dev_project['id'],
+                'project_name': dev_project.get('name') or dev_project['id'],
+                'project_path': dev_project['path'],
+                'session_cache_dir': str(session_workspace),
+                'git': project_git,
+                'default_tests': dev_project.get('default_tests') or [],
+            }
+            log.info('[Chat] 开发模式 session=%s project=%s cwd=%s', session_id, dev_project['id'], dev_project['path'])
 
         collected_text = []
         collected_thinking = []
@@ -307,6 +488,15 @@ def register_routes(app, sm: SessionManager):
                         '请明确告知用户联网搜索未成功，不要编造最新信息。\n\n'
                     )
 
+            if dev_project:
+                yield 'data: ' + json.dumps(
+                    {
+                        'type': 'info',
+                        'message': f'开发模式：已连接项目 {dev_project.get("name") or dev_project["id"]}，AI 将在该项目真实目录中工作。',
+                    },
+                    ensure_ascii=False,
+                ) + '\n\n'
+
             log.info(
                 '[Chat] 外环编排 max_rounds=%s',
                 config.CLAUDE_WEB_ORCH_MAX_ROUNDS,
@@ -327,6 +517,10 @@ def register_routes(app, sm: SessionManager):
                     conversation_history=prior_messages,
                     mounted_bundle_ids=selected_bundle_ids,
                     web_search_context=web_search_context,
+                    cli_cwd_dir=dev_cli_cwd,
+                    permission_mode_override=dev_permission_mode,
+                    dangerously_skip_permissions_override=dev_dangerous_skip,
+                    development_context=dev_context,
                     **_v2_orch_kwargs(rt),
                 )
             )
@@ -397,6 +591,25 @@ def register_routes(app, sm: SessionManager):
         except (TypeError, ValueError):
             total_offset = 0
 
+        dev_meta, dev_project = _attached_dev_project(client_ip, user_id, session_id)
+        dev_context = None
+        dev_cli_cwd = None
+        dev_permission_mode = None
+        dev_dangerous_skip = None
+        if dev_project:
+            project_git = git_status(Path(dev_project['path']))
+            dev_cli_cwd = dev_project['path']
+            dev_permission_mode = config.DEV_PERMISSION_MODE
+            dev_dangerous_skip = config.DEV_DANGEROUSLY_SKIP_PERMISSIONS
+            dev_context = {
+                'project_id': dev_project['id'],
+                'project_name': dev_project.get('name') or dev_project['id'],
+                'project_path': dev_project['path'],
+                'session_cache_dir': str(session_workspace),
+                'git': project_git,
+                'default_tests': dev_project.get('default_tests') or [],
+            }
+
         log.info(
             '[Orchestration/continue] user=%s session=%s action=%s offset=%s',
             user_id, session_id, action, total_offset,
@@ -446,6 +659,10 @@ def register_routes(app, sm: SessionManager):
                         readonly_dirs_notes=_readonly_notes(),
                         skill_bundles=skill_bundles,
                         cli_log_context=cli_ctx,
+                        cli_cwd_dir=dev_cli_cwd,
+                        permission_mode_override=dev_permission_mode,
+                        dangerously_skip_permissions_override=dev_dangerous_skip,
+                        development_context=dev_context,
                         **_v2_orch_kwargs(rt),
                     )
                 )
@@ -465,6 +682,10 @@ def register_routes(app, sm: SessionManager):
                         cli_log_context=cli_ctx,
                         total_rounds_offset=total_offset,
                         mounted_bundle_ids=mounted_ids,
+                        cli_cwd_dir=dev_cli_cwd,
+                        permission_mode_override=dev_permission_mode,
+                        dangerously_skip_permissions_override=dev_dangerous_skip,
+                        development_context=dev_context,
                         **_v2_orch_kwargs(rt),
                     )
                 )
