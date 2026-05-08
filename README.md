@@ -41,6 +41,8 @@
 | 意见反馈 | 前端提交至 `POST /feedback`，落盘 `feedback/<日期>/...` |
 | 局域网访问 | 监听 0.0.0.0:8080，手机/平板可直接访问 |
 | 可选认证 | 支持简单 Token 认证 |
+| Android 问题分析 | 可选开启日志包安全解压、采样、规则匹配、Evidence Pack、Claude 报告、Deep/Verifier |
+| 项目规则 Skill | `skills/android-log-rule-builder` 可为白名单 Android 项目生成、校验和维护日志规则包 |
 
 ## 快速开始
 
@@ -103,6 +105,23 @@
 
 使用方式：用户在输入框左侧勾选「联网」后，本轮 `/chat` 会先由服务端调用 Tavily 搜索，再把搜索摘要和来源链接注入 Claude CLI，由 Claude 负责整理回答。未勾选时不会联网，也不会消耗 Tavily 额度。
 
+### `[android_analysis]` — Android 问题分析
+
+| 键 | 默认值 | 说明 |
+|----|--------|------|
+| `knowledge_dir` | `android_analysis_knowledge` | 本机共享规则、案例、索引目录；已加入 `.gitignore`，不会上传仓库。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_KNOWLEDGE_DIR` |
+| `seven_zip_path` | 空 | 可选 7-Zip 可执行文件路径，用于受控解压 `.rar` 日志包；空时自动查找 PATH 以及 Windows 常见路径，如 `C:\Program Files\7-Zip\7z.exe`。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_7Z_PATH` |
+| `planner_timeout_seconds` | `45` | 轻量 Planner 调用 Claude CLI 的超时时间。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS` |
+
+RAR 支持依赖 7-Zip。建议首次使用时手动确认 7-Zip 路径并写入 `config.ini`，例如：
+
+```ini
+[android_analysis]
+seven_zip_path = C:\Program Files\7-Zip\7z.exe
+```
+
+如果不配置，服务会自动扫描 PATH 和常见安装路径；自动扫描只用于运行时发现，不会自动改写 `config.ini`。
+
 ### `[proxy]` — 反向代理
 
 | 键 | 默认值 | 说明 |
@@ -121,6 +140,7 @@
 |----|--------|------|
 | `v2_multi_user_api` | `false` | **`true`** 时启用 V2：浏览器地址栏为 **本机**（`127.0.0.1` / `localhost` / `::1`）时，Claude 子进程仍使用 **服务器本机** 的环境变量与 `config.ini` 中的 `model`；通过 **局域网 IP 或域名** 打开时，使用 **各用户** 在侧栏「API 配置」中保存的 `env` + `model`（文件位于 `cache/<规范化IP>/<user_id>/claude_api_credentials.json`，**不**随请求明文传输）。环境变量：`CLAUDE_WEB_V2_MULTI_USER_API` |
 | `v3_linux_deploy` | `false` | **可选标记**：在日志中提示「面向 Linux 服务器部署」；**不**依赖该开关即可在 Linux 上运行（运行时仍按 `sys.platform` 自动选择 CLI 子进程与隔离目录等）。环境变量：`CLAUDE_WEB_V3_LINUX_DEPLOY` |
+| `android_issue_analysis` | `false` | **`true`** 时显示 Android 分析入口并开放 `/api/android-analysis/*`。规则、案例、索引默认写入 `android_analysis_knowledge/`，该目录已被 `.gitignore` 忽略。环境变量：`CLAUDE_WEB_ANDROID_ISSUE_ANALYSIS` |
 
 若 `trust_x_forwarded = true`，判定「访问站点的主机名」时优先使用 **`X-Forwarded-Host`** 的首段（与 `X-Forwarded-For` 策略一致），以便反向代理后仍正确区分本机与局域网。
 
@@ -149,6 +169,15 @@
 | `POST /upload` | POST | 上传文件（multipart/form-data） |
 | `GET /sessions/<id>/files?user_id=xxx` | GET | 获取文件列表 |
 | `POST /feedback` | POST | 意见反馈（multipart：`text`、`contact`、`user_id` 可选、`images` 多文件） |
+| `GET /api/android-analysis/status` | GET | Android 分析状态、可用 bundle、规则目录摘要 |
+| `POST /api/android-analysis/jobs` | POST | 创建 Android 日志分析任务；支持后台 job + SSE |
+| `GET /api/android-analysis/jobs/<job_id>` | GET | 获取 Android 分析 job 状态 |
+| `GET /api/android-analysis/jobs/<job_id>/events` | GET | 获取 `events.jsonl` 事件列表 |
+| `GET /api/android-analysis/jobs/<job_id>/events/stream` | GET | Android 分析进度 SSE |
+| `GET /api/android-analysis/jobs/<job_id>/artifacts/<name>` | GET | 下载报告、证据包、规则命中、指标等 artifacts |
+| `POST /api/android-analysis/jobs/<job_id>/deep` | POST | 触发 Deep 分析和 Verifier |
+| `POST /api/android-analysis/jobs/<job_id>/case-draft` | POST | 生成案例草稿和规则候选 |
+| `POST /api/android-analysis/jobs/<job_id>/case-draft/confirm` | POST | 人工确认后写入本机共享案例库 |
 
 ### POST /chat 请求体
 
@@ -181,8 +210,13 @@ claude-web-server/
 ├── claude_web_paths.config.json   # 技能包 / 只读路径（可选）
 ├── 快速开始.md            # 最少步骤与最小配置范围
 ├── claude_web/            # 应用包（配置、路径、会话、CLI、路由等）
+│   └── android_analysis/  # Android 日志分析：解压、采样、Planner、规则、报告、Verifier
 ├── static/
 │   └── index.html         # 前端页面
+├── skills/
+│   └── android-log-rule-builder/  # 项目日志规则生成与维护 Skill
+├── docs/plan/             # 阶段性开发计划
+├── android_analysis_knowledge/    # 本机共享规则/案例/索引（gitignore）
 ├── cache/                 # 运行时数据（cache/<规范化IP>/<user_id>/...）
 ├── backups/               # 删除会话前的备份（按日期分子目录）
 ├── feedback/              # 用户反馈落盘
@@ -268,32 +302,144 @@ python server.py
 
 ### Skills 从哪加载？`claude_web_paths.config.json`
 
-- **Claude Code 默认**：在本机未启用 `CLAUDE_WEB_ISOLATE_HOME` 时，**skills、配置、凭证** 仍来自当前系统用户下的 **`~/.claude`**（Windows 一般为 `%USERPROFILE%\.claude`）。这是 **Claude CLI 自身行为**，不是本仓库单独实现的。
-- **本服务额外放行目录**：在**仓库根目录**放置 **`claude_web_paths.config.json`**（可复制 `claude_web_paths.config.example.json` 改名）。
+- **Claude Code 默认**：在本机未启用 `CLAUDE_WEB_ISOLATE_HOME` 时，**全局 skills、配置、凭证** 仍来自当前系统用户下的 **`~/.claude`**（Windows 一般为 `%USERPROFILE%\.claude`）。这是 **Claude CLI 自身行为**。
+- **本服务的按需技能包**：在**仓库根目录**放置 **`claude_web_paths.config.json`**（可复制 `claude_web_paths.config.example.json` 改名）。
   - **`readonly_dirs`**：扁平路径列表（与旧版兼容），与 **`CLAUDE_WEB_READONLY_DIRS`** 合并去重后全部进入 **`--add-dir`**。
-  - **`bundles`（技能包）**：按类分组；每包含 **`id`**、**`title`**、**`summary`**、**`paths`**，可选 **`keywords`** 与 **`always_mount`**。服务端默认只注入各包摘要；每轮根据用户问题与少量会话历史匹配 `id/title/summary/keywords`，只把命中的包路径加入 **`--add-dir`**。未命中的包仅作为摘要索引出现，模型不会获得其目录读取权限。
+  - **`bundles`（技能包）**：按类分组；每包含 **`id`**、**`title`**、**`summary`**，可选 **`keywords`**、**`always_mount`**、**`skills`**、**`resources`**、**`paths`**。
+  - 服务端默认只注入各包摘要；每轮根据用户问题与少量会话历史匹配 bundle/skill 关键词，只把命中的包路径加入 **`--add-dir`**。
+  - 命中包后，prompt 优先级为：**本轮命中的 `SKILL.md` 工作流** → **全局/通用能力** → **命中包根目录 `CLAUDE.md` 摘要** → **普通资源/代码目录 Read/Grep**。这样可减少无目标全仓搜索。
+  - `paths` 仍兼容旧配置；若目录本身或其第一层子目录存在 `SKILL.md`，服务端会自动发现并作为按需 skill 索引。建议新配置使用 `skills` 和 `resources` 显式声明。
+  - 若**本轮命中包**的资源根目录存在 `CLAUDE.md`，服务端会显式把其摘要注入 prompt；未命中的包不会读取 `CLAUDE.md` 内容，也不会展示其路径，避免一次性塞入过多上下文。
+  - 每次启动 Claude CLI 前，日志会打印 `prompt_chars_total`、`mounted_bundles`、`selected_skills`、`injected_claude_md`，方便排查某轮 prompt 长度和按需加载情况。
 - 可选 **`notes`**：全局字符串，追加在沙箱提示末尾（与各包的 `summary` 不同）。
 
 示例（节选）：
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "notes": "全局补充说明（可选）。",
   "readonly_dirs": [],
   "bundles": [
     {
       "id": "my-team",
       "title": "团队技能与文档",
-      "summary": "本包涵盖某某业务；用户问到相关问题时再深入下列路径。",
+      "summary": "本包涵盖某某业务；用户问到相关问题时先使用 skill，再深入资料和代码。",
       "keywords": ["业务名", "模块名", "常见缩写"],
-      "paths": ["D:/Tools/skills", "D:/Docs/api"]
+      "skills": [
+        {
+          "id": "triage-flow",
+          "path": "D:/Tools/skills/triage-flow/SKILL.md",
+          "summary": "某某业务问题的标准排查流程。",
+          "keywords": ["故障名", "错误码"]
+        }
+      ],
+      "resources": [
+        {
+          "id": "api-docs",
+          "kind": "docs",
+          "path": "D:/Docs/api",
+          "summary": "接口资料。只有 skill 判断需要证据时再读取。"
+        }
+      ],
+      "paths": ["D:/Tools/skills"]
     }
   ]
 }
 ```
 
 配置文件缺失或 JSON 无效时不会报错，仅使用环境变量中的目录。
+
+## Android 问题分析与规则包
+
+Android 分析能力默认关闭。开启后，前端右上角会出现「Android分析」入口，可选择当前会话上传的 `.zip/.tar/.rar` 日志包并创建分析任务。
+
+```ini
+[features]
+android_issue_analysis = true
+
+[android_analysis]
+knowledge_dir = android_analysis_knowledge
+seven_zip_path = C:\Program Files\7-Zip\7z.exe
+planner_timeout_seconds = 45
+```
+
+首轮流水线：
+
+```text
+安全解压 -> 文件树/manifest -> 有界采样 -> Planner 路由
+-> 按需加载规则包 -> 本地规则匹配 -> Evidence Pack
+-> Case Card 召回 -> Claude 首轮报告 -> Verifier -> metrics
+```
+
+每个 job 的运行数据位于：
+
+```text
+cache/<ip>/<user_id>/<session_id>/android_analysis/<job_id>/
+  extracted/       # 安全解压后的日志
+  artifacts/       # file_manifest、samples、matched_rules、report、metrics 等
+  events.jsonl     # 前端 SSE/刷新恢复使用的事件流
+  job.json
+```
+
+共享知识目录位于 `android_analysis_knowledge/`，用于保存所有用户共享的规则和案例，默认不提交 GitHub：
+
+```text
+android_analysis_knowledge/
+  bundles/<bundle_id>/
+    bundle.json
+    rules/<rule_pack_id>.json
+    cases/
+    indexes/case_cards.jsonl
+```
+
+规则包结构示例：
+
+```json
+{
+  "version": 1,
+  "id": "rdm-base",
+  "title": "RDM Base Signals",
+  "source_bundle_ids": ["android-rdm"],
+  "rules": [
+    {
+      "id": "rdm-lock-keywords",
+      "title": "RDM lock or unlock flow signal",
+      "issue_type": "android_business_spec",
+      "severity": "medium",
+      "source_bundle_ids": ["android-rdm"],
+      "tags": ["rdm", "lock"],
+      "match": {
+        "keywords": ["RDM", "DeviceLock", "lock", "unlock"],
+        "regex": ["(?i)RDM|DeviceLock|lock|unlock|provision"]
+      }
+    }
+  ]
+}
+```
+
+### 项目日志规则 Skill
+
+`skills/android-log-rule-builder` 是标准 Skill 结构，可给 `claude_web_paths.config.json` 中的特定 bundle 生成和维护项目日志规则包。它的脚本只依赖 Python 标准库。
+
+常用命令：
+
+```powershell
+# 从 android-rdm 对应代码目录生成规则包
+python skills\android-log-rule-builder\scripts\rule_pack_manager.py generate --bundle-id android-rdm --rule-pack-id rdm-generated
+
+# 校验 schema、正则、bundle id、规则 id
+python skills\android-log-rule-builder\scripts\rule_pack_manager.py validate --bundle-id android-rdm --rule-pack-id rdm-generated
+
+# 查看规则包摘要和指定规则
+python skills\android-log-rule-builder\scripts\rule_pack_manager.py list --bundle-id android-rdm
+python skills\android-log-rule-builder\scripts\rule_pack_manager.py get --bundle-id android-rdm --rule-pack-id rdm-generated --rule-id rdm-generated-business-flow
+
+# 用日志样例做轻量命中验证
+python skills\android-log-rule-builder\scripts\rule_pack_manager.py test --bundle-id android-rdm --rule-pack-id rdm-generated --log-path temp\PNM-N49-2.zip --require-hit
+```
+
+脚本还支持 `add/update/delete`，用于人工或 AI 维护单条规则。生成的规则包会写入 `android_analysis_knowledge/bundles/<bundle_id>/rules/`，被 Android 分析阶段 4 自动按需加载。
 
 ### `CLAUDE_WEB_ISOLATE_HOME`（一般不推荐）
 
@@ -316,6 +462,7 @@ python server.py
 | `CLAUDE_WEB_CLI_PATH` / `CLAUDE_WEB_MODEL` / `CLAUDE_WEB_EXTRA_CLI_ARGS` | 同 `config.ini` `[claude]` |
 | `CLAUDE_WEB_FORK_CLAUDE_HOME` | 同 `config.ini` `[claude] fork_claude_home` |
 | `TAVILY_API_KEY` / `TAVILY_SEARCH_DEPTH` / `TAVILY_MAX_RESULTS` | 同 `config.ini` `[tavily]` |
+| `CLAUDE_WEB_ANDROID_ANALYSIS_7Z_PATH` / `CLAUDE_WEB_ANDROID_ANALYSIS_KNOWLEDGE_DIR` / `CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS` | 同 `config.ini` `[android_analysis]` |
 | `CLAUDE_WEB_CACHE_DIR` 等 | 数据目录，同 `config.ini` `[paths]` |
 
 ## 自动化测试
@@ -326,9 +473,14 @@ python server.py
 # Python 语法与后端 API 冒烟
 python -m compileall -q server.py claude_web
 python -m unittest tests.test_smoke_backend
+python -m unittest tests.test_android_analysis
+python -m unittest tests.test_android_log_rule_builder_skill
 
 # 前端 Markdown、导出 HTML、移动端关键结构冒烟
 node tests/smoke_frontend.mjs
+
+# 或直接跑完整离线测试
+python -m unittest discover -s tests
 ```
 
 测试覆盖范围与后续计划见 `docs/plan/automated-testing-plan.md`。

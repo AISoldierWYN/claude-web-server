@@ -745,7 +745,8 @@
 
         .header-actions { display: flex; gap: 6px; align-items: center; }
 
-        .dev-project-btn {
+        .dev-project-btn,
+        .android-analysis-btn {
             display: none;
             height: 34px;
             padding: 0 12px;
@@ -757,13 +758,16 @@
             cursor: pointer;
         }
         .dev-project-btn.show { display: inline-flex; align-items: center; gap: 6px; }
-        .dev-project-btn.active {
+        .android-analysis-btn.show { display: inline-flex; align-items: center; gap: 6px; }
+        .dev-project-btn.active,
+        .android-analysis-btn.active {
             color: var(--accent-light);
             border-color: rgba(124, 58, 237, 0.55);
             background: rgba(124, 58, 237, 0.16);
         }
 
-        .dev-project-btn:disabled {
+        .dev-project-btn:disabled,
+        .android-analysis-btn:disabled {
             opacity: 0.45;
             cursor: not-allowed;
         }
@@ -823,6 +827,105 @@
         }
         .dev-project-card-title { font-weight: 700; margin-bottom: 4px; }
         .dev-project-card-sub { color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
+
+        .android-analysis-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .android-analysis-form select,
+        .android-analysis-form textarea {
+            width: 100%;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            padding: 9px 10px;
+            font: inherit;
+        }
+        .android-analysis-form textarea {
+            min-height: 96px;
+            resize: vertical;
+        }
+        .android-upload-box {
+            border: 1px dashed rgba(196,181,253,0.35);
+            border-radius: var(--radius-sm);
+            background: rgba(124,58,237,0.08);
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+        .android-upload-box.dragging {
+            border-color: rgba(196,181,253,0.8);
+            background: rgba(124,58,237,0.18);
+            color: var(--text-primary);
+        }
+        .android-bundle-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .android-bundle-list label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            padding: 7px 9px;
+            font-size: 12px;
+        }
+        .android-analysis-result {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .android-analysis-stage {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .android-analysis-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .android-analysis-process {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: rgba(255,255,255,0.03);
+            padding: 8px 10px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+        .android-analysis-process summary {
+            cursor: pointer;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .android-analysis-process-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        .android-analysis-process-item {
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding-top: 5px;
+        }
+        .android-analysis-process-item span:first-child { color: var(--text-primary); }
+        .android-analysis-process-item span:last-child {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
 
         .icon-btn {
             background: none;
@@ -1333,13 +1436,15 @@
                 justify-content: center;
             }
 
-            .dev-project-btn {
+            .dev-project-btn,
+            .android-analysis-btn {
                 width: 36px;
                 padding: 0;
                 justify-content: center;
             }
 
-            .dev-project-btn span { display: none; }
+            .dev-project-btn span,
+            .android-analysis-btn span { display: none; }
 
             .dev-project-bar {
                 padding: 8px 10px;
@@ -1497,6 +1602,10 @@
                 </button>
                 <div class="header-title" id="headerTitle">Claude Chat</div>
                 <div class="header-actions">
+                    <button class="android-analysis-btn" id="androidAnalysisBtn" onclick="openAndroidAnalysisPanel()" title="Android 问题分析">
+                        <span>Android分析</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 16V8a7 7 0 0 1 14 0v8"/><path d="M7 16h10"/><path d="M9 20h6"/><path d="M9 8h.01"/><path d="M15 8h.01"/></svg>
+                    </button>
                     <button class="dev-project-btn" id="devProjectBtn" onclick="openDevProjectPicker()" title="开发项目">
                         <span>开发项目</span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
@@ -1603,6 +1712,36 @@
         </div>
     </div>
 
+    <div class="feedback-overlay" id="androidAnalysisOverlay" onclick="if(event.target===this) closeAndroidAnalysisPanel()">
+        <div class="feedback-modal" onclick="event.stopPropagation()">
+            <h3>Android 问题分析</h3>
+            <div class="android-analysis-form">
+                <div>
+                    <label for="androidAnalysisFile">日志包</label>
+                    <div class="android-upload-box" id="androidUploadBox" ondragover="handleAndroidAnalysisDragOver(event)" ondragleave="handleAndroidAnalysisDragLeave(event)" ondrop="handleAndroidAnalysisDrop(event)">
+                        <span>可直接上传或拖拽 .zip / .rar 日志包</span>
+                        <button type="button" class="dev-mini-btn" onclick="document.getElementById('androidAnalysisFileInput').click()">上传日志包</button>
+                    </div>
+                    <input type="file" id="androidAnalysisFileInput" multiple hidden onchange="handleAndroidAnalysisFileSelect(this.files)">
+                    <select id="androidAnalysisFile"></select>
+                </div>
+                <div>
+                    <label for="androidAnalysisQuestion">问题描述</label>
+                    <textarea id="androidAnalysisQuestion" placeholder="描述现象、时间点、包名或操作步骤"></textarea>
+                </div>
+                <div>
+                    <label>规则包</label>
+                    <div class="android-bundle-list" id="androidBundleList"></div>
+                </div>
+                <p class="footer-hint">首轮会先本地解压、采样、规则匹配，再让 Claude 基于 Evidence Pack 生成报告。</p>
+            </div>
+            <div class="feedback-actions" style="margin-top:14px;">
+                <button type="button" class="btn-secondary" onclick="closeAndroidAnalysisPanel()">取消</button>
+                <button type="button" class="btn-primary" id="androidAnalysisStartBtn" onclick="startAndroidAnalysis()">开始分析</button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <!-- Confirm Dialog -->
@@ -1644,9 +1783,11 @@
     let markdownPreviewEnabled = localStorage.getItem('claude_markdown_preview') === '1';
     let webSearchEnabled = localStorage.getItem('claude_web_search_enabled') === '1';
     let devFeatureEnabled = false;
+    let androidAnalysisFeatureEnabled = false;
     let geminiFeatureEnabled = false;
     let newSessionProvider = localStorage.getItem('claude_new_session_provider') || 'claude';
     let devProjects = [];
+    let androidAnalysisBundles = [];
     let currentDevStatus = { mode: 'chat', attached: false };
 
     // ==================== DOM ====================
@@ -1663,6 +1804,13 @@
     const webSearchToggle = document.getElementById('webSearchToggle');
     const webSearchToggleWrap = document.getElementById('webSearchToggleWrap');
     const devProjectBtn = document.getElementById('devProjectBtn');
+    const androidAnalysisBtn = document.getElementById('androidAnalysisBtn');
+    const androidAnalysisFile = document.getElementById('androidAnalysisFile');
+    const androidAnalysisFileInput = document.getElementById('androidAnalysisFileInput');
+    const androidAnalysisQuestion = document.getElementById('androidAnalysisQuestion');
+    const androidBundleList = document.getElementById('androidBundleList');
+    const androidAnalysisStartBtn = document.getElementById('androidAnalysisStartBtn');
+    const androidUploadBox = document.getElementById('androidUploadBox');
     const providerPicker = document.getElementById('providerPicker');
     const devProjectBar = document.getElementById('devProjectBar');
     const devProjectMeta = document.getElementById('devProjectMeta');
@@ -1743,6 +1891,18 @@
         return r.json();
     }
 
+    async function apiText(url) {
+        const r = await fetch(url, { headers: apiHeaders() });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+    }
+
+    async function apiBlob(url) {
+        const r = await fetch(url, { headers: apiHeaders() });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.blob();
+    }
+
     async function apiPost(url, body) {
         const r = await fetch(url, { method: 'POST', headers: apiHeaders(), body: JSON.stringify(body) });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1797,6 +1957,7 @@
             window.__featuresV2 = !!j.v2_multi_user_api;
             window.__tavilySearchConfigured = !!j.tavily_search_configured;
             devFeatureEnabled = !!j.mobile_remote_development;
+            androidAnalysisFeatureEnabled = !!j.android_issue_analysis;
             geminiFeatureEnabled = !!j.gemini_support;
             if (!geminiFeatureEnabled && newSessionProvider === 'gemini') {
                 newSessionProvider = 'claude';
@@ -1804,15 +1965,19 @@
             }
             updateProviderPicker();
             updateDevUi();
+            updateAndroidAnalysisUi();
+            if (androidAnalysisFeatureEnabled) loadAndroidAnalysisStatus();
             updateApiConfigButtonVisibility();
             updateWebSearchToggleAvailability();
         } catch (_) {
             window.__featuresV2 = false;
             window.__tavilySearchConfigured = false;
             devFeatureEnabled = false;
+            androidAnalysisFeatureEnabled = false;
             geminiFeatureEnabled = false;
             updateProviderPicker();
             updateDevUi();
+            updateAndroidAnalysisUi();
             updateWebSearchToggleAvailability();
         }
     }
@@ -1843,6 +2008,527 @@
         if (newSessionProvider === 'gemini' && !geminiFeatureEnabled) newSessionProvider = 'claude';
         localStorage.setItem('claude_new_session_provider', newSessionProvider);
         updateProviderPicker();
+    }
+
+    function updateAndroidAnalysisUi() {
+        if (androidAnalysisBtn) {
+            androidAnalysisBtn.classList.toggle('show', !!androidAnalysisFeatureEnabled);
+            androidAnalysisBtn.disabled = !currentSessionId;
+            androidAnalysisBtn.title = currentSessionId ? 'Android 问题分析' : '请先创建或选择会话';
+        }
+    }
+
+    async function loadAndroidAnalysisStatus() {
+        if (!androidAnalysisFeatureEnabled) return;
+        try {
+            const data = await apiGet('/api/android-analysis/status');
+            androidAnalysisBundles = data.bundles || [];
+        } catch (_) {
+            androidAnalysisBundles = [];
+        }
+        renderAndroidBundleList();
+    }
+
+    function closeAndroidAnalysisPanel() {
+        document.getElementById('androidAnalysisOverlay').classList.remove('show');
+    }
+
+    function openAndroidAnalysisPanel() {
+        if (!androidAnalysisFeatureEnabled) return;
+        if (!currentSessionId) {
+            alert('请先创建或选择一个会话');
+            return;
+        }
+        if (androidAnalysisQuestion) androidAnalysisQuestion.value = messageInput.value.trim();
+        renderAndroidAnalysisFileOptions();
+        renderAndroidBundleList();
+        document.getElementById('androidAnalysisOverlay').classList.add('show');
+    }
+
+    function renderAndroidAnalysisFileOptions() {
+        if (!androidAnalysisFile) return;
+        const previous = androidAnalysisFile.value;
+        androidAnalysisFile.innerHTML = '';
+        if (!pendingFiles.length) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '请先上传日志压缩包';
+            androidAnalysisFile.appendChild(opt);
+            return;
+        }
+        for (const f of pendingFiles) {
+            const opt = document.createElement('option');
+            opt.value = f.name;
+            opt.textContent = f.displayName || f.name;
+            androidAnalysisFile.appendChild(opt);
+        }
+        if (previous && pendingFiles.some(f => f.name === previous)) {
+            androidAnalysisFile.value = previous;
+        } else if (pendingFiles.length) {
+            androidAnalysisFile.value = pendingFiles[pendingFiles.length - 1].name;
+        }
+    }
+
+    async function handleAndroidAnalysisFileSelect(fileList) {
+        await handleFileSelect(fileList);
+        if (androidAnalysisFileInput) androidAnalysisFileInput.value = '';
+        renderAndroidAnalysisFileOptions();
+    }
+
+    function handleAndroidAnalysisDragOver(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (androidUploadBox) androidUploadBox.classList.add('dragging');
+    }
+
+    function handleAndroidAnalysisDragLeave(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (androidUploadBox) androidUploadBox.classList.remove('dragging');
+    }
+
+    async function handleAndroidAnalysisDrop(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (androidUploadBox) androidUploadBox.classList.remove('dragging');
+        if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length) {
+            await handleAndroidAnalysisFileSelect(event.dataTransfer.files);
+        }
+    }
+
+    function renderAndroidBundleList() {
+        if (!androidBundleList) return;
+        androidBundleList.innerHTML = '';
+        if (!androidAnalysisBundles.length) {
+            androidBundleList.innerHTML = '<span class="footer-hint">暂无本地规则包，将只使用内置 Android 基础规则。</span>';
+            return;
+        }
+        for (const b of androidAnalysisBundles) {
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = b.id || '';
+            checkbox.checked = true;
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(' ' + (b.title || b.id || 'bundle')));
+            androidBundleList.appendChild(label);
+        }
+    }
+
+    function selectedAndroidBundleIds() {
+        if (!androidBundleList) return [];
+        return Array.from(androidBundleList.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(x => x.value)
+            .filter(Boolean);
+    }
+
+    function appendAndroidAnalysisBubble(title) {
+        welcomeEl.style.display = 'none';
+        const row = document.createElement('div');
+        row.className = 'message-row ai';
+        const contentEl = document.createElement('div');
+        contentEl.className = 'message-content';
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble answer-bubble markdown-body android-analysis-result';
+        renderMarkdownInto(bubble, title || '正在创建 Android 分析任务…');
+        contentEl.appendChild(bubble);
+        row.innerHTML = '<div class="message-avatar ai">A</div>';
+        row.appendChild(contentEl);
+        chatContainer.appendChild(row);
+        scrollToBottom();
+        return bubble;
+    }
+
+    function androidArtifactUrl(jobId, artifactName) {
+        return `/api/android-analysis/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifactName)}?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`;
+    }
+
+    function androidEventsStreamUrl(jobId) {
+        return `/api/android-analysis/jobs/${encodeURIComponent(jobId)}/events/stream?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`;
+    }
+
+    async function startAndroidAnalysis() {
+        if (!androidAnalysisFeatureEnabled || isStreaming) return;
+        const sourceFilename = (androidAnalysisFile && androidAnalysisFile.value) || '';
+        if (!sourceFilename) {
+            alert('请先上传并选择一个日志压缩包');
+            return;
+        }
+        const question = (androidAnalysisQuestion && androidAnalysisQuestion.value.trim()) || messageInput.value.trim() || '请分析这个 Android 日志包。';
+        closeAndroidAnalysisPanel();
+        appendMessage('user', `Android 问题分析\n\n文件：${sourceFilename}\n\n${question}`, null, [sourceFilename]);
+        const bubble = appendAndroidAnalysisBubble('正在创建 Android 分析任务…');
+        isStreaming = true;
+        setStreamingLocked(true);
+        sendBtn.disabled = true;
+        sendBtn.textContent = '分析中...';
+        if (androidAnalysisStartBtn) androidAnalysisStartBtn.disabled = true;
+        let completed = false;
+        let progress = null;
+        try {
+            progress = renderAndroidAnalysisProgress(bubble, '正在创建 Android 分析任务…');
+            const data = await apiPost('/api/android-analysis/jobs', {
+                user_id: userId,
+                session_id: currentSessionId,
+                question,
+                source_filename: sourceFilename,
+                bundle_ids: selectedAndroidBundleIds(),
+                background: true,
+            });
+            const job = data.job || {};
+            updateAndroidProgress(progress, { type: 'job_queued', data: { status: job.status || 'queued' } });
+            const finalJob = await waitAndroidAnalysisJob(job.id, progress);
+            if (finalJob.status === 'error') {
+                const err = finalJob.error || {};
+                throw new Error(err.message || err.code || 'Android 分析失败');
+            }
+            await refreshAndroidAnalysisBubble(job.id, bubble);
+            completed = true;
+            loadSessions();
+        } catch (e) {
+            finishAndroidProgress(progress);
+            renderMarkdownInto(bubble, `Android 分析失败：${e.message}`);
+        } finally {
+            if (androidAnalysisStartBtn) androidAnalysisStartBtn.disabled = false;
+            setStreamingLocked(false);
+            isStreaming = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+            messageInput.focus();
+            if (completed) {
+                pendingFiles = pendingFiles.filter(f => f.name !== sourceFilename);
+                renderUploadPreview();
+            }
+        }
+    }
+
+    function renderAndroidAnalysisProgress(bubble, title) {
+        bubble.innerHTML = '';
+        const startedAt = Date.now();
+        const stage = document.createElement('div');
+        stage.className = 'android-analysis-stage';
+        stage.innerHTML = `<strong>${escapeHtml(title || 'Android 分析中')}</strong><br><span class="android-progress-elapsed">用时：0s</span>`;
+        const process = document.createElement('details');
+        process.className = 'android-analysis-process';
+        process.open = true;
+        process.innerHTML = '<summary>分析过程</summary><div class="android-analysis-process-list"></div>';
+        bubble.appendChild(stage);
+        bubble.appendChild(process);
+        const progress = {
+            stage,
+            list: process.querySelector('.android-analysis-process-list'),
+            startedAt,
+            timer: null,
+            seen: new Set(),
+        };
+        progress.timer = setInterval(() => {
+            const elapsed = Math.round((Date.now() - startedAt) / 1000);
+            const el = stage.querySelector('.android-progress-elapsed');
+            if (el) el.textContent = `用时：${elapsed}s`;
+        }, 1000);
+        return progress;
+    }
+
+    function finishAndroidProgress(progress) {
+        if (progress && progress.timer) {
+            clearInterval(progress.timer);
+            progress.timer = null;
+        }
+    }
+
+    function updateAndroidProgress(progress, event) {
+        if (!progress || !event) return;
+        const label = formatAndroidAnalysisEvent(event);
+        if (!label) return;
+        const key = `${event.type}:${label}:${JSON.stringify(event.data || {})}`;
+        if (progress.seen && progress.seen.has(key)) return;
+        if (progress.seen) progress.seen.add(key);
+        const item = document.createElement('div');
+        item.className = 'android-analysis-process-item';
+        item.innerHTML = `<span>${escapeHtml(label)}</span><span>${escapeHtml(event.timestamp || '')}</span>`;
+        progress.list.appendChild(item);
+        const elapsed = Math.round((Date.now() - progress.startedAt) / 1000);
+        progress.stage.innerHTML = `<strong>${escapeHtml(label)}</strong><br><span class="android-progress-elapsed">用时：${elapsed}s</span>`;
+        scrollToBottom();
+    }
+
+    async function waitAndroidAnalysisJob(jobId, progress) {
+        try {
+            return await streamAndroidAnalysisEvents(jobId, progress);
+        } catch (_) {
+            return await pollAndroidAnalysisEvents(jobId, progress);
+        } finally {
+            finishAndroidProgress(progress);
+        }
+    }
+
+    async function streamAndroidAnalysisEvents(jobId, progress) {
+        const response = await fetch(androidEventsStreamUrl(jobId), { headers: apiHeaders() });
+        if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const blocks = buffer.split('\n\n');
+            buffer = blocks.pop() || '';
+            for (const block of blocks) {
+                const dataLine = block.split('\n').find(line => line.startsWith('data:'));
+                if (!dataLine) continue;
+                const raw = dataLine.slice(5).trim();
+                if (!raw) continue;
+                const event = JSON.parse(raw);
+                if (block.includes('event: done')) {
+                    return (await apiGet(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`)).job || {};
+                }
+                updateAndroidProgress(progress, event);
+            }
+        }
+        return (await apiGet(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`)).job || {};
+    }
+
+    async function pollAndroidAnalysisEvents(jobId, progress) {
+        const terminal = new Set(['report_ready', 'verified', 'needs_review', 'case_draft_ready', 'case_confirmed', 'error']);
+        let seenCount = 0;
+        for (let i = 0; i < 720; i++) {
+            const eventsData = await apiGet(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}/events?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`);
+            for (const event of (eventsData.events || []).slice(seenCount)) updateAndroidProgress(progress, event);
+            seenCount = (eventsData.events || []).length;
+            const jobData = await apiGet(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`);
+            const job = jobData.job || {};
+            if (terminal.has(job.status)) return job;
+            await new Promise(resolve => setTimeout(resolve, 700));
+        }
+        throw new Error('Android 分析等待超时');
+    }
+
+    function renderAndroidAnalysisResult(bubble, job, events, report) {
+        bubble.innerHTML = '';
+        const stage = document.createElement('div');
+        stage.className = 'android-analysis-stage';
+        const eventLabels = (events || []).map(e => formatAndroidAnalysisEvent(e)).filter(Boolean);
+        stage.innerHTML = `<strong>Android 分析完成</strong><br>状态：${escapeHtml(job.status || '')}<br>${eventLabels.slice(-6).map(escapeHtml).join('<br>')}`;
+        const process = makeAndroidProcessPanel(events || []);
+        const actions = document.createElement('div');
+        actions.className = 'android-analysis-actions';
+        const reportBtn = makeArtifactButton(job.id, 'final_report.md', '下载报告');
+        const evidenceBtn = makeArtifactButton(job.id, 'first_evidence_pack.md', '下载证据包');
+        const rulesBtn = makeArtifactButton(job.id, 'matched_rules.json', '下载规则命中');
+        const deepBtn = makeAndroidActionButton('Deep分析', () => runAndroidDeepAnalysis(job.id, bubble));
+        const draftBtn = makeAndroidActionButton('生成案例草稿', () => generateAndroidCaseDraft(job.id, bubble));
+        actions.appendChild(reportBtn);
+        actions.appendChild(evidenceBtn);
+        actions.appendChild(rulesBtn);
+        actions.appendChild(deepBtn);
+        actions.appendChild(draftBtn);
+        if (job.artifacts && job.artifacts.verified_report) {
+            actions.appendChild(makeArtifactButton(job.id, 'verified_report.md', '下载校验报告'));
+        }
+        if (job.artifacts && job.artifacts.verifier_result) {
+            actions.appendChild(makeArtifactButton(job.id, 'verifier_result.json', '下载Verifier'));
+        }
+        if (job.artifacts && job.artifacts.deep_report) {
+            actions.appendChild(makeArtifactButton(job.id, 'deep_report.md', '下载Deep报告'));
+        }
+        if (job.artifacts && job.artifacts.case_draft) {
+            actions.appendChild(makeArtifactButton(job.id, 'case_draft.json', '下载案例草稿'));
+            actions.appendChild(makeAndroidActionButton('确认案例入库', () => confirmAndroidCaseDraft(job.id, bubble, job)));
+        }
+        const reportEl = document.createElement('div');
+        reportEl.className = 'markdown-body';
+        renderMarkdownInto(reportEl, report || '（报告为空）');
+        bubble.appendChild(stage);
+        bubble.appendChild(process);
+        bubble.appendChild(actions);
+        bubble.appendChild(reportEl);
+        scrollToBottom();
+    }
+
+    function makeAndroidProcessPanel(events) {
+        const process = document.createElement('details');
+        process.className = 'android-analysis-process';
+        process.innerHTML = '<summary>分析过程</summary><div class="android-analysis-process-list"></div>';
+        const list = process.querySelector('.android-analysis-process-list');
+        for (const event of events || []) {
+            const label = formatAndroidAnalysisEvent(event);
+            if (!label) continue;
+            const item = document.createElement('div');
+            item.className = 'android-analysis-process-item';
+            item.innerHTML = `<span>${escapeHtml(label)}</span><span>${escapeHtml(event.timestamp || '')}</span>`;
+            list.appendChild(item);
+        }
+        return process;
+    }
+
+    function makeArtifactButton(jobId, artifactName, label) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'dev-mini-btn';
+        btn.textContent = label;
+        btn.addEventListener('click', () => downloadAndroidArtifact(jobId, artifactName));
+        return btn;
+    }
+
+    function makeAndroidActionButton(label, handler) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'dev-mini-btn';
+        btn.textContent = label;
+        btn.addEventListener('click', handler);
+        return btn;
+    }
+
+    function formatAndroidAnalysisEvent(event) {
+        if (!event) return '';
+        if (event.type === 'job_queued') return `阶段：${androidStatusLabel(event.data && event.data.status)}`;
+        if (event.type === 'job_updated') return `阶段：${androidStatusLabel(event.data && event.data.status)}`;
+        if (event.type === 'stage_timing') return `${androidStatusLabel(event.data && event.data.stage)} 用时 ${event.data && event.data.duration_seconds}s`;
+        const map = {
+            archive_extracted: '解压完成',
+            files_sampled: '采样完成',
+            planner_completed: 'Planner 完成',
+            rules_matched: '规则匹配完成',
+            evidence_pack_created: '证据包完成',
+            case_cards_recalled: '案例召回完成',
+            first_report_generated: '首轮报告完成',
+            deep_evidence_created: 'Deep 证据完成',
+            deep_report_generated: 'Deep 报告完成',
+            verifier_completed: 'Verifier 完成',
+            case_draft_generated: '案例草稿完成',
+            case_draft_confirmed: '案例已入库',
+            analysis_metrics_recorded: '性能与成本指标已记录',
+        };
+        return map[event.type] || '';
+    }
+
+    function androidStatusLabel(status) {
+        const map = {
+            queued: '排队中',
+            extracting: '解压日志包',
+            profiling: '扫描文件树',
+            sampling: '采样日志',
+            planning: 'Planner 路由',
+            matching_rules: '规则匹配',
+            building_evidence: '生成证据包',
+            recalling_cases: '召回案例',
+            generating_report: '生成首轮报告',
+            verifying_first_report: '首轮报告校验',
+            report_ready: '首轮报告完成',
+            deep_scoping: 'Deep 范围校验',
+            deep_reporting: '生成 Deep 报告',
+            verifying: 'Verifier 校验',
+            verified: '校验通过',
+            needs_review: '需要人工复核',
+            case_draft_ready: '案例草稿完成',
+            case_confirmed: '案例已入库',
+            error: '分析失败',
+        };
+        return map[status] || status || '处理中';
+    }
+
+    async function refreshAndroidAnalysisBubble(jobId, bubble, preferredReportName) {
+        const eventsData = await apiGet(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}/events?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`);
+        const jobData = await apiGet(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`);
+        const job = jobData.job || {};
+        const reportName = preferredReportName || (job.artifacts && job.artifacts.verified_report ? 'verified_report.md' : 'final_report.md');
+        let report = '';
+        try {
+            report = await apiText(androidArtifactUrl(jobId, reportName));
+        } catch (_) {
+            report = await apiText(androidArtifactUrl(jobId, 'final_report.md'));
+        }
+        renderAndroidAnalysisResult(bubble, job, eventsData.events || [], report);
+    }
+
+    async function runAndroidDeepAnalysis(jobId, bubble) {
+        if (isStreaming) return;
+        isStreaming = true;
+        setStreamingLocked(true);
+        sendBtn.disabled = true;
+        sendBtn.textContent = '分析中...';
+        try {
+            renderMarkdownInto(bubble, '正在执行 Deep 分析并校验证据…');
+            await apiPost(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}/deep`, {
+                user_id: userId,
+                session_id: currentSessionId,
+            });
+            await refreshAndroidAnalysisBubble(jobId, bubble, 'verified_report.md');
+            showToast('Deep 分析完成');
+        } catch (e) {
+            showToast(`Deep 分析失败：${e.message}`);
+        } finally {
+            setStreamingLocked(false);
+            isStreaming = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+        }
+    }
+
+    async function generateAndroidCaseDraft(jobId, bubble) {
+        if (isStreaming) return;
+        isStreaming = true;
+        setStreamingLocked(true);
+        sendBtn.disabled = true;
+        sendBtn.textContent = '生成中...';
+        try {
+            await apiPost(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}/case-draft`, {
+                user_id: userId,
+                session_id: currentSessionId,
+            });
+            await refreshAndroidAnalysisBubble(jobId, bubble);
+            showToast('案例草稿已生成');
+        } catch (e) {
+            showToast(`案例草稿生成失败：${e.message}`);
+        } finally {
+            setStreamingLocked(false);
+            isStreaming = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+        }
+    }
+
+    async function confirmAndroidCaseDraft(jobId, bubble, job) {
+        const bundleId = ((job && job.bundle_ids) || [])[0] || '';
+        if (!bundleId) {
+            showToast('缺少可入库的 bundle id');
+            return;
+        }
+        if (!confirm(`确认将案例草稿写入本机知识库 ${bundleId} 吗？请先下载草稿检查内容。`)) return;
+        if (isStreaming) return;
+        isStreaming = true;
+        setStreamingLocked(true);
+        try {
+            await apiPost(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}/case-draft/confirm`, {
+                user_id: userId,
+                session_id: currentSessionId,
+                bundle_id: bundleId,
+            });
+            await refreshAndroidAnalysisBubble(jobId, bubble);
+            showToast('案例已写入本机知识库');
+        } catch (e) {
+            showToast(`案例入库失败：${e.message}`);
+        } finally {
+            setStreamingLocked(false);
+            isStreaming = false;
+        }
+    }
+
+    async function downloadAndroidArtifact(jobId, artifactName) {
+        try {
+            const blob = await apiBlob(androidArtifactUrl(jobId, artifactName) + '&download=1');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = artifactName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            showToast(`下载失败：${e.message}`);
+        }
     }
 
     function updateDevUi() {
@@ -2175,6 +2861,7 @@
             renderChat([]);
             headerTitle.textContent = session.title;
             await refreshDevStatus();
+            updateAndroidAnalysisUi();
             closeSidebar();
             messageInput.focus();
         } catch (e) {
@@ -2203,6 +2890,7 @@
             renderChat([]);
         }
         await refreshDevStatus();
+        updateAndroidAnalysisUi();
     }
 
     let deleteTargetId = null;
@@ -2237,6 +2925,7 @@
                 currentSessionId = null;
                 headerTitle.textContent = 'Claude Chat';
                 renderChat([]);
+                updateAndroidAnalysisUi();
             }
             renderSessionList();
             if (delRes && delRes.backed_up_to) {
@@ -2847,6 +3536,10 @@
             const showName = f.displayName || f.name;
             tag.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${escapeHtml(showName)}<button class="remove-file" onclick="removePendingFile(${i})">&times;</button>`;
             uploadPreview.appendChild(tag);
+        }
+        const androidOverlay = document.getElementById('androidAnalysisOverlay');
+        if (androidOverlay && androidOverlay.classList.contains('show')) {
+            renderAndroidAnalysisFileOptions();
         }
     }
 

@@ -256,17 +256,94 @@ def _development_prompt_block(development_context: Optional[Dict[str, Any]]) -> 
     return '\n'.join(lines) + '\n'
 
 
+def _read_prompt_file_excerpt(path_str: str, max_chars: int) -> str:
+    """读取 prompt 注入用的本地文本片段，失败时返回空串。"""
+    if not path_str:
+        return ''
+    try:
+        path = Path(path_str)
+        if not path.is_file():
+            return ''
+        text = path.read_text(encoding='utf-8', errors='replace').strip()
+    except OSError:
+        return ''
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + f'\n...[已截断，完整文件约 {len(text)} 字符，可按需 Read 该文件]'
+
+
+def _format_skill_brief(skill: Dict[str, Any]) -> str:
+    sid = str(skill.get('id') or '?')
+    title = str(skill.get('title') or sid).strip()
+    summary = (skill.get('summary') or '').strip()
+    path = str(skill.get('path') or '').strip()
+    parts = [f'`{sid}`']
+    if title and title != sid:
+        parts.append(title)
+    if summary:
+        parts.append(summary[:240])
+    if path:
+        parts.append(f'path={path}')
+    return ' - '.join(parts)
+
+
+def _append_selected_skill_blocks(lines: List[str], skills: List[Dict[str, Any]]) -> None:
+    if not skills:
+        return
+    lines.append('- **本轮优先 Skill**（先按这些工作流分析，再考虑通用搜索）：')
+    for skill in skills[:3]:
+        sid = str(skill.get('id') or '?')
+        title = str(skill.get('title') or sid).strip()
+        path = str(skill.get('path') or '').strip()
+        reason = (skill.get('match_reason') or '').strip()
+        summary = (skill.get('summary') or '').strip()
+        lines.append(f'  - `{sid}`：{title}')
+        if reason:
+            lines.append(f'    - 命中原因：{reason}')
+        if summary:
+            lines.append(f'    - 摘要：{summary}')
+        if path:
+            lines.append(f'    - 文件：`{path}`')
+            excerpt = _read_prompt_file_excerpt(path, 6000)
+            if excerpt:
+                lines.append('    - SKILL.md 摘要/工作流（已按长度限制注入）：')
+                lines.append('```markdown')
+                lines.append(excerpt)
+                lines.append('```')
+            else:
+                lines.append('    - SKILL.md 内容未能预读；如需要请优先 Read 该文件，再读其它资料/代码。')
+
+
+def _append_claude_md_blocks(lines: List[str], claude_md_paths: List[str]) -> None:
+    if not claude_md_paths:
+        return
+    lines.append('- **本轮相关 CLAUDE.md**（`--add-dir` 下的 CLAUDE.md 默认不保证自动加载，本服务显式注入摘要）：')
+    for path in claude_md_paths[:3]:
+        lines.append(f'  - `{path}`')
+        excerpt = _read_prompt_file_excerpt(path, 4000)
+        if excerpt:
+            lines.append('```markdown')
+            lines.append(excerpt)
+            lines.append('```')
+
+
 def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
     """
-    技能包：仅注入各包 id/title/summary；仅对本轮已挂载的包展示路径索引。
+    技能包：默认仅注入摘要；对本轮已挂载的包，额外注入命中的 SKILL.md
+    与根目录 CLAUDE.md 摘要，确保模型先按技能流程处理，再按需读代码/资料。
     """
     if not bundles:
         return ''
     lines = [
-        '【技能包索引 — Web 服务注入】',
+        '【按需技能包与 Skill 优先级 — Web 服务注入】',
         '以下为管理员在 `claude_web_paths.config.json` 的 `bundles` 中配置的**技能包**。',
-        '**默认只需理解各包的摘要与适用场景**；服务端只会把本轮命中的包路径加入 `--add-dir`。',
-        '若某包显示为“本轮已挂载”，可按需 Read/Grep/Glob 其路径；若显示为“仅摘要”，说明本轮未授权读取该包目录，不要尝试访问其路径。',
+        '处理顺序必须遵守：',
+        '1. 先使用“本轮优先 Skill”中注入的 `SKILL.md` 工作流和规则，不要一上来大范围 grep 代码。',
+        '2. 若没有直接命中的 Skill，先看本轮已挂载包的 Skill 索引；判断需要时优先 Read 对应 `SKILL.md`。',
+        '3. 再使用你的通用能力做推理、提问和归纳。',
+        '4. 最后才按需读取本轮已挂载的资料/代码路径，并用 Read/Grep/Glob 获取证据。',
+        '5. 未挂载的包仅作为摘要索引；不要访问其路径。若判断需要额外包，可在回答中说明需要追加哪个 bundle/skill。',
+        '说明：Claude CLI 对 `--add-dir` 目录下 `CLAUDE.md` 的自动加载不是默认可靠行为，本服务会对命中的包显式注入其根目录 `CLAUDE.md` 摘要。',
         '',
     ]
     for b in bundles:
@@ -274,6 +351,10 @@ def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
         title = str(b.get('title') or bid).strip()
         summary = (b.get('summary') or '').strip() or '（无摘要）'
         paths = b.get('paths') or []
+        resources = b.get('resources') or []
+        skills = b.get('skills') or []
+        selected_skills = b.get('selected_skills') or []
+        claude_md_paths = b.get('claude_md_paths') or []
         mounted = bool(b.get('mounted'))
         reason = (b.get('mount_reason') or '').strip()
         lines.append(f'### 包 `{bid}`：{title}')
@@ -281,8 +362,28 @@ def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
         if mounted and reason:
             lines.append(f'- **命中原因**：{reason}')
         lines.append(f'- **摘要**：{summary}')
+        if mounted:
+            _append_selected_skill_blocks(lines, selected_skills)
+            if skills:
+                lines.append('- **Skill 索引**（若优先 Skill 不足，先从这里挑选并 Read 对应 SKILL.md）：')
+                for skill in skills[:12]:
+                    lines.append(f'  - {_format_skill_brief(skill)}')
+                if len(skills) > 12:
+                    lines.append(f'  - ... 其余 {len(skills) - 12} 个 skill 已省略，可在对应 skills 目录中按需查看')
+            _append_claude_md_blocks(lines, claude_md_paths)
+            if resources:
+                lines.append('- **资源索引**（仅在 Skill 指示需要证据/源码时再读）：')
+                for res in resources[:20]:
+                    rid = str(res.get('id') or '?')
+                    kind = str(res.get('kind') or 'generic')
+                    desc = (res.get('summary') or '').strip()
+                    path = str(res.get('path') or '').strip()
+                    suffix = f'：{desc}' if desc else ''
+                    lines.append(f'  - `{rid}` ({kind}) `{path}`{suffix}')
+                if len(resources) > 20:
+                    lines.append(f'  - ... 其余 {len(resources) - 20} 个 resource 已省略')
         if mounted and paths:
-            lines.append('- **按需深入路径**（有明确需求时再 Read/Grep）：')
+            lines.append('- **按需深入路径**（最后再 Read/Grep/Glob，避免无目标扫全仓）：')
             for p in paths:
                 lines.append(f'  - `{p}`')
         elif mounted:
@@ -813,8 +914,19 @@ def stream_claude_output(
 
     cmd.append('--')
 
+    mounted_bundles = [b for b in (skill_bundles or []) if b.get('mounted')]
+    selected_skill_count = sum(len(b.get('selected_skills') or []) for b in mounted_bundles)
+    injected_claude_md_count = sum(len(b.get('claude_md_paths') or []) for b in mounted_bundles)
     log.info('[CLI] 执行命令: claude ... --print ... -- （prompt 经 stdin 传入）')
     log.info(f'[CLI] session_id={session_id}, claude_session_id={claude_session_id}')
+    log.info(
+        '[CLI] prompt_chars_total=%s, user_message_chars=%s, mounted_bundles=%s, selected_skills=%s, injected_claude_md=%s',
+        len(full_message),
+        len(message or ''),
+        [b.get('id') for b in mounted_bundles],
+        selected_skill_count,
+        injected_claude_md_count,
+    )
     log.info(
         f'[CLI] session_workspace={session_workspace_dir}, cli_cwd={cli_cwd_dir}, add_dirs={add_dirs}, '
         f'upload_dir={upload_dir}, 文件数={len(file_paths) if file_paths else 0}, 消息长度={len(full_message)}'

@@ -16,6 +16,21 @@ assertIncludes('id="markdownToggle"', 'Markdown toggle');
 assertIncludes('id="webSearchToggle"', 'web search toggle');
 assertIncludes('id="devProjectBtn"', 'development project button');
 assertIncludes('id="devProjectBar"', 'development project status bar');
+assertIncludes('id="androidAnalysisBtn"', 'Android analysis button');
+assertIncludes('id="androidAnalysisFileInput"', 'Android analysis upload input');
+assertIncludes('上传日志包', 'Android analysis upload button');
+assertIncludes('openAndroidAnalysisPanel', 'Android analysis panel');
+assertIncludes('handleAndroidAnalysisDrop', 'Android analysis drag-drop handler');
+assertIncludes('startAndroidAnalysis', 'Android analysis start action');
+assertIncludes("sendBtn.textContent = '分析中...'", 'Android analysis busy button state');
+assertIncludes('runAndroidDeepAnalysis', 'Android analysis Deep action');
+assertIncludes('generateAndroidCaseDraft', 'Android analysis case draft action');
+assertIncludes('confirmAndroidCaseDraft', 'Android analysis case confirm action');
+assertIncludes('/case-draft/confirm', 'Android analysis case confirm endpoint');
+assertIncludes('waitAndroidAnalysisJob', 'Android analysis async job wait helper');
+assertIncludes('streamAndroidAnalysisEvents', 'Android analysis SSE stream helper');
+assertIncludes('android-analysis-process', 'Android analysis process panel');
+assertIncludes('analysis_metrics_recorded', 'Android analysis metrics event');
 assertIncludes('id="providerPicker"', 'provider picker');
 assertIncludes('data-provider="gemini"', 'Gemini provider option');
 assertIncludes('session-provider-badge', 'session provider badge');
@@ -35,6 +50,14 @@ assertIncludes('100dvh', 'mobile dynamic viewport support');
 const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>\s*<\/body>/);
 assert.ok(scriptMatch, 'Expected inline application script');
 const script = scriptMatch[1];
+
+const androidStart = script.slice(
+  script.indexOf('async function startAndroidAnalysis'),
+  script.indexOf('function renderAndroidAnalysisResult'),
+);
+assert.match(androidStart, /isStreaming = true;/, 'Android analysis should enter streaming lock state');
+assert.match(androidStart, /setStreamingLocked\(true\);/, 'Android analysis should lock page interactions');
+assert.match(androidStart, /setStreamingLocked\(false\);/, 'Android analysis should unlock page interactions');
 
 const start = script.indexOf('function escapeHtml');
 const end = script.indexOf('async function saveHtmlFile');

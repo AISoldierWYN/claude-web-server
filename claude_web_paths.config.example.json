@@ -1,14 +1,30 @@
 {
-  "version": 2,
+  "version": 3,
   "notes": "全局说明（可选）：会追加在沙箱提示末尾，与技能包摘要不同。",
   "readonly_dirs": [],
   "bundles": [
     {
       "id": "example-skills",
       "title": "示例技能包",
-      "summary": "两三句话说明：本包解决什么问题、包含哪类技能文档或代码；模型默认只读这段摘要，需要时再 Read/Grep 下列路径。",
+      "summary": "两三句话说明：本包解决什么问题、包含哪类技能文档或代码；模型默认只读这段摘要，命中后优先注入相关 SKILL.md，再按需读取资源路径。",
       "keywords": ["示例业务名", "常见缩写", "模块关键词"],
       "always_mount": false,
+      "skills": [
+        {
+          "id": "example-triage",
+          "path": "D:/path/to/skills/example-triage/SKILL.md",
+          "summary": "本 skill 的适用场景和排查流程摘要。",
+          "keywords": ["示例问题", "排查关键词"]
+        }
+      ],
+      "resources": [
+        {
+          "id": "example-docs",
+          "kind": "docs",
+          "path": "D:/path/to/docs",
+          "summary": "普通资料目录。仅在 skill 指示需要证据或细节时再 Read/Grep。"
+        }
+      ],
       "paths": [
         "D:/path/to/skills",
         "D:/path/to/docs"

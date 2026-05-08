@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "rule_packs": [
+    {
+      "id": "android-base",
+      "title": "Android Base Log Signals",
+      "description": "Common Android crash, ANR, native crash, permission, package install, watchdog, and boot signals.",
+      "source_bundle_ids": [],
+      "rules": [
+        {
+          "id": "androidruntime-fatal-exception",
+          "title": "AndroidRuntime fatal exception",
+          "issue_type": "android_app_crash",
+          "severity": "fatal",
+          "tags": ["crash", "java", "androidruntime"],
+          "match": {
+            "kinds": ["android_main_log", "android_system_log", "android_logcat", "android_crash"],
+            "keywords": ["FATAL EXCEPTION", "AndroidRuntime"],
+            "regex": ["(?m)FATAL EXCEPTION:|(?m)E AndroidRuntime:"]
+          }
+        },
+        {
+          "id": "java-caused-by-exception",
+          "title": "Java exception cause chain",
+          "issue_type": "android_app_crash",
+          "severity": "high",
+          "tags": ["crash", "java"],
+          "match": {
+            "kinds": ["android_main_log", "android_system_log", "android_logcat", "android_crash"],
+            "keywords": ["Caused by:", "Exception"],
+            "regex": ["(?m)Caused by: .*Exception"]
+          }
+        },
+        {
+          "id": "anr-signal",
+          "title": "ANR signal",
+          "issue_type": "android_anr",
+          "severity": "high",
+          "tags": ["anr", "hang"],
+          "match": {
+            "keywords": ["ANR", "am_anr", "Input dispatching timed out", "Broadcast of Intent"],
+            "regex": ["(?i)\\bANR\\b|am_anr|Input dispatching timed out"]
+          }
+        },
+        {
+          "id": "native-tombstone-signal",
+          "title": "Native tombstone signal",
+          "issue_type": "android_native_crash",
+          "severity": "fatal",
+          "tags": ["native", "tombstone", "signal"],
+          "match": {
+            "keywords": ["backtrace:", "signal ", "tombstone", "Abort message"],
+            "regex": ["(?m)^signal \\d+|(?m)^backtrace:|Abort message:"]
+          }
+        },
+        {
+          "id": "permission-denial",
+          "title": "Permission denial or SecurityException",
+          "issue_type": "android_permission_denial",
+          "severity": "high",
+          "tags": ["permission", "security"],
+          "match": {
+            "keywords": ["Permission Denial", "SecurityException", "requires permission"],
+            "regex": ["(?i)Permission Denial|SecurityException|requires .*permission"]
+          }
+        },
+        {
+          "id": "package-install-failure",
+          "title": "Package install failure",
+          "issue_type": "android_package_install",
+          "severity": "high",
+          "tags": ["package", "install"],
+          "match": {
+            "keywords": ["INSTALL_FAILED", "PackageManager", "Failure [INSTALL_"],
+            "regex": ["INSTALL_FAILED_[A-Z_]+|Failure \\[INSTALL_[A-Z_]+"]
+          }
+        },
+        {
+          "id": "system-server-watchdog",
+          "title": "System server watchdog or fatal process",
+          "issue_type": "android_system_server_crash",
+          "severity": "fatal",
+          "tags": ["system_server", "watchdog"],
+          "match": {
+            "keywords": ["Watchdog", "system_server", "*** WATCHDOG KILLING SYSTEM PROCESS"],
+            "regex": ["(?i)Watchdog|WATCHDOG KILLING SYSTEM PROCESS|system_server.*crash"]
+          }
+        },
+        {
+          "id": "boot-failure-signal",
+          "title": "Boot failure signal",
+          "issue_type": "android_boot",
+          "severity": "high",
+          "tags": ["boot"],
+          "match": {
+            "keywords": ["bootloop", "BootReceiver", "init: Service", "zygote"],
+            "regex": ["(?i)bootloop|BootReceiver|init: Service .* killed|zygote.*crash"]
+          }
+        }
+      ]
+    }
+  ]
+}

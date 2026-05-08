@@ -17,6 +17,40 @@ def _folder_segment(s: str, max_len: int = 120) -> str:
     return ''.join(out) or 'x'
 
 
+def _copy2_best_effort(src, dst, *, follow_symlinks=True):
+    """Copy a file for delete-backup snapshots, tolerating volatile CLI files."""
+    try:
+        return shutil.copy2(src, dst, follow_symlinks=follow_symlinks)
+    except (FileNotFoundError, PermissionError, OSError):
+        return dst
+
+
+def _make_backup_ignore(session_dir: Path):
+    volatile_debug_parts = ('.claude_web_home', '.claude', 'debug')
+
+    def ignore(dir_path: str, names: list[str]) -> set[str]:
+        current = Path(dir_path)
+        try:
+            rel_parts = current.relative_to(session_dir).parts
+        except ValueError:
+            rel_parts = ()
+
+        ignored: set[str] = set()
+        if rel_parts == volatile_debug_parts or rel_parts[:3] == volatile_debug_parts:
+            ignored.update(names)
+            return ignored
+        if rel_parts == volatile_debug_parts[:2]:
+            ignored.add('debug')
+
+        for name in names:
+            child = current / name
+            if not child.exists() and not child.is_symlink():
+                ignored.add(name)
+        return ignored
+
+    return ignore
+
+
 def backup_session_before_delete(
     backups_root: Path,
     cache_dir: Path,
@@ -41,7 +75,14 @@ def backup_session_before_delete(
     dest_root = backups_root / date_str / folder_name
     dest_snapshot = dest_root / 'session_snapshot'
     dest_root.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(session_dir, dest_snapshot, dirs_exist_ok=True)
+    shutil.copytree(
+        session_dir,
+        dest_snapshot,
+        dirs_exist_ok=True,
+        ignore=_make_backup_ignore(session_dir),
+        copy_function=_copy2_best_effort,
+        ignore_dangling_symlinks=True,
+    )
 
     cli_src = log_dir / 'users' / user_id / 'sessions' / f'{session_id}_cli.log'
     if cli_src.is_file():

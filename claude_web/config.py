@@ -8,6 +8,14 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from . import settings_loader as _sl
+from .skill_bundle_index import (
+    as_posix,
+    configured_path,
+    discover_claude_md,
+    discover_skills,
+    normalize_resource_items,
+    resolve_existing_path,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_INI_PATH = ROOT / 'config.ini'
@@ -99,6 +107,24 @@ CACHE_DIR = _sl.resolve_optional_dir(ROOT, _str('paths', 'cache_dir', '', env='C
 LOG_DIR = _sl.resolve_optional_dir(ROOT, _str('paths', 'log_dir', '', env='CLAUDE_WEB_LOG_DIR'), 'logs')
 BACKUPS_DIR = _sl.resolve_optional_dir(ROOT, _str('paths', 'backups_dir', '', env='CLAUDE_WEB_BACKUPS_DIR'), 'backups')
 FEEDBACK_DIR = _sl.resolve_optional_dir(ROOT, _str('paths', 'feedback_dir', '', env='CLAUDE_WEB_FEEDBACK_DIR'), 'feedback')
+ANDROID_ANALYSIS_KNOWLEDGE_DIR = _sl.resolve_optional_dir(
+    ROOT,
+    _str('android_analysis', 'knowledge_dir', '', env='CLAUDE_WEB_ANDROID_ANALYSIS_KNOWLEDGE_DIR'),
+    'android_analysis_knowledge',
+)
+ANDROID_ANALYSIS_7Z_PATH = _str(
+    'android_analysis',
+    'seven_zip_path',
+    '',
+    env='CLAUDE_WEB_ANDROID_ANALYSIS_7Z_PATH',
+)
+ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS = _int(
+    'android_analysis',
+    'planner_timeout_seconds',
+    45,
+    env='CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS',
+    minimum=1,
+)
 
 # ---------- 上传 ----------
 UPLOAD_MAX_SIZE = _int('upload', 'max_size_mb', 100, env='CLAUDE_WEB_UPLOAD_MAX_MB', minimum=1) * 1024 * 1024
@@ -130,6 +156,12 @@ FEATURE_GEMINI_SUPPORT = _bool(
     'gemini_support',
     False,
     env='CLAUDE_WEB_GEMINI_SUPPORT',
+)
+FEATURE_ANDROID_ISSUE_ANALYSIS = _bool(
+    'features',
+    'android_issue_analysis',
+    False,
+    env='CLAUDE_WEB_ANDROID_ISSUE_ANALYSIS',
 )
 
 # ---------- 开发模式（手机端远程控制 PC 项目） ----------
@@ -189,14 +221,8 @@ def parse_readonly_dirs(log):
 
 
 def _resolve_dir_entry(p: str, log) -> Optional[str]:
-    try:
-        pp = Path(p).expanduser().resolve()
-        if pp.is_dir():
-            return str(pp)
-        log.warning(f'[Config] 忽略（非目录）: {p}')
-    except Exception as e:
-        log.warning(f'[Config] 路径无效 {p}: {e}')
-    return None
+    pp = resolve_existing_path(p, log, require_dir=True)
+    return str(pp) if pp else None
 
 
 def load_paths_config_file(log) -> Tuple[List[str], str, List[Dict[str, Any]]]:
@@ -249,25 +275,49 @@ def load_paths_config_file(log) -> Tuple[List[str], str, List[Dict[str, Any]]]:
             bid = (b.get('id') or '').strip() or f'bundle-{i + 1}'
             title = (b.get('title') or b.get('name') or bid).strip()
             summary = (b.get('summary') or b.get('description') or '').strip()
+            resources = normalize_resource_items(b.get('resources') or [], log)
             praw = b.get('paths') or b.get('readonly_dirs') or []
             if not isinstance(praw, list):
                 log.warning('[Config] %s 包 %s 的 paths 须为数组', path.name, bid)
                 praw = []
             resolved_posix: List[str] = []
+            search_roots: List[Path] = []
+            legacy_resources: List[Dict[str, Any]] = []
             for item in praw:
-                p = ''
-                if isinstance(item, str):
-                    p = item.strip()
-                elif isinstance(item, dict):
-                    p = (item.get('path') or '').strip()
+                p = configured_path(item)
                 if not p:
                     continue
-                r = _resolve_dir_entry(p, log)
-                if r:
-                    try:
-                        resolved_posix.append(Path(r).resolve().as_posix())
-                    except OSError:
-                        resolved_posix.append(r)
+                r = resolve_existing_path(p, log, require_dir=True)
+                if not r:
+                    continue
+                rp = as_posix(r)
+                resolved_posix.append(rp)
+                search_roots.append(r)
+                legacy_resources.append(
+                    {
+                        'id': str(item.get('id') or '').strip() if isinstance(item, dict) else '',
+                        'kind': str(item.get('kind') or 'generic').strip() if isinstance(item, dict) else 'generic',
+                        'summary': str(item.get('summary') or item.get('description') or '').strip()
+                        if isinstance(item, dict)
+                        else '',
+                        'keywords': item.get('keywords') if isinstance(item, dict) and isinstance(item.get('keywords'), list) else [],
+                        'path': rp,
+                        'is_dir': True,
+                    }
+                )
+            for res in resources:
+                res_path = res.get('path') or ''
+                if res.get('is_dir') and res_path:
+                    resolved_posix.append(res_path)
+                    search_roots.append(Path(res_path))
+            seen_paths = set()
+            resolved_posix = [
+                p for p in resolved_posix
+                if not (p.lower() in seen_paths or seen_paths.add(p.lower()))
+            ]
+            all_resources = legacy_resources + resources
+            skills = discover_skills(b.get('skills') or [], search_roots, log, bid)
+            claude_md_paths = discover_claude_md(search_roots)
             bundles_out.append(
                 {
                     'id': bid,
@@ -276,13 +326,26 @@ def load_paths_config_file(log) -> Tuple[List[str], str, List[Dict[str, Any]]]:
                     'keywords': b.get('keywords') if isinstance(b.get('keywords'), list) else [],
                     'always_mount': bool(b.get('always_mount')),
                     'paths': resolved_posix,
+                    'resources': all_resources,
+                    'skills': skills,
+                    'claude_md_paths': claude_md_paths,
                 }
             )
 
     if path_acc:
         log.info('[Config] %s: %s 个全局只读路径', path.name, len(path_acc))
     if bundles_out:
-        log.info('[Config] %s: %s 个技能包（路径按需挂载，不默认加入 --add-dir）', path.name, len(bundles_out))
+        skill_count = sum(len(b.get('skills') or []) for b in bundles_out)
+        resource_count = sum(len(b.get('resources') or []) for b in bundles_out)
+        claude_md_count = sum(len(b.get('claude_md_paths') or []) for b in bundles_out)
+        log.info(
+            '[Config] %s: %s 个技能包，%s 个 skill，%s 个 resource，%s 个 CLAUDE.md（均按需挂载/注入）',
+            path.name,
+            len(bundles_out),
+            skill_count,
+            resource_count,
+            claude_md_count,
+        )
     return path_acc, notes, bundles_out
 
 
@@ -318,6 +381,12 @@ def log_config_summary(log: logging.Logger) -> None:
     log.info('[Config] V2 每用户 API（局域网）: %s', FEATURE_V2_MULTI_USER_API)
     log.info('[Config] 移动端远程开发控制: %s', FEATURE_MOBILE_REMOTE_DEVELOPMENT)
     log.info('[Config] Gemini CLI 支持: %s', FEATURE_GEMINI_SUPPORT)
+    log.info('[Config] Android 问题分析: %s', FEATURE_ANDROID_ISSUE_ANALYSIS)
+    if FEATURE_ANDROID_ISSUE_ANALYSIS:
+        log.info('[Config] Android 问题分析知识目录: %s', ANDROID_ANALYSIS_KNOWLEDGE_DIR)
+        if ANDROID_ANALYSIS_7Z_PATH:
+            log.info('[Config] Android RAR 7-Zip 路径: %s', ANDROID_ANALYSIS_7Z_PATH)
+        log.info('[Config] Android Planner timeout: %ss', ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS)
     if FEATURE_GEMINI_SUPPORT:
         log.info('[Config] Gemini CLI: %s', GEMINI_CLI_PATH)
         log.info('[Config] Gemini approval_mode: %s', GEMINI_APPROVAL_MODE)

@@ -6,6 +6,7 @@ import sys
 import tempfile
 import time
 import unittest
+import zipfile
 from pathlib import Path
 
 from claude_web import config, settings_loader
@@ -22,6 +23,8 @@ class BackendSmokeTests(unittest.TestCase):
         config.BACKUPS_DIR = root / 'backups'
         config.FEEDBACK_DIR = root / 'feedback'
         config.PATHS_CONFIG_FILE = root / 'missing-paths.json'
+        config.ANDROID_ANALYSIS_KNOWLEDGE_DIR = root / 'android_analysis_knowledge'
+        config.ANDROID_ANALYSIS_7Z_PATH = ''
         config.TOKEN = ''
         config.ENABLE_AUTH = False
         config.TRUST_X_FORWARDED = False
@@ -29,6 +32,7 @@ class BackendSmokeTests(unittest.TestCase):
         config.FEATURE_V2_MULTI_USER_API = False
         config.FEATURE_MOBILE_REMOTE_DEVELOPMENT = False
         config.FEATURE_GEMINI_SUPPORT = False
+        config.FEATURE_ANDROID_ISSUE_ANALYSIS = False
         config.GEMINI_CLI_PATH = 'gemini'
         config.GEMINI_MODEL = ''
         config.GEMINI_APPROVAL_MODE = 'plan'
@@ -103,15 +107,169 @@ class BackendSmokeTests(unittest.TestCase):
         self.assertIn('mobile_remote_development', data)
         self.assertIn('gemini_support', data)
         self.assertIn('gemini_configured', data)
+        self.assertIn('android_issue_analysis', data)
         self.assertFalse(data['tavily_search_configured'])
         self.assertFalse(data['mobile_remote_development'])
         self.assertFalse(data['gemini_support'])
         self.assertFalse(data['gemini_configured'])
+        self.assertFalse(data['android_issue_analysis'])
 
     def test_dev_api_is_hidden_when_feature_disabled(self):
         resp = self.client.get('/api/dev/projects')
         self.assertEqual(resp.status_code, 404)
         self.assertEqual(resp.get_json()['code'], 'dev_disabled')
+
+    def test_android_analysis_api_is_hidden_when_feature_disabled(self):
+        resp = self.client.get('/api/android-analysis/status')
+        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(resp.get_json()['code'], 'android_analysis_disabled')
+
+    def test_android_analysis_phase_one_job_profiles_uploaded_archive(self):
+        config.FEATURE_ANDROID_ISSUE_ANALYSIS = True
+        bundle_dir = config.ANDROID_ANALYSIS_KNOWLEDGE_DIR / 'bundles' / 'android-rdm'
+        bundle_dir.mkdir(parents=True)
+        (bundle_dir / 'bundle.json').write_text(
+            json.dumps({'id': 'android-rdm', 'title': 'RDM', 'source_path': 'D:/AndroidCode/RealtimeDeviceManager'}),
+            encoding='utf-8',
+        )
+        code_dir = Path(self.tmp.name) / 'rdm-code'
+        code_dir.mkdir()
+        (code_dir / 'LockActivity.java').write_text('class LockActivity { void lock() {} }\n', encoding='utf-8')
+        self.app.config['CLAUDE_WEB_PATHS_BUNDLES'] = [
+            {'id': 'android-rdm', 'title': 'RDM', 'paths': [str(code_dir)]}
+        ]
+        session = self.create_session()
+        upload_dir = config.CACHE_DIR / '127_0_0_1' / self.user_id / session['id'] / 'uploads'
+        archive = upload_dir / 'logs.zip'
+        with zipfile.ZipFile(archive, 'w') as zf:
+            zf.writestr('logcat/main.log', '05-07 10:00:00 FATAL EXCEPTION: main\nRDM LockActivity lock failed\n')
+
+        status = self.client.get('/api/android-analysis/status')
+        self.assertEqual(status.status_code, 200, status.get_data(as_text=True))
+        self.assertEqual(status.get_json()['bundles'][0]['id'], 'android-rdm')
+        self.assertNotIn('source_path', status.get_json()['bundles'][0])
+
+        created = self.client.post(
+            '/api/android-analysis/jobs',
+            json={
+                'user_id': self.user_id,
+                'session_id': session['id'],
+                'question': 'lock flow crash',
+                'source_filename': 'logs.zip',
+                'bundle_ids': ['android-rdm'],
+            },
+        )
+        self.assertEqual(created.status_code, 200, created.get_data(as_text=True))
+        job = created.get_json()['job']
+        self.assertEqual(job['status'], 'report_ready')
+        artifacts = config.CACHE_DIR / '127_0_0_1' / self.user_id / session['id'] / 'android_analysis' / job['id'] / 'artifacts'
+        self.assertTrue((artifacts / 'file_manifest.json').is_file())
+        self.assertTrue((artifacts / 'file_tree.json').is_file())
+        self.assertTrue((artifacts / 'file_samples.json').is_file())
+        self.assertTrue((artifacts / 'planner_result.json').is_file())
+        self.assertTrue((artifacts / 'matched_rules.json').is_file())
+        self.assertTrue((artifacts / 'first_evidence_pack.md').is_file())
+        self.assertTrue((artifacts / 'case_cards.json').is_file())
+        self.assertTrue((artifacts / 'final_report.md').is_file())
+        self.assertTrue((artifacts / 'verifier_result.json').is_file())
+        self.assertTrue((artifacts / 'verified_report.md').is_file())
+        self.assertTrue((artifacts / 'analysis_metrics.json').is_file())
+        metrics = json.loads((artifacts / 'analysis_metrics.json').read_text(encoding='utf-8'))
+        self.assertGreaterEqual(len(metrics['stage_timings']), 1)
+        self.assertIn('first_report_input_chars_estimate', metrics['prompt_chars'])
+
+        loaded_job = self.client.get(
+            f'/api/android-analysis/jobs/{job["id"]}?user_id={self.user_id}&session_id={session["id"]}'
+        )
+        self.assertEqual(loaded_job.status_code, 200)
+        self.assertEqual(loaded_job.get_json()['job']['status'], 'report_ready')
+
+        events = self.client.get(
+            f'/api/android-analysis/jobs/{job["id"]}/events?user_id={self.user_id}&session_id={session["id"]}'
+        )
+        self.assertEqual(events.status_code, 200)
+        event_types = [e['type'] for e in events.get_json()['events']]
+        self.assertIn('first_report_generated', event_types)
+        self.assertIn('verifier_completed', event_types)
+        self.assertIn('analysis_metrics_recorded', event_types)
+
+        report = self.client.get(
+            f'/api/android-analysis/jobs/{job["id"]}/artifacts/final_report.md?user_id={self.user_id}&session_id={session["id"]}'
+        )
+        self.assertEqual(report.status_code, 200)
+        report_text = report.get_data(as_text=True)
+        report.close()
+        self.assertIn('Android 问题首轮分析报告', report_text)
+
+        deep = self.client.post(
+            f'/api/android-analysis/jobs/{job["id"]}/deep',
+            json={'user_id': self.user_id, 'session_id': session['id']},
+        )
+        self.assertEqual(deep.status_code, 200, deep.get_data(as_text=True))
+        self.assertTrue(deep.get_json()['deep']['has_code_context'])
+        deep_job = deep.get_json()['job']
+        self.assertIn('deep_report', deep_job['artifacts'])
+        self.assertIn('verifier_result', deep_job['artifacts'])
+        self.assertIn('analysis_metrics', deep_job['artifacts'])
+
+        draft = self.client.post(
+            f'/api/android-analysis/jobs/{job["id"]}/case-draft',
+            json={'user_id': self.user_id, 'session_id': session['id']},
+        )
+        self.assertEqual(draft.status_code, 200, draft.get_data(as_text=True))
+        self.assertEqual(draft.get_json()['draft']['status'], 'draft')
+
+        confirmed = self.client.post(
+            f'/api/android-analysis/jobs/{job["id"]}/case-draft/confirm',
+            json={'user_id': self.user_id, 'session_id': session['id'], 'bundle_id': 'android-rdm'},
+        )
+        self.assertEqual(confirmed.status_code, 200, confirmed.get_data(as_text=True))
+        case_path = config.ANDROID_ANALYSIS_KNOWLEDGE_DIR / confirmed.get_json()['confirmed']['case_path']
+        self.assertTrue(case_path.is_file())
+
+    def test_android_analysis_background_job_streams_events(self):
+        config.FEATURE_ANDROID_ISSUE_ANALYSIS = True
+        bundle_dir = config.ANDROID_ANALYSIS_KNOWLEDGE_DIR / 'bundles' / 'android-rdm'
+        bundle_dir.mkdir(parents=True)
+        (bundle_dir / 'bundle.json').write_text(
+            json.dumps({'id': 'android-rdm', 'title': 'RDM'}),
+            encoding='utf-8',
+        )
+        session = self.create_session()
+        upload_dir = config.CACHE_DIR / '127_0_0_1' / self.user_id / session['id'] / 'uploads'
+        archive = upload_dir / 'logs.zip'
+        with zipfile.ZipFile(archive, 'w') as zf:
+            zf.writestr('logcat/main.log', 'RDM LockActivity lock failed\n')
+
+        created = self.client.post(
+            '/api/android-analysis/jobs',
+            json={
+                'user_id': self.user_id,
+                'session_id': session['id'],
+                'question': 'RDM lock failed',
+                'source_filename': 'logs.zip',
+                'bundle_ids': ['android-rdm'],
+                'background': True,
+            },
+        )
+        self.assertEqual(created.status_code, 200, created.get_data(as_text=True))
+        job = created.get_json()['job']
+        self.assertEqual(job['status'], 'queued')
+
+        stream = self.client.get(
+            f'/api/android-analysis/jobs/{job["id"]}/events/stream?user_id={self.user_id}&session_id={session["id"]}',
+            buffered=True,
+        )
+        self.assertEqual(stream.status_code, 200, stream.get_data(as_text=True))
+        body = stream.get_data(as_text=True)
+        self.assertIn('planner_completed', body)
+        self.assertIn('verifier_completed', body)
+        self.assertIn('analysis_metrics_recorded', body)
+
+        loaded = self.client.get(
+            f'/api/android-analysis/jobs/{job["id"]}?user_id={self.user_id}&session_id={session["id"]}'
+        )
+        self.assertIn(loaded.get_json()['job']['status'], {'report_ready', 'needs_review'})
 
     def test_dev_project_whitelist_attach_diff_and_test_when_enabled(self):
         config.FEATURE_MOBILE_REMOTE_DEVELOPMENT = True
@@ -190,6 +348,22 @@ class BackendSmokeTests(unittest.TestCase):
 
         list_after = self.client.get(f'/sessions?user_id={self.user_id}')
         self.assertEqual(list_after.get_json(), [])
+
+    def test_delete_session_backup_ignores_volatile_claude_debug_dir(self):
+        session = self.create_session()
+        session_id = session['id']
+        session_dir = config.CACHE_DIR / '127_0_0_1' / self.user_id / session_id
+        debug_dir = session_dir / '.claude_web_home' / '.claude' / 'debug'
+        debug_dir.mkdir(parents=True)
+        (debug_dir / 'latest').write_text('volatile debug pointer', encoding='utf-8')
+
+        resp = self.client.delete(f'/sessions/{session_id}?user_id={self.user_id}')
+        self.assertEqual(resp.status_code, 200, resp.get_data(as_text=True))
+        data = resp.get_json()
+        self.assertTrue(data['ok'])
+        backup_dir = Path(data['backed_up_to'])
+        self.assertTrue((backup_dir / 'session_snapshot' / 'messages.json').is_file())
+        self.assertFalse((backup_dir / 'session_snapshot' / '.claude_web_home' / '.claude' / 'debug' / 'latest').exists())
 
     def test_legacy_session_records_default_to_claude_provider(self):
         user_dir = config.CACHE_DIR / '127_0_0_1' / self.user_id

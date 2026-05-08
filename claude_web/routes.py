@@ -4,11 +4,25 @@ import json
 import logging
 import re
 import threading
+import time
 from pathlib import Path
 
 from flask import Response, jsonify, request, send_from_directory, stream_with_context
 from . import config
 from .auth import optional_token
+from .android_analysis.archive import safe_extract_archive
+from .android_analysis.casebook import confirm_case_draft, generate_case_draft, recall_case_cards, write_case_cards
+from .android_analysis.deep_analysis import build_deep_evidence_pack, generate_deep_report
+from .android_analysis.evidence import generate_first_evidence_pack
+from .android_analysis.jobs import AndroidAnalysisJobStore
+from .android_analysis.knowledge_store import list_bundles as list_android_analysis_bundles
+from .android_analysis.models import AndroidAnalysisError
+from .android_analysis.planner import run_planner
+from .android_analysis.profiler import profile_extracted_tree
+from .android_analysis.reporter import generate_first_report
+from .android_analysis.rule_engine import run_rule_matching
+from .android_analysis.sampler import sample_files
+from .android_analysis.verifier import run_verifier
 from .backup_service import backup_session_before_delete
 from . import orchestrator
 from .claude_runner import CLAUDE_CLI_PATH, resolve_session_upload_paths, stop_session_process, stream_claude_output
@@ -74,6 +88,24 @@ def register_routes(app, sm: SessionManager):
             bundle.get('summary') or bundle.get('description') or '',
         ]
         raw.extend(str(x) for x in (bundle.get('keywords') or []) if x)
+        for skill in bundle.get('skills') or []:
+            raw.extend(
+                [
+                    skill.get('id') or '',
+                    skill.get('title') or skill.get('name') or '',
+                    skill.get('summary') or skill.get('description') or '',
+                ]
+            )
+            raw.extend(str(x) for x in (skill.get('keywords') or []) if x)
+        for res in bundle.get('resources') or []:
+            raw.extend(
+                [
+                    res.get('id') or '',
+                    res.get('kind') or '',
+                    res.get('summary') or res.get('description') or '',
+                ]
+            )
+            raw.extend(str(x) for x in (res.get('keywords') or []) if x)
         terms = []
         for s in raw:
             s = str(s).strip().lower()
@@ -91,6 +123,54 @@ def register_routes(app, sm: SessionManager):
                             if sub not in terms:
                                 terms.append(sub)
         return terms
+
+    def _skill_terms(skill: dict):
+        raw = [
+            skill.get('id') or '',
+            skill.get('title') or skill.get('name') or '',
+            skill.get('summary') or skill.get('description') or '',
+        ]
+        raw.extend(str(x) for x in (skill.get('keywords') or []) if x)
+        terms = []
+        for s in raw:
+            s = str(s).strip().lower()
+            if not s:
+                continue
+            if len(s) <= 80:
+                terms.append(s)
+            for part in re.findall(r'[a-z0-9_./+-]{3,}|[\u4e00-\u9fff]{2,}', s):
+                if part not in terms:
+                    terms.append(part)
+                if re.fullmatch(r'[\u4e00-\u9fff]{2,}', part):
+                    for n in (2, 3, 4):
+                        for i in range(0, max(0, len(part) - n + 1)):
+                            sub = part[i:i + n]
+                            if sub not in terms:
+                                terms.append(sub)
+        return terms
+
+    def _select_skills_for_bundle(bundle: dict, text: str):
+        skills = bundle.get('skills') or []
+        selected = []
+        for skill in skills:
+            reasons = []
+            for term in _skill_terms(skill):
+                if term and term in text:
+                    reasons.append(f'keyword: {term[:40]}')
+                    break
+            if reasons:
+                ss = dict(skill)
+                ss['selected'] = True
+                ss['match_reason'] = ', '.join(reasons)
+                selected.append(ss)
+            if len(selected) >= 3:
+                break
+        if not selected and len(skills) == 1:
+            ss = dict(skills[0])
+            ss['selected'] = True
+            ss['match_reason'] = 'bundle matched; only skill'
+            selected.append(ss)
+        return selected
 
     def _recent_history_text(messages: list, limit: int = 4000) -> str:
         chunks = []
@@ -132,8 +212,12 @@ def register_routes(app, sm: SessionManager):
             bb = dict(b)
             bb['mounted'] = mounted
             bb['mount_reason'] = reason
+            bb['selected_skills'] = _select_skills_for_bundle(bb, text) if mounted else []
             rendered.append(bb)
             if mounted:
+                skill_ids = [s.get('id') for s in bb.get('selected_skills') or [] if s.get('id')]
+                if skill_ids:
+                    log.info('[SkillBundle] mounted=%s reason=%s selected_skills=%s', bid, reason, skill_ids)
                 selected.append(bb)
         return rendered, selected
 
@@ -209,6 +293,309 @@ def register_routes(app, sm: SessionManager):
     def _dev_disabled_response():
         return jsonify({'error': 'mobile_remote_development disabled', 'code': 'dev_disabled'}), 404
 
+    def _android_analysis_enabled():
+        return bool(getattr(config, 'FEATURE_ANDROID_ISSUE_ANALYSIS', False))
+
+    def _android_analysis_disabled_response():
+        return jsonify({'error': 'android_issue_analysis disabled', 'code': 'android_analysis_disabled'}), 404
+
+    def _merge_android_artifacts(job: dict, updates: dict) -> dict:
+        artifacts = dict(job.get('artifacts') or {})
+        artifacts.update(updates)
+        return artifacts
+
+    def _android_store_for_request(user_id: str, session_id: str):
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return None, None, err
+        session_dir = sm.get_session_dir(client_ip, user_id, session_id)
+        return AndroidAnalysisJobStore(session_dir), session_dir, None
+
+    def _android_artifact_sizes(artifacts_dir: Path) -> dict:
+        out = {}
+        if not artifacts_dir.is_dir():
+            return out
+        for path in sorted(artifacts_dir.iterdir()):
+            if path.is_file():
+                try:
+                    out[path.name] = path.stat().st_size
+                except OSError:
+                    out[path.name] = 0
+        return out
+
+    def _android_prompt_char_metrics(artifacts_dir: Path) -> dict:
+        def read_len(name: str) -> int:
+            path = artifacts_dir / name
+            try:
+                return len(path.read_text(encoding='utf-8')) if path.is_file() else 0
+            except OSError:
+                return 0
+
+        return {
+            'planner_input_chars_estimate': read_len('file_manifest.json') + read_len('file_tree.json') + read_len('file_samples.json'),
+            'first_report_input_chars_estimate': read_len('first_evidence_pack.md') + read_len('matched_rules.json') + read_len('planner_result.json') + read_len('case_cards.json'),
+            'deep_report_input_chars_estimate': read_len('deep_evidence_pack.md') + read_len('matched_rules.json') + read_len('planner_result.json') + read_len('final_report.md'),
+            'verifier_input_chars_estimate': read_len('deep_evidence_pack.md') + read_len('first_evidence_pack.md') + read_len('matched_rules.json') + read_len('deep_report.md'),
+        }
+
+    def _write_android_metrics(store: AndroidAnalysisJobStore, job_id: str, timings: list[dict]) -> dict:
+        # 指标文件用于后续成本/性能回归分析，不参与模型判断；写入 artifacts 便于前端下载和测试断言。
+        metrics = {
+            'version': 1,
+            'stage_timings': timings,
+            'artifact_sizes': _android_artifact_sizes(store.artifacts_dir(job_id)),
+            'prompt_chars': _android_prompt_char_metrics(store.artifacts_dir(job_id)),
+        }
+        metrics_path = store.artifacts_dir(job_id) / 'analysis_metrics.json'
+        with open(metrics_path, 'w', encoding='utf-8') as f:
+            json.dump(metrics, f, ensure_ascii=False, indent=2)
+        store.append_event(
+            job_id,
+            'analysis_metrics_recorded',
+            {
+                'stage_count': len(timings),
+                'artifact_count': len(metrics['artifact_sizes']),
+                'prompt_chars': metrics['prompt_chars'],
+            },
+        )
+        return metrics
+
+    def _timed_android_stage(store: AndroidAnalysisJobStore, job_id: str, timings: list[dict], stage: str, fn):
+        # 每个阶段统一记录耗时并推送事件，前端 SSE 面板和 analysis_metrics.json 共用这份数据。
+        started = time.perf_counter()
+        result = fn()
+        duration = round(time.perf_counter() - started, 3)
+        item = {'stage': stage, 'duration_seconds': duration}
+        timings.append(item)
+        store.append_event(job_id, 'stage_timing', item)
+        return result
+
+    def _android_progress_markdown(events: list[dict]) -> str:
+        lines = ['Android 分析过程']
+        for event in events:
+            et = event.get('type')
+            data = event.get('data') or {}
+            if et == 'job_updated':
+                lines.append(f"- 阶段：{data.get('status')}")
+            elif et == 'stage_timing':
+                lines.append(f"- {data.get('stage')}：{data.get('duration_seconds')}s")
+            elif et and et != 'job_initialized':
+                lines.append(f"- {et}")
+        return '\n'.join(lines)
+
+    def _run_android_first_pass_pipeline(
+        store: AndroidAnalysisJobStore,
+        job_id: str,
+        source_path: Path,
+        question: str,
+        bundle_ids: list,
+        enable_ai: bool,
+        client_ip: str = '',
+        user_id: str = '',
+        session_id: str = '',
+    ) -> dict:
+        # 首轮分析是后台 job 的主流水线：先本地解压/采样/规则匹配，再把受控证据包交给 Claude。
+        # 任何异常都会落到 job.json，避免 SSE 客户端长时间等待无结果。
+        timings: list[dict] = []
+        try:
+            store.update_job(job_id, status='extracting')
+            extraction = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'extracting',
+                lambda: safe_extract_archive(
+                    source_path,
+                    store.extracted_dir(job_id),
+                    seven_zip_path=config.ANDROID_ANALYSIS_7Z_PATH,
+                ),
+            )
+            store.append_event(job_id, 'archive_extracted', extraction)
+
+            store.update_job(job_id, status='profiling')
+            _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'profiling',
+                lambda: profile_extracted_tree(store.extracted_dir(job_id), store.artifacts_dir(job_id)),
+            )
+
+            store.update_job(job_id, status='sampling')
+            samples = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'sampling',
+                lambda: sample_files(store.extracted_dir(job_id), store.artifacts_dir(job_id), question=question),
+            )
+            store.append_event(job_id, 'files_sampled', {'file_count': samples.get('file_count', 0)})
+
+            store.update_job(job_id, status='planning')
+            bundles = list_android_analysis_bundles(config.ANDROID_ANALYSIS_KNOWLEDGE_DIR)
+            planner = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'planning',
+                lambda: run_planner(
+                    store.artifacts_dir(job_id),
+                    question=question,
+                    bundles=bundles,
+                    requested_bundle_ids=bundle_ids,
+                    cli_path=config.CLAUDE_CLI_PATH,
+                    timeout_seconds=config.ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS,
+                    enable_ai=enable_ai,
+                ),
+            )
+            store.append_event(
+                job_id,
+                'planner_completed',
+                {
+                    'planner_mode': planner.get('planner_mode'),
+                    'issue_types': planner.get('issue_types') or [],
+                    'candidate_bundle_ids': planner.get('candidate_bundle_ids') or [],
+                },
+            )
+
+            store.update_job(job_id, status='matching_rules')
+            matched = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'matching_rules',
+                lambda: run_rule_matching(
+                    store.artifacts_dir(job_id),
+                    config.ANDROID_ANALYSIS_KNOWLEDGE_DIR,
+                    question=question,
+                ),
+            )
+            store.append_event(
+                job_id,
+                'rules_matched',
+                {
+                    'rule_pack_count': matched.get('rule_pack_count', 0),
+                    'event_count': matched.get('event_count', 0),
+                },
+            )
+
+            store.update_job(job_id, status='building_evidence')
+            evidence = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'building_evidence',
+                lambda: generate_first_evidence_pack(store.artifacts_dir(job_id), question=question),
+            )
+            store.append_event(
+                job_id,
+                'evidence_pack_created',
+                {
+                    'event_count': evidence.get('event_count', 0),
+                    'has_evidence': bool(evidence.get('has_evidence')),
+                },
+            )
+
+            store.update_job(job_id, status='recalling_cases')
+            case_cards = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'recalling_cases',
+                lambda: recall_case_cards(config.ANDROID_ANALYSIS_KNOWLEDGE_DIR, planner, matched),
+            )
+            write_case_cards(store.artifacts_dir(job_id), case_cards)
+            store.append_event(job_id, 'case_cards_recalled', {'card_count': case_cards.get('card_count', 0)})
+
+            store.update_job(job_id, status='generating_report')
+            report = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'generating_report',
+                lambda: generate_first_report(
+                    store.artifacts_dir(job_id),
+                    question=question,
+                    cli_path=config.CLAUDE_CLI_PATH,
+                    timeout_seconds=config.ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS,
+                    enable_ai=enable_ai,
+                ),
+            )
+            store.append_event(
+                job_id,
+                'first_report_generated',
+                {
+                    'report_mode': report.get('report_mode'),
+                    'has_report': bool(report.get('has_report')),
+                },
+            )
+            store.update_job(job_id, status='verifying')
+            verifier = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'verifying_first_report',
+                lambda: run_verifier(
+                    store.artifacts_dir(job_id),
+                    report_name='final_report.md',
+                    cli_path=config.CLAUDE_CLI_PATH,
+                    timeout_seconds=config.ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS,
+                    enable_ai=False,
+                ),
+            )
+            store.append_event(
+                job_id,
+                'verifier_completed',
+                {
+                    'phase': 'first_pass',
+                    'status': verifier.get('status'),
+                    'overclaim_risk': verifier.get('overclaim_risk'),
+                    'best_evidence_score': verifier.get('best_evidence_score'),
+                },
+            )
+            _write_android_metrics(store, job_id, timings)
+            artifacts = {
+                'file_manifest': 'artifacts/file_manifest.json',
+                'file_tree': 'artifacts/file_tree.json',
+                'file_samples': 'artifacts/file_samples.json',
+                'planner_result': 'artifacts/planner_result.json',
+                'matched_rules': 'artifacts/matched_rules.json',
+                'first_evidence_pack': 'artifacts/first_evidence_pack.md',
+                'first_evidence_summary': 'artifacts/first_evidence_pack.json',
+                'case_cards': 'artifacts/case_cards.json',
+                'final_report': 'artifacts/final_report.md',
+                'first_report_meta': 'artifacts/first_report_meta.json',
+                'verifier_result': 'artifacts/verifier_result.json',
+                'verified_report': 'artifacts/verified_report.md',
+                'analysis_metrics': 'artifacts/analysis_metrics.json',
+            }
+            final_status = 'needs_review' if verifier.get('status') == 'needs_more_evidence' else 'report_ready'
+            job = store.update_job(job_id, status=final_status, artifacts=artifacts, error=None)
+            if client_ip and user_id and session_id:
+                try:
+                    report_path = store.artifacts_dir(job_id) / 'verified_report.md'
+                    if not report_path.is_file():
+                        report_path = store.artifacts_dir(job_id) / 'final_report.md'
+                    report_text = report_path.read_text(encoding='utf-8')
+                    sm.add_message(
+                        client_ip,
+                        user_id,
+                        session_id,
+                        'assistant',
+                        report_text,
+                        thinking=_android_progress_markdown(store.read_events(job_id)),
+                    )
+                except Exception as exc:
+                    log.warning('[AndroidAnalysis] failed to persist report message: %s', exc)
+            return job
+        except AndroidAnalysisError as e:
+            log.warning('[AndroidAnalysis] job=%s failed: %s %s', job_id, e.code, e.message)
+            return store.update_job(job_id, status='error', error={'code': e.code, 'message': e.message})
+        except Exception as e:
+            log.exception('[AndroidAnalysis] job=%s unexpected failure', job_id)
+            return store.update_job(job_id, status='error', error={'code': 'android_analysis_unexpected_error', 'message': str(e)})
+
     def _session_for_user(client_ip: str, user_id: str, session_id: str):
         if not user_id:
             return None, (jsonify({'error': 'user_id required'}), 400)
@@ -241,8 +628,428 @@ def register_routes(app, sm: SessionManager):
                 'mobile_remote_development': _dev_enabled(),
                 'gemini_support': bool(config.FEATURE_GEMINI_SUPPORT),
                 'gemini_configured': bool(config.FEATURE_GEMINI_SUPPORT and (config.GEMINI_CLI_PATH or '').strip()),
+                'android_issue_analysis': bool(config.FEATURE_ANDROID_ISSUE_ANALYSIS),
             }
         )
+
+    @app.route('/api/android-analysis/status', methods=['GET'])
+    @optional_token
+    def api_android_analysis_status():
+        if not _android_analysis_enabled():
+            return _android_analysis_disabled_response()
+        bundles = list_android_analysis_bundles(config.ANDROID_ANALYSIS_KNOWLEDGE_DIR)
+        return jsonify(
+            {
+                'enabled': True,
+                'knowledge_dir': str(config.ANDROID_ANALYSIS_KNOWLEDGE_DIR),
+                'bundles': bundles,
+            }
+        )
+
+    @app.route('/api/android-analysis/jobs', methods=['POST'])
+    @optional_token
+    def api_android_analysis_jobs():
+        if not _android_analysis_enabled():
+            return _android_analysis_disabled_response()
+        data = request.json or {}
+        user_id = (data.get('user_id') or '').strip()
+        session_id = (data.get('session_id') or '').strip()
+        question = (data.get('question') or '').strip()
+        source_filename = (data.get('source_filename') or '').strip()
+        bundle_ids = data.get('bundle_ids') or []
+        if not isinstance(bundle_ids, list):
+            bundle_ids = []
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+
+        session_dir = sm.get_session_dir(client_ip, user_id, session_id)
+        store = AndroidAnalysisJobStore(session_dir)
+        job = store.create_job(question=question, source_files=[source_filename] if source_filename else [], bundle_ids=bundle_ids)
+        if not source_filename:
+            return jsonify({'job': job})
+
+        if '/' in source_filename or '\\' in source_filename or Path(source_filename).name != source_filename:
+            job = store.update_job(
+                job['id'],
+                status='error',
+                error={'code': 'unsafe_source_filename', 'message': 'Invalid source filename.'},
+            )
+            return jsonify({'job': job}), 400
+        source_path = (sm.get_upload_dir(client_ip, user_id, session_id) / source_filename).resolve()
+        upload_dir = sm.get_upload_dir(client_ip, user_id, session_id).resolve()
+        try:
+            source_path.relative_to(upload_dir)
+        except ValueError:
+            job = store.update_job(
+                job['id'],
+                status='error',
+                error={'code': 'unsafe_source_filename', 'message': 'Invalid source filename.'},
+            )
+            return jsonify({'job': job}), 400
+        if not source_path.is_file():
+            job = store.update_job(
+                job['id'],
+                status='error',
+                error={'code': 'source_not_found', 'message': 'Uploaded source archive was not found.'},
+            )
+            return jsonify({'job': job}), 404
+
+        try:
+            sm.add_message(
+                client_ip,
+                user_id,
+                session_id,
+                'user',
+                f'Android 问题分析\n\n文件：{source_filename}\n\n{question}',
+                files=[source_filename],
+            )
+        except Exception as exc:
+            log.warning('[AndroidAnalysis] failed to persist user message: %s', exc)
+
+        enable_ai = not app.config.get('TESTING', False)
+        if bool(data.get('background')):
+            job = store.update_job(job['id'], status='queued')
+            thread = threading.Thread(
+                target=_run_android_first_pass_pipeline,
+                kwargs={
+                    'store': AndroidAnalysisJobStore(session_dir),
+                    'job_id': job['id'],
+                    'source_path': source_path,
+                    'question': question,
+                    'bundle_ids': bundle_ids,
+                    'enable_ai': enable_ai,
+                    'client_ip': client_ip,
+                    'user_id': user_id,
+                    'session_id': session_id,
+                },
+                daemon=True,
+            )
+            thread.start()
+            return jsonify({'job': job, 'background': True})
+
+        job = _run_android_first_pass_pipeline(
+            store,
+            job['id'],
+            source_path,
+            question,
+            bundle_ids,
+            enable_ai=enable_ai,
+            client_ip=client_ip,
+            user_id=user_id,
+            session_id=session_id,
+        )
+        status_code = 400 if job.get('status') == 'error' else 200
+        return jsonify({'job': job}), status_code
+
+    @app.route('/api/android-analysis/jobs/<job_id>', methods=['GET'])
+    @optional_token
+    def api_android_analysis_job(job_id):
+        if not _android_analysis_enabled():
+            return _android_analysis_disabled_response()
+        user_id = request.args.get('user_id', '').strip()
+        session_id = request.args.get('session_id', '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        store = AndroidAnalysisJobStore(sm.get_session_dir(client_ip, user_id, session_id))
+        try:
+            return jsonify({'job': store.load_job(job_id)})
+        except OSError:
+            return jsonify({'error': 'Android analysis job not found', 'code': 'android_analysis_job_not_found'}), 404
+
+    @app.route('/api/android-analysis/jobs/<job_id>/events', methods=['GET'])
+    @optional_token
+    def api_android_analysis_job_events(job_id):
+        if not _android_analysis_enabled():
+            return _android_analysis_disabled_response()
+        user_id = request.args.get('user_id', '').strip()
+        session_id = request.args.get('session_id', '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        store = AndroidAnalysisJobStore(sm.get_session_dir(client_ip, user_id, session_id))
+        events_path = store.job_dir(job_id) / 'events.jsonl'
+        if not events_path.is_file():
+            return jsonify({'error': 'Android analysis job not found', 'code': 'android_analysis_job_not_found'}), 404
+        return jsonify({'events': store.read_events(job_id)})
+
+    @app.route('/api/android-analysis/jobs/<job_id>/events/stream', methods=['GET'])
+    @optional_token
+    def api_android_analysis_job_events_stream(job_id):
+        if not _android_analysis_enabled():
+            return _android_analysis_disabled_response()
+        user_id = request.args.get('user_id', '').strip()
+        session_id = request.args.get('session_id', '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        store = AndroidAnalysisJobStore(sm.get_session_dir(client_ip, user_id, session_id))
+        if not store.job_dir(job_id).is_dir():
+            return jsonify({'error': 'Android analysis job not found', 'code': 'android_analysis_job_not_found'}), 404
+
+        terminal = {'report_ready', 'verified', 'needs_review', 'case_draft_ready', 'case_confirmed', 'error'}
+
+        @stream_with_context
+        def generate():
+            last = 0
+            started = time.monotonic()
+            while time.monotonic() - started < 3600:
+                events = store.read_events(job_id)
+                for event in events[last:]:
+                    yield 'data: ' + json.dumps(event, ensure_ascii=False, separators=(',', ':')) + '\n\n'
+                last = len(events)
+                try:
+                    job = store.load_job(job_id)
+                except OSError:
+                    yield 'event: done\ndata: {"status":"missing"}\n\n'
+                    break
+                if job.get('status') in terminal:
+                    yield 'event: done\ndata: ' + json.dumps({'status': job.get('status')}, ensure_ascii=False) + '\n\n'
+                    break
+                time.sleep(0.4)
+
+        return Response(generate(), mimetype='text/event-stream', headers={'Cache-Control': 'no-store'})
+
+    @app.route('/api/android-analysis/jobs/<job_id>/artifacts/<artifact_name>', methods=['GET'])
+    @optional_token
+    def api_android_analysis_job_artifact(job_id, artifact_name):
+        if not _android_analysis_enabled():
+            return _android_analysis_disabled_response()
+        user_id = request.args.get('user_id', '').strip()
+        session_id = request.args.get('session_id', '').strip()
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        _, err = _session_for_user(client_ip, user_id, session_id)
+        if err:
+            return err
+        if '/' in artifact_name or '\\' in artifact_name or Path(artifact_name).name != artifact_name:
+            return jsonify({'error': 'Invalid artifact name', 'code': 'invalid_artifact_name'}), 400
+        store = AndroidAnalysisJobStore(sm.get_session_dir(client_ip, user_id, session_id))
+        try:
+            job = store.load_job(job_id)
+        except OSError:
+            return jsonify({'error': 'Android analysis job not found', 'code': 'android_analysis_job_not_found'}), 404
+        artifacts = job.get('artifacts') or {}
+        rel = artifacts.get(artifact_name)
+        if not rel:
+            for value in artifacts.values():
+                if Path(str(value)).name == artifact_name:
+                    rel = value
+                    break
+        if not rel or not str(rel).replace('\\', '/').startswith('artifacts/'):
+            return jsonify({'error': 'Artifact not found', 'code': 'android_analysis_artifact_not_found'}), 404
+        filename = Path(str(rel)).name
+        artifact_path = store.artifacts_dir(job_id) / filename
+        if not artifact_path.is_file():
+            return jsonify({'error': 'Artifact not found', 'code': 'android_analysis_artifact_not_found'}), 404
+        return send_from_directory(
+            store.artifacts_dir(job_id),
+            filename,
+            as_attachment=request.args.get('download') == '1',
+        )
+
+    @app.route('/api/android-analysis/jobs/<job_id>/deep', methods=['POST'])
+    @optional_token
+    def api_android_analysis_job_deep(job_id):
+        if not _android_analysis_enabled():
+            return _android_analysis_disabled_response()
+        data = request.json or {}
+        user_id = (data.get('user_id') or '').strip()
+        session_id = (data.get('session_id') or '').strip()
+        preferred_paths = data.get('preferred_paths') if isinstance(data.get('preferred_paths'), dict) else {}
+        store, _, err = _android_store_for_request(user_id, session_id)
+        if err:
+            return err
+        try:
+            job = store.load_job(job_id)
+        except OSError:
+            return jsonify({'error': 'Android analysis job not found', 'code': 'android_analysis_job_not_found'}), 404
+        try:
+            timings: list[dict] = []
+            store.update_job(job_id, status='deep_scoping')
+            deep_summary = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'deep_scoping',
+                lambda: build_deep_evidence_pack(
+                    store.artifacts_dir(job_id),
+                    store.extracted_dir(job_id),
+                    question=job.get('question') or '',
+                    configured_bundles=_readonly_bundles(),
+                    preferred_paths=preferred_paths,
+                ),
+            )
+            store.append_event(
+                job_id,
+                'deep_evidence_created',
+                {
+                    'has_code_context': bool(deep_summary.get('has_code_context')),
+                    'code_file_count': deep_summary.get('code_file_count', 0),
+                    'log_context_count': deep_summary.get('log_context_count', 0),
+                },
+            )
+            store.update_job(job_id, status='deep_reporting')
+            deep_report = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'deep_reporting',
+                lambda: generate_deep_report(
+                    store.artifacts_dir(job_id),
+                    question=job.get('question') or '',
+                    cli_path=config.CLAUDE_CLI_PATH,
+                    timeout_seconds=config.ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS,
+                    enable_ai=not app.config.get('TESTING', False),
+                ),
+            )
+            store.append_event(
+                job_id,
+                'deep_report_generated',
+                {
+                    'report_mode': deep_report.get('report_mode'),
+                    'has_report': bool(deep_report.get('has_report')),
+                },
+            )
+            store.update_job(job_id, status='verifying')
+            verifier = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'verifying',
+                lambda: run_verifier(
+                    store.artifacts_dir(job_id),
+                    report_name='deep_report.md',
+                    cli_path=config.CLAUDE_CLI_PATH,
+                    timeout_seconds=config.ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS,
+                    enable_ai=not app.config.get('TESTING', False),
+                ),
+            )
+            store.append_event(
+                job_id,
+                'verifier_completed',
+                {
+                    'status': verifier.get('status'),
+                    'overclaim_risk': verifier.get('overclaim_risk'),
+                },
+            )
+            job = store.load_job(job_id)
+            artifacts = _merge_android_artifacts(
+                job,
+                {
+                    'deep_evidence_pack': 'artifacts/deep_evidence_pack.md',
+                    'deep_evidence_summary': 'artifacts/deep_evidence_pack.json',
+                    'deep_report': 'artifacts/deep_report.md',
+                    'deep_report_meta': 'artifacts/deep_report_meta.json',
+                    'verifier_result': 'artifacts/verifier_result.json',
+                    'verified_report': 'artifacts/verified_report.md',
+                },
+            )
+            _write_android_metrics(store, job_id, timings)
+            artifacts['analysis_metrics'] = 'artifacts/analysis_metrics.json'
+            status = 'verified' if verifier.get('status') == 'supported' else 'needs_review'
+            job = store.update_job(job_id, status=status, artifacts=artifacts, error=None)
+            try:
+                report_text = (store.artifacts_dir(job_id) / 'verified_report.md').read_text(encoding='utf-8')
+                sm.add_message(
+                    get_client_ip(request, config.TRUST_X_FORWARDED),
+                    user_id,
+                    session_id,
+                    'assistant',
+                    report_text,
+                    thinking=_android_progress_markdown(store.read_events(job_id)),
+                )
+            except Exception as exc:
+                log.warning('[AndroidAnalysis] failed to persist deep report message: %s', exc)
+            return jsonify({'job': job, 'deep': deep_summary, 'verifier': verifier})
+        except AndroidAnalysisError as e:
+            log.warning('[AndroidAnalysis] deep job=%s failed: %s %s', job_id, e.code, e.message)
+            job = store.update_job(job_id, status='error', error={'code': e.code, 'message': e.message})
+            return jsonify({'job': job}), 400
+
+    @app.route('/api/android-analysis/jobs/<job_id>/case-draft', methods=['POST'])
+    @optional_token
+    def api_android_analysis_job_case_draft(job_id):
+        if not _android_analysis_enabled():
+            return _android_analysis_disabled_response()
+        data = request.json or {}
+        user_id = (data.get('user_id') or '').strip()
+        session_id = (data.get('session_id') or '').strip()
+        store, _, err = _android_store_for_request(user_id, session_id)
+        if err:
+            return err
+        try:
+            job = store.load_job(job_id)
+        except OSError:
+            return jsonify({'error': 'Android analysis job not found', 'code': 'android_analysis_job_not_found'}), 404
+        try:
+            draft = generate_case_draft(store.artifacts_dir(job_id), source_job_id=job_id)
+            store.append_event(
+                job_id,
+                'case_draft_generated',
+                {
+                    'draft_id': draft.get('id'),
+                    'source_bundle_ids': draft.get('source_bundle_ids') or [],
+                },
+            )
+            artifacts = _merge_android_artifacts(
+                job,
+                {
+                    'case_draft': 'artifacts/case_draft.json',
+                    'rule_candidates': 'artifacts/rule_candidates.json',
+                },
+            )
+            job = store.update_job(job_id, status='case_draft_ready', artifacts=artifacts, error=None)
+            return jsonify({'job': job, 'draft': draft})
+        except AndroidAnalysisError as e:
+            log.warning('[AndroidAnalysis] case draft job=%s failed: %s %s', job_id, e.code, e.message)
+            job = store.update_job(job_id, status='error', error={'code': e.code, 'message': e.message})
+            return jsonify({'job': job}), 400
+
+    @app.route('/api/android-analysis/jobs/<job_id>/case-draft/confirm', methods=['POST'])
+    @optional_token
+    def api_android_analysis_job_case_draft_confirm(job_id):
+        if not _android_analysis_enabled():
+            return _android_analysis_disabled_response()
+        data = request.json or {}
+        user_id = (data.get('user_id') or '').strip()
+        session_id = (data.get('session_id') or '').strip()
+        bundle_id = (data.get('bundle_id') or '').strip()
+        reviewer_note = (data.get('reviewer_note') or '').strip()
+        store, _, err = _android_store_for_request(user_id, session_id)
+        if err:
+            return err
+        try:
+            job = store.load_job(job_id)
+        except OSError:
+            return jsonify({'error': 'Android analysis job not found', 'code': 'android_analysis_job_not_found'}), 404
+        if not bundle_id:
+            bundle_id = next(iter(job.get('bundle_ids') or []), '')
+        try:
+            confirmed = confirm_case_draft(
+                config.ANDROID_ANALYSIS_KNOWLEDGE_DIR,
+                store.artifacts_dir(job_id),
+                bundle_id=bundle_id,
+                reviewer_note=reviewer_note,
+            )
+            store.append_event(
+                job_id,
+                'case_draft_confirmed',
+                {
+                    'case_id': confirmed.get('case_id'),
+                    'bundle_id': confirmed.get('bundle_id'),
+                },
+            )
+            job = store.update_job(job_id, status='case_confirmed', error=None)
+            return jsonify({'job': job, 'confirmed': confirmed})
+        except AndroidAnalysisError as e:
+            log.warning('[AndroidAnalysis] case confirm job=%s failed: %s %s', job_id, e.code, e.message)
+            job = store.update_job(job_id, status='error', error={'code': e.code, 'message': e.message})
+            return jsonify({'job': job}), 400
 
     @app.route('/api/dev/projects', methods=['GET'])
     @optional_token
@@ -819,10 +1626,21 @@ def register_routes(app, sm: SessionManager):
         if not user_id:
             return jsonify({'error': 'user_id required'}), 400
         client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
-        backed = backup_session_before_delete(
-            config.BACKUPS_DIR, config.CACHE_DIR, config.LOG_DIR,
-            client_ip, user_id, session_id,
-        )
+        backed = None
+        backup_error = None
+        try:
+            backed = backup_session_before_delete(
+                config.BACKUPS_DIR, config.CACHE_DIR, config.LOG_DIR,
+                client_ip, user_id, session_id,
+            )
+        except Exception as exc:
+            backup_error = str(exc)
+            logging.warning(
+                '[Session] Failed to backup before delete: user_id=%s session_id=%s error=%s',
+                user_id,
+                session_id,
+                exc,
+            )
         sm.delete_session(client_ip, user_id, session_id)
         out = {'ok': True}
         if backed is not None:
@@ -830,6 +1648,8 @@ def register_routes(app, sm: SessionManager):
                 out['backed_up_to'] = str(backed.relative_to(config.ROOT))
             except ValueError:
                 out['backed_up_to'] = str(backed)
+        if backup_error:
+            out['backup_warning'] = 'delete_backup_failed'
         return jsonify(out)
 
     @app.route('/sessions/<session_id>/messages', methods=['GET'])
