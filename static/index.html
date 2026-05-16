@@ -2397,6 +2397,9 @@
             padding: 10px 24px 24px;
             border-top: 0;
             background: linear-gradient(180deg, rgba(250,249,245,0), rgba(250,249,245,0.96) 30%);
+            position: relative;
+            z-index: 20;
+            overflow: visible;
         }
 
         .input-wrapper {
@@ -2747,7 +2750,7 @@
                 padding: 10px 10px calc(12px + env(safe-area-inset-bottom));
                 width: 100vw;
                 max-width: 100vw;
-                overflow-x: hidden;
+                overflow: visible;
             }
 
             .input-wrapper {
@@ -2785,7 +2788,13 @@
             }
 
             .input-plus-menu {
+                left: 0;
+                right: auto;
+                bottom: calc(100% + 8px);
                 width: min(260px, calc(100vw - 40px));
+                max-height: min(42vh, 260px);
+                overflow-y: auto;
+                overscroll-behavior: contain;
             }
         }
 </style>

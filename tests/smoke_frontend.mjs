@@ -53,6 +53,8 @@ assertIncludes('function getMermaidSvgBaseWidth', 'vector-safe Mermaid zoom sizi
 assertIncludes('svg.style.width = `${nextWidth}px`', 'Mermaid zoom updates SVG width');
 assertIncludes('viewport.scrollLeft = drag.left', 'Mermaid drag pans viewport');
 assertIncludes("viewport.addEventListener('dragstart'", 'Mermaid drag blocks file upload overlay');
+assertIncludes('overflow: visible;', 'mobile input popup should not be clipped');
+assertIncludes('max-height: min(42vh, 260px);', 'mobile input plus menu height guard');
 assertIncludes('function buildExportHtml', 'HTML export builder');
 assertIncludes('session-menu', 'session action menu');
 assertIncludes('safe-area-inset-top', 'mobile safe-area top support');
