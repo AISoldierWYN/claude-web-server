@@ -47,6 +47,12 @@ assertIncludes('openDevProjectPicker', 'development project picker');
 assertIncludes('showDevDiff', 'development diff action');
 assertIncludes('runDevPresetTest', 'development test action');
 assertIncludes('function renderMarkdown', 'Markdown renderer');
+assertIncludes('/static/assets/mermaid.min.js', 'local Mermaid renderer');
+assertIncludes('function preRenderMermaidForExport', 'Mermaid export pre-render');
+assertIncludes('function getMermaidSvgBaseWidth', 'vector-safe Mermaid zoom sizing');
+assertIncludes('svg.style.width = `${nextWidth}px`', 'Mermaid zoom updates SVG width');
+assertIncludes('viewport.scrollLeft = drag.left', 'Mermaid drag pans viewport');
+assertIncludes("viewport.addEventListener('dragstart'", 'Mermaid drag blocks file upload overlay');
 assertIncludes('function buildExportHtml', 'HTML export builder');
 assertIncludes('session-menu', 'session action menu');
 assertIncludes('safe-area-inset-top', 'mobile safe-area top support');
@@ -119,13 +125,41 @@ assert.match(rendered, /<code>ok<\/code>/);
 assert.match(rendered, /<ul><li>item<\/li><\/ul>/);
 assert.match(rendered, /&lt;safe&gt;/);
 
+const mermaidRendered = context.renderMarkdown([
+  '```mermaid',
+  'graph TD',
+  '  A --> B',
+  '```',
+].join('\n'));
+assert.match(mermaidRendered, /class="mermaid-diagram"/);
+assert.match(mermaidRendered, /data-mermaid-key="mmd-/);
+assert.match(mermaidRendered, /<pre data-lang="mermaid" class="mermaid-source">/);
+assert.match(mermaidRendered, /A --&gt; B/);
+
+const mermaidSource = 'graph TD\n  A --> B';
+context.getMermaidSvgCache().set(context.mermaidSourceKey(mermaidSource), '<svg><g></g></svg>');
+const cachedMermaidRendered = context.renderMarkdown(`\`\`\`mermaid\n${mermaidSource}\n\`\`\``);
+assert.match(cachedMermaidRendered, /mermaid-toolbar/);
+assert.match(cachedMermaidRendered, /mermaid-viewport/);
+assert.match(cachedMermaidRendered, /mermaid-canvas/);
+
+const repairedState = context.repairMermaidSource([
+  'stateDiagram-v2',
+  '    state LOCK {',
+  '        [*] --> Locked',
+  '        note right of LOCK : Lock Task mode active',
+  '    }',
+  '    LOCK --> LOCK: EVENT_LOCK',
+].join('\n'));
+assert.match(repairedState, /state LOCK \{\n        \[\*\] --> Locked\n    \}\n        note right of LOCK : Lock Task mode active/);
+
 const exported = context.buildExportHtml(
   { title: 'Smoke Export' },
   [
     { role: 'user', content: '| A | B |\n|---|---|\n| 1 | 2 |' },
     {
       role: 'assistant',
-      content: 'Done',
+      content: 'Done\n\n```mermaid\ngraph TD\n  A --> B\n```',
       thinking: [
         'Android 分析过程',
         '- 阶段：planning',
@@ -159,7 +193,10 @@ const exported = context.buildExportHtml(
 );
 assert.match(exported, /<!DOCTYPE html>/);
 assert.match(exported, /Smoke Export - Claude Chat Export/);
+assert.match(exported, /--bg-primary: #faf9f5/);
 assert.match(exported, /markdown-table-wrap/);
+assert.match(exported, /mermaid-diagram/);
+assert.match(exported, /mermaid-viewport/);
 assert.match(exported, /thinking-block/);
 assert.match(exported, /Android RealtimeDeviceManager问题分析过程概览/);
 assert.match(exported, /Android RealtimeDeviceManager问题分析过程详情/);

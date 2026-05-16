@@ -635,6 +635,107 @@
         }
 
         /* 整块思考区折叠（DeepSeek 风格） */
+        .markdown-body .mermaid-diagram {
+            margin: 0 0 0.95em;
+            padding: 14px;
+            border: 1px solid rgba(15,15,26,0.1);
+            border-radius: var(--radius-sm);
+            background: rgba(255,255,255,0.52);
+            overflow: hidden;
+        }
+
+        .markdown-body .mermaid-viewport {
+            width: 100%;
+            min-height: 260px;
+            max-height: min(72vh, 760px);
+            overflow: hidden;
+            cursor: grab;
+            touch-action: none;
+            overscroll-behavior: contain;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.55);
+        }
+
+        .markdown-body .mermaid-viewport *,
+        .markdown-body .mermaid-toolbar * {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .markdown-body .mermaid-viewport.dragging {
+            cursor: grabbing;
+        }
+
+        .markdown-body .mermaid-canvas {
+            width: max-content;
+            min-width: 100%;
+            min-height: 100%;
+            padding: 18px;
+        }
+
+        .markdown-body .mermaid-diagram svg {
+            display: block;
+            max-width: none;
+            min-width: 760px;
+            height: auto;
+            margin: 0 auto;
+            text-rendering: geometricPrecision;
+            shape-rendering: geometricPrecision;
+        }
+
+        .markdown-body .mermaid-diagram svg text,
+        .markdown-body .mermaid-diagram svg foreignObject {
+            font-size: 16px !important;
+        }
+
+        .markdown-body .mermaid-diagram pre {
+            margin: 0;
+        }
+
+        .mermaid-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            user-select: none;
+        }
+
+        .mermaid-toolbar button {
+            min-width: 30px;
+            height: 28px;
+            border-radius: 8px;
+            border: 1px solid rgba(15,15,26,0.12);
+            background: rgba(255,255,255,0.68);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .mermaid-toolbar button:hover {
+            background: rgba(255,255,255,0.9);
+        }
+
+        .mermaid-zoom-label {
+            min-width: 48px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .mermaid-hint {
+            margin-left: auto;
+            color: var(--text-muted);
+        }
+
+        .mermaid-error {
+            margin-bottom: 10px;
+            color: #b45309;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
         .reasoning-panel {
             border: 1px solid rgba(124,58,237,0.25);
             border-radius: var(--radius-sm);
@@ -2927,6 +3028,7 @@
         </div>
     </div>
 
+    <script src="/static/assets/mermaid.min.js"></script>
     <script>
     // http://IP 非安全上下文，crypto.randomUUID 可能不存在，会导致整段脚本失败（发送无反应）
     function genUUID() {
@@ -3053,14 +3155,19 @@
 
     // Drag & Drop
     let dragCounter = 0;
+    function isMermaidDragEvent(event) {
+        return !!(event && event.target && event.target.closest && event.target.closest('.mermaid-viewport'));
+    }
     document.addEventListener('dragenter', e => {
+        if (isMermaidDragEvent(e)) return;
         e.preventDefault();
         if (isStreaming) return;
         dragCounter++; dropZone.classList.add('show');
     });
-    document.addEventListener('dragleave', e => { e.preventDefault(); dragCounter--; if (dragCounter <= 0) { dragCounter = 0; dropZone.classList.remove('show'); } });
-    document.addEventListener('dragover', e => e.preventDefault());
+    document.addEventListener('dragleave', e => { if (isMermaidDragEvent(e)) return; e.preventDefault(); dragCounter--; if (dragCounter <= 0) { dragCounter = 0; dropZone.classList.remove('show'); } });
+    document.addEventListener('dragover', e => { if (isMermaidDragEvent(e)) return; e.preventDefault(); });
     document.addEventListener('drop', e => {
+        if (isMermaidDragEvent(e)) return;
         e.preventDefault();
         dragCounter = 0;
         dropZone.classList.remove('show');
@@ -3726,6 +3833,7 @@
                 ) : ''}
             `;
             box.appendChild(row);
+            queueMermaidRender(row);
         }
         return item;
     }
@@ -4515,6 +4623,7 @@
         row.innerHTML = avatarHtml;
         row.appendChild(contentDiv);
         chatContainer.appendChild(row);
+        queueMermaidRender(contentDiv);
         if (isAi && metadata && metadata.android_analysis_job_id) {
             hydrateAndroidAnalysisMessage(metadata.android_analysis_job_id, bubble);
         }
@@ -4567,6 +4676,389 @@
             .trim()
             .slice(0, 80);
         return cleaned || 'claude-chat';
+    }
+
+    function getMermaidGlobalRoot() {
+        if (typeof window !== 'undefined') return window;
+        if (typeof globalThis !== 'undefined') return globalThis;
+        return {};
+    }
+
+    function getMermaidSvgCache() {
+        const root = getMermaidGlobalRoot();
+        if (!root.__claudeMermaidSvgCache) root.__claudeMermaidSvgCache = new Map();
+        return root.__claudeMermaidSvgCache;
+    }
+
+    function isMermaidFenceLanguage(lang) {
+        return /^(mermaid|mmd)$/i.test(String(lang || '').trim());
+    }
+
+    function normalizeMermaidSource(source) {
+        return String(source || '').replace(/^\n+|\n+$/g, '');
+    }
+
+    function mermaidSourceKey(source) {
+        const s = normalizeMermaidSource(source);
+        let hash = 0;
+        for (let i = 0; i < s.length; i++) {
+            hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+        }
+        return `mmd-${(hash >>> 0).toString(36)}-${s.length.toString(36)}`;
+    }
+
+    function nextMermaidRenderId() {
+        const root = getMermaidGlobalRoot();
+        root.__claudeMermaidRenderCounter = (root.__claudeMermaidRenderCounter || 0) + 1;
+        return `claude-mermaid-${Date.now()}-${root.__claudeMermaidRenderCounter}`;
+    }
+
+    function renderMermaidBlock(source) {
+        const code = normalizeMermaidSource(source);
+        const key = mermaidSourceKey(code);
+        const cachedSvg = getMermaidSvgCache().get(key);
+        if (cachedSvg) {
+            return renderMermaidSvgBlock(key, cachedSvg);
+        }
+        return `<div class="mermaid-diagram" data-mermaid-key="${escapeAttr(key)}"><pre data-lang="mermaid" class="mermaid-source"><code>${escapeHtml(code)}</code></pre></div>`;
+    }
+
+    function renderMermaidSvgBlock(key, svg) {
+        return `<div class="mermaid-diagram mermaid-rendered" data-rendered="1" data-mermaid-key="${escapeAttr(key)}">
+            <div class="mermaid-toolbar" aria-label="Mermaid 图控制">
+                <button type="button" data-mermaid-action="zoom-out" title="缩小">−</button>
+                <button type="button" data-mermaid-action="zoom-reset" title="重置">100%</button>
+                <button type="button" data-mermaid-action="zoom-in" title="放大">+</button>
+                <span class="mermaid-zoom-label">100%</span>
+                <span class="mermaid-hint">拖拽移动，滚轮缩放</span>
+            </div>
+            <div class="mermaid-viewport">
+                <div class="mermaid-canvas">${svg}</div>
+            </div>
+        </div>`;
+    }
+
+    function getMermaidSourceFromNode(node) {
+        const code = node && node.querySelector ? node.querySelector('pre code') : null;
+        return code ? code.textContent || '' : '';
+    }
+
+    function repairMermaidSource(source) {
+        const code = normalizeMermaidSource(source);
+        if (!/^\s*stateDiagram-v2\b/m.test(code)) return code;
+        const lines = code.split('\n');
+        const out = [];
+        const stack = [];
+        for (const raw of lines) {
+            const open = /^(\s*)state\s+([A-Za-z0-9_-]+)\s*\{\s*$/.exec(raw);
+            if (open) {
+                stack.push({ name: open[2], notes: [] });
+                out.push(raw);
+                continue;
+            }
+            const top = stack[stack.length - 1];
+            const note = /^\s*note\s+(?:left|right)\s+of\s+([A-Za-z0-9_-]+)\s*:/.exec(raw);
+            if (top && note && note[1] === top.name) {
+                top.notes.push(raw);
+                continue;
+            }
+            if (top && /^\s*}\s*$/.test(raw)) {
+                out.push(raw);
+                stack.pop();
+                out.push(...top.notes);
+                continue;
+            }
+            out.push(raw);
+        }
+        return out.join('\n');
+    }
+
+    async function renderMermaidSourceToSvg(api, source) {
+        const original = normalizeMermaidSource(source);
+        const repaired = repairMermaidSource(original);
+        const candidates = repaired !== original ? [original, repaired] : [original];
+        let lastError = null;
+        for (const candidate of candidates) {
+            try {
+                const result = await api.render(nextMermaidRenderId(), candidate);
+                const svg = result && result.svg ? result.svg : '';
+                if (!svg) throw new Error('Mermaid returned empty SVG');
+                return { svg, source: candidate, repaired: candidate !== original, result };
+            } catch (e) {
+                lastError = e;
+            }
+        }
+        throw lastError || new Error('Mermaid render failed');
+    }
+
+    function getMermaidSvgBaseWidth(diagram) {
+        const svg = diagram && diagram.querySelector ? diagram.querySelector('.mermaid-canvas svg') : null;
+        if (!svg) return 760;
+        const cached = Number(svg.dataset.baseWidth || 0);
+        if (cached > 0) return cached;
+        let width = 0;
+        const viewBox = String(svg.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
+        if (viewBox.length === 4 && Number.isFinite(viewBox[2]) && viewBox[2] > 0) {
+            width = viewBox[2];
+        }
+        if (!width) {
+            const attrWidth = parseFloat(String(svg.getAttribute('width') || '').replace('px', ''));
+            if (Number.isFinite(attrWidth) && attrWidth > 0) width = attrWidth;
+        }
+        if (!width && typeof svg.getBoundingClientRect === 'function') {
+            const rect = svg.getBoundingClientRect();
+            if (rect && rect.width > 0) width = rect.width;
+        }
+        width = Math.max(760, Math.round(width || 760));
+        svg.dataset.baseWidth = String(width);
+        svg.setAttribute('draggable', 'false');
+        return width;
+    }
+
+    function setMermaidTransform(diagram, scale) {
+        const canvas = diagram && diagram.querySelector ? diagram.querySelector('.mermaid-canvas') : null;
+        const svg = diagram && diagram.querySelector ? diagram.querySelector('.mermaid-canvas svg') : null;
+        if (!canvas || !svg) return;
+        const nextScale = Math.min(8, Math.max(0.45, Number(scale) || 1));
+        const baseWidth = getMermaidSvgBaseWidth(diagram);
+        const nextWidth = Math.max(760, Math.round(baseWidth * nextScale));
+        diagram.dataset.scale = String(nextScale);
+        canvas.style.transform = '';
+        canvas.style.width = `${nextWidth + 36}px`;
+        svg.style.width = `${nextWidth}px`;
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+        const label = diagram.querySelector('.mermaid-zoom-label');
+        if (label) label.textContent = `${Math.round(nextScale * 100)}%`;
+    }
+
+    function bindMermaidInteractions(diagram) {
+        if (!diagram || diagram.dataset.bound === '1') return;
+        diagram.dataset.bound = '1';
+        const viewport = diagram.querySelector('.mermaid-viewport');
+        if (!viewport) return;
+        setMermaidTransform(diagram, Number(diagram.dataset.scale || 1));
+
+        const zoomBy = (factor, originX, originY) => {
+            const prevScale = Number(diagram.dataset.scale || 1);
+            const nextScale = Math.min(8, Math.max(0.45, prevScale * factor));
+            const rect = viewport.getBoundingClientRect ? viewport.getBoundingClientRect() : { left: 0, top: 0, width: 1, height: 1 };
+            const ox = Number.isFinite(originX) ? originX - rect.left : rect.width / 2;
+            const oy = Number.isFinite(originY) ? originY - rect.top : rect.height / 2;
+            const anchorX = (viewport.scrollLeft + ox) / prevScale;
+            const anchorY = (viewport.scrollTop + oy) / prevScale;
+            setMermaidTransform(diagram, nextScale);
+            viewport.scrollLeft = Math.max(0, anchorX * nextScale - ox);
+            viewport.scrollTop = Math.max(0, anchorY * nextScale - oy);
+        };
+
+        const reset = () => {
+            setMermaidTransform(diagram, 1);
+            viewport.scrollLeft = 0;
+            viewport.scrollTop = 0;
+        };
+
+        diagram.querySelector('[data-mermaid-action="zoom-in"]')?.addEventListener('click', () => zoomBy(1.25));
+        diagram.querySelector('[data-mermaid-action="zoom-out"]')?.addEventListener('click', () => zoomBy(0.8));
+        diagram.querySelector('[data-mermaid-action="zoom-reset"]')?.addEventListener('click', reset);
+
+        viewport.addEventListener('wheel', (event) => {
+            if (!event.ctrlKey && Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            zoomBy(event.deltaY < 0 ? 1.12 : 0.89, event.clientX, event.clientY);
+        }, { passive: false });
+
+        viewport.addEventListener('dragstart', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        viewport.addEventListener('dragenter', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        viewport.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        viewport.addEventListener('drop', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+
+        let drag = null;
+        viewport.addEventListener('pointerdown', (event) => {
+            if (event.button !== undefined && event.button !== 0) return;
+            event.preventDefault();
+            event.stopPropagation();
+            drag = {
+                id: event.pointerId,
+                sx: event.clientX,
+                sy: event.clientY,
+                left: viewport.scrollLeft,
+                top: viewport.scrollTop
+            };
+            viewport.classList.add('dragging');
+            if (viewport.setPointerCapture) viewport.setPointerCapture(event.pointerId);
+        });
+        viewport.addEventListener('pointermove', (event) => {
+            if (!drag || drag.id !== event.pointerId) return;
+            event.preventDefault();
+            event.stopPropagation();
+            viewport.scrollLeft = drag.left - (event.clientX - drag.sx);
+            viewport.scrollTop = drag.top - (event.clientY - drag.sy);
+        });
+        const endDrag = (event) => {
+            if (!drag || (event && drag.id !== event.pointerId)) return;
+            if (event) event.stopPropagation();
+            drag = null;
+            viewport.classList.remove('dragging');
+        };
+        viewport.addEventListener('pointerup', endDrag);
+        viewport.addEventListener('pointercancel', endDrag);
+        viewport.addEventListener('pointerleave', endDrag);
+    }
+
+    async function ensureMermaidReady() {
+        const root = getMermaidGlobalRoot();
+        const api = root.mermaid;
+        if (!api || typeof api.render !== 'function') {
+            throw new Error('Mermaid renderer is not loaded');
+        }
+        if (!root.__claudeMermaidInitialized && typeof api.initialize === 'function') {
+            api.initialize({
+                startOnLoad: false,
+                securityLevel: 'strict',
+                theme: 'base',
+                themeVariables: {
+                    primaryColor: '#f4efe7',
+                    primaryTextColor: '#2b2926',
+                    primaryBorderColor: '#d8cfc2',
+                    lineColor: '#8a7f73',
+                    secondaryColor: '#fffaf2',
+                    tertiaryColor: '#f7f3ed',
+                    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    fontSize: '17px'
+                },
+                flowchart: { htmlLabels: false },
+                sequence: { mirrorActors: false }
+            });
+            root.__claudeMermaidInitialized = true;
+        }
+        return api;
+    }
+
+    async function renderMermaidDiagrams(rootEl) {
+        if (!rootEl || !rootEl.querySelectorAll) return;
+        const nodes = Array.from(rootEl.querySelectorAll('.mermaid-diagram:not([data-rendering="1"])'));
+        if (!nodes.length) return;
+        const pending = nodes.filter((node) => node.dataset.rendered !== '1');
+        let api = null;
+        if (pending.length) {
+            try {
+                api = await ensureMermaidReady();
+            } catch (_) {
+                nodes.forEach(bindMermaidInteractions);
+                return;
+            }
+        }
+        for (const node of nodes) {
+            if (node.dataset.rendered === '1') {
+                bindMermaidInteractions(node);
+                continue;
+            }
+            const source = getMermaidSourceFromNode(node);
+            if (!source.trim()) continue;
+            node.dataset.rendering = '1';
+            try {
+                const key = mermaidSourceKey(source);
+                const rendered = await renderMermaidSourceToSvg(api, source);
+                getMermaidSvgCache().set(key, rendered.svg);
+                const tmp = document.createElement('div');
+                tmp.innerHTML = renderMermaidSvgBlock(key, rendered.svg);
+                const fresh = tmp.firstElementChild;
+                node.className = fresh.className;
+                node.innerHTML = fresh.innerHTML;
+                node.dataset.rendered = '1';
+                node.dataset.mermaidKey = key;
+                if (rendered.repaired) node.dataset.repaired = '1';
+                node.classList.add('mermaid-rendered');
+                bindMermaidInteractions(node);
+                if (rendered.result && typeof rendered.result.bindFunctions === 'function') {
+                    rendered.result.bindFunctions(node);
+                }
+            } catch (e) {
+                const fallback = `<pre data-lang="mermaid" class="mermaid-source"><code>${escapeHtml(source)}</code></pre>`;
+                node.innerHTML = `<div class="mermaid-error">Mermaid 图渲染失败，已保留源码。</div>${fallback}`;
+                node.dataset.rendered = '1';
+                node.dataset.state = 'error';
+                console.warn('Mermaid render failed:', e);
+            } finally {
+                delete node.dataset.rendering;
+            }
+        }
+    }
+
+    function queueMermaidRender(rootEl) {
+        if (!rootEl || !rootEl.querySelector || !rootEl.querySelector('.mermaid-diagram')) return;
+        const run = () => renderMermaidDiagrams(rootEl);
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(run);
+        } else if (typeof setTimeout === 'function') {
+            setTimeout(run, 0);
+        }
+    }
+
+    function collectMermaidSourcesFromMarkdown(markdown) {
+        const sources = [];
+        const text = String(markdown || '');
+        const fenceRe = /```([A-Za-z0-9_-]*)[ \t]*\n?([\s\S]*?)```/g;
+        let m;
+        while ((m = fenceRe.exec(text)) !== null) {
+            if (isMermaidFenceLanguage(m[1])) {
+                const source = normalizeMermaidSource(m[2]);
+                if (source.trim()) sources.push(source);
+            }
+        }
+        return sources;
+    }
+
+    function collectMermaidSourcesFromMessages(messages) {
+        const sources = [];
+        for (const m of messages || []) {
+            sources.push(...collectMermaidSourcesFromMarkdown(m && m.content));
+            sources.push(...collectMermaidSourcesFromMarkdown(m && m.thinking));
+            const details = m && m.android_process_details;
+            for (const stage of (details && details.stages) || []) {
+                for (const entry of stage.items || []) {
+                    const content = entry && entry.data && entry.data.content;
+                    sources.push(...collectMermaidSourcesFromMarkdown(content));
+                }
+            }
+        }
+        return Array.from(new Set(sources));
+    }
+
+    async function preRenderMermaidForExport(messages) {
+        const sources = collectMermaidSourcesFromMessages(messages);
+        if (!sources.length) return;
+        let api;
+        try {
+            api = await ensureMermaidReady();
+        } catch (_) {
+            return;
+        }
+        const cache = getMermaidSvgCache();
+        for (const source of sources) {
+            const key = mermaidSourceKey(source);
+            if (cache.get(key)) continue;
+            try {
+                const rendered = await renderMermaidSourceToSvg(api, source);
+                if (rendered && rendered.svg) cache.set(key, rendered.svg);
+            } catch (e) {
+                console.warn('Mermaid export pre-render failed:', e);
+            }
+        }
     }
 
     function renderInlineMarkdown(str) {
@@ -4752,8 +5244,12 @@
         let m;
         while ((m = fenceRe.exec(text)) !== null) {
             out.push(renderMarkdownBlocks(text.slice(idx, m.index)));
-            const lang = m[1] ? ` data-lang="${escapeAttr(m[1])}"` : '';
-            out.push(`<pre${lang}><code>${escapeHtml(m[2])}</code></pre>`);
+            if (isMermaidFenceLanguage(m[1])) {
+                out.push(renderMermaidBlock(m[2]));
+            } else {
+                const lang = m[1] ? ` data-lang="${escapeAttr(m[1])}"` : '';
+                out.push(`<pre${lang}><code>${escapeHtml(m[2])}</code></pre>`);
+            }
             idx = fenceRe.lastIndex;
         }
         out.push(renderMarkdownBlocks(text.slice(idx)));
@@ -4764,22 +5260,23 @@
         if (!el) return;
         el.classList.add('markdown-body');
         el.innerHTML = renderMarkdown(markdown || '');
+        queueMermaidRender(el);
     }
 
     function exportCss() {
         return `
             :root {
-                --bg-primary: #0F0F1A;
-                --bg-secondary: #1A1A2E;
-                --bg-input: #1E1E35;
-                --text-primary: #E6E6E6;
-                --text-secondary: #A5A5BC;
-                --text-muted: #777790;
-                --accent: #7C3AED;
-                --border: #2A2A4A;
-                --user-bubble: #5B2DA0;
-                --ai-bubble: #1A1A35;
-                --thinking-bg: #151530;
+                --bg-primary: #faf9f5;
+                --bg-secondary: #f1eee7;
+                --bg-input: #fffdf8;
+                --text-primary: #2f2a25;
+                --text-secondary: #6e665d;
+                --text-muted: #9b9288;
+                --accent: #d97852;
+                --border: #ded8ce;
+                --user-bubble: #df7d5d;
+                --ai-bubble: transparent;
+                --thinking-bg: transparent;
             }
             * { box-sizing: border-box; }
             body {
@@ -4815,9 +5312,9 @@
                 font-weight: 700;
                 flex: 0 0 auto;
                 color: #fff;
-                background: linear-gradient(135deg, var(--accent), #6D28D9);
+                background: linear-gradient(135deg, var(--accent), #b85f43);
             }
-            .message-row.user .message-avatar { order: 2; background: #5B2DA0; }
+            .message-row.user .message-avatar { order: 2; background: #2f2a25; }
             .message-avatar.ai { background: transparent; color: transparent; }
             .message-avatar.ai img { width: 32px; height: 32px; display: block; border-radius: 50%; }
             .message-content { max-width: 76%; min-width: 0; }
@@ -4828,7 +5325,7 @@
                 overflow-wrap: anywhere;
                 font-size: 14px;
             }
-            .message-row.user .message-bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; }
+            .message-row.user .message-bubble { background: var(--user-bubble); color: #fff; border-bottom-right-radius: 4px; }
             .message-row.ai .message-bubble { background: transparent; border: 0; border-radius: 0; padding: 1px 0; }
             .thinking-block {
                 margin-bottom: 10px;
@@ -4846,7 +5343,7 @@
             }
             .thinking-header {
                 padding: 8px 12px;
-                color: #c4b5fd;
+                color: #9b5b3f;
                 font-size: 12px;
                 font-weight: 700;
                 border-bottom: 0;
@@ -4861,8 +5358,8 @@
             .android-process-export {
                 margin-bottom: 10px;
                 border-radius: 8px;
-                border: 1px solid rgba(124,58,237,0.28);
-                background: rgba(255,255,255,0.03);
+                border: 1px solid rgba(47,42,37,0.12);
+                background: rgba(255,255,255,0.58);
                 padding: 10px 12px;
                 color: var(--text-secondary);
                 font-size: 12px;
@@ -4874,7 +5371,7 @@
             }
             .android-process-export details {
                 margin-top: 8px;
-                border-top: 1px solid rgba(255,255,255,0.08);
+                border-top: 1px solid rgba(47,42,37,0.08);
                 padding-top: 8px;
             }
             .android-process-export pre {
@@ -4883,8 +5380,8 @@
                 white-space: pre-wrap;
                 word-break: break-word;
                 overflow-wrap: anywhere;
-                background: rgba(0,0,0,0.24);
-                border: 1px solid rgba(255,255,255,0.08);
+                background: rgba(255,255,255,0.72);
+                border: 1px solid rgba(47,42,37,0.1);
                 border-radius: 6px;
                 padding: 8px;
                 font-size: 11px;
@@ -4892,8 +5389,8 @@
             .android-process-export .android-export-stream {
                 max-height: 340px;
                 overflow: auto;
-                background: rgba(0,0,0,0.24);
-                border: 1px solid rgba(255,255,255,0.08);
+                background: rgba(255,255,255,0.72);
+                border: 1px solid rgba(47,42,37,0.1);
                 border-radius: 6px;
                 padding: 8px;
                 margin-top: 6px;
@@ -4905,10 +5402,10 @@
                 display: inline-flex;
                 padding: 3px 9px;
                 border-radius: 999px;
-                border: 1px solid rgba(124,58,237,0.3);
-                color: #c4b5fd;
+                border: 1px solid rgba(217,120,82,0.3);
+                color: #9b5b3f;
                 font-size: 12px;
-                background: rgba(124,58,237,0.15);
+                background: rgba(217,120,82,0.12);
             }
             .markdown-body { white-space: normal; }
             .markdown-body > :first-child { margin-top: 0; }
@@ -4921,22 +5418,30 @@
             .markdown-body h4 { font-size: 1em; }
             .markdown-body ul, .markdown-body ol { padding-left: 1.35em; }
             .markdown-body li + li { margin-top: 0.25em; }
-            .markdown-body code { padding: 0.1em 0.35em; border-radius: 5px; background: rgba(255,255,255,0.08); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.92em; }
-            .markdown-body pre { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.28); overflow: auto; white-space: pre; }
+            .markdown-body code { padding: 0.1em 0.35em; border-radius: 5px; background: rgba(47,42,37,0.07); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.92em; }
+            .markdown-body pre { padding: 12px; border-radius: 8px; border: 1px solid rgba(47,42,37,0.1); background: rgba(255,255,255,0.7); overflow: auto; white-space: pre; }
             .markdown-body pre code { padding: 0; background: transparent; border-radius: 0; }
-            .markdown-body blockquote { padding: 0.2em 0 0.2em 0.9em; border-left: 3px solid rgba(196,181,253,0.55); color: var(--text-secondary); }
-            .markdown-body a { color: #c4b5fd; text-decoration: none; border-bottom: 1px solid rgba(196,181,253,0.35); }
-            .markdown-table-wrap { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
-            .markdown-body table { width: 100%; border-collapse: collapse; min-width: max-content; background: rgba(0,0,0,0.12); font-size: 13px; line-height: 1.55; }
-            .markdown-body th, .markdown-body td { padding: 8px 10px; border: 1px solid rgba(255,255,255,0.12); vertical-align: top; white-space: nowrap; }
-            .markdown-body th { background: rgba(124,58,237,0.22); color: #f3edff; font-weight: 700; text-align: left; }
-            .markdown-body tr:nth-child(even) td { background: rgba(255,255,255,0.035); }
+            .markdown-body blockquote { padding: 0.2em 0 0.2em 0.9em; border-left: 3px solid rgba(217,120,82,0.45); color: var(--text-secondary); }
+            .markdown-body a { color: #b85f43; text-decoration: none; border-bottom: 1px solid rgba(184,95,67,0.3); }
+            .markdown-table-wrap { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid rgba(47,42,37,0.12); }
+            .markdown-body table { width: 100%; border-collapse: collapse; min-width: max-content; background: rgba(255,255,255,0.5); font-size: 13px; line-height: 1.55; }
+            .markdown-body th, .markdown-body td { padding: 8px 10px; border: 1px solid rgba(47,42,37,0.12); vertical-align: top; white-space: nowrap; }
+            .markdown-body th { background: rgba(217,120,82,0.16); color: var(--text-primary); font-weight: 700; text-align: left; }
+            .markdown-body tr:nth-child(even) td { background: rgba(47,42,37,0.035); }
+            .markdown-body .mermaid-diagram { margin: 0 0 0.95em; padding: 14px; border: 1px solid rgba(47,42,37,0.12); border-radius: 10px; background: rgba(255,255,255,0.58); overflow: hidden; }
+            .export-page .mermaid-toolbar { display: none; }
+            .markdown-body .mermaid-viewport { width: 100%; overflow: auto; border-radius: 10px; background: rgba(255,255,255,0.55); }
+            .markdown-body .mermaid-canvas { width: max-content; min-width: 100%; padding: 18px; }
+            .markdown-body .mermaid-diagram svg { display: block; max-width: none; min-width: 760px; height: auto; margin: 0 auto; }
+            .markdown-body .mermaid-diagram svg text, .markdown-body .mermaid-diagram svg foreignObject { font-size: 16px !important; }
+            .markdown-body .mermaid-diagram pre { margin: 0; }
+            .mermaid-error { margin-bottom: 10px; color: #fbbf24; font-size: 12px; font-weight: 600; }
             .interrupted-notice {
                 margin-top: 14px;
                 padding: 10px 12px;
-                border: 1px solid rgba(255,255,255,0.12);
+                border: 1px solid rgba(47,42,37,0.12);
                 border-radius: 13px;
-                background: rgba(255,255,255,0.04);
+                background: rgba(255,255,255,0.58);
                 color: var(--text-secondary);
                 display: flex;
                 align-items: center;
@@ -4944,7 +5449,7 @@
             }
             .interrupted-notice span { flex: 1; min-width: 0; }
             .interrupted-notice button {
-                border: 1px solid rgba(255,255,255,0.16);
+                border: 1px solid rgba(47,42,37,0.14);
                 border-radius: 10px;
                 background: transparent;
                 color: var(--text-primary);
@@ -5040,8 +5545,11 @@
             ? `<div class="interrupted-notice"><span>AI 的回复已中断。</span><button type="button">Try again</button></div>`
             : '';
         const bubble = `<div class="message-bubble markdown-body">${renderMarkdown((m && m.content) || '')}</div>`;
+        const exportLogoSrc = (typeof assistantLogoDataUri !== 'undefined' && assistantLogoDataUri)
+            || (typeof AI_LOGO_SRC !== 'undefined' && AI_LOGO_SRC)
+            || '/static/assets/assistant-logo.svg';
         const avatar = isAi
-            ? `<div class="message-avatar ai"><img src="${escapeAttr(assistantLogoDataUri || AI_LOGO_SRC)}" alt="AI"></div>`
+            ? `<div class="message-avatar ai"><img src="${escapeAttr(exportLogoSrc)}" alt="AI"></div>`
             : `<div class="message-avatar user-av">U</div>`;
         return `<div class="message-row ${isAi ? 'ai' : 'user'}">${avatar}<div class="message-content">${filesHtml}${thinkingHtml}${androidProcessHtml}${bubble}${interruptedHtml}</div></div>`;
     }
@@ -5133,6 +5641,7 @@
                 sessionId
             );
             await ensureAssistantLogoDataUri();
+            await preRenderMermaidForExport(messages);
             const html = buildExportHtml(session, messages);
             await saveHtmlFile(html, filename, saveHandle);
             showToast('已导出 HTML');
