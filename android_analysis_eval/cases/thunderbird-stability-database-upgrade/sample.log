@@ -1,0 +1,2 @@
+05-10 11:04:20.100 E AndroidRuntime: FATAL EXCEPTION main Thunderbird
+05-10 11:04:20.102 E AndroidRuntime: DatabaseUpgradeInterceptor failed before AccountCreator initialized MessageListWidgetManager

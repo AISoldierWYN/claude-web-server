@@ -1,0 +1,17 @@
+{
+  "min_rule_count": 4,
+  "min_hit_count": 1,
+  "expected_profile": "performance",
+  "expected_keywords": [
+    "Choreographer",
+    "Skipped",
+    "ForYou"
+  ],
+  "must_hit_rule_tags": [
+    "performance"
+  ],
+  "must_hit_terms": [
+    "Choreographer"
+  ],
+  "max_generic_term_ratio": 0.2
+}

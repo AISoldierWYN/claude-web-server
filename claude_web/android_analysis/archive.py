@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tarfile
@@ -32,13 +33,32 @@ def safe_extract_archive(
         raise AndroidAnalysisError('archive_too_large', 'Archive exceeds the configured size limit.')
 
     suffixes = [s.lower() for s in archive_path.suffixes]
-    if archive_path.suffix.lower() == '.zip':
+    archive_type = _detect_archive_type(archive_path)
+    if archive_type == 'zip':
         return _extract_zip(archive_path, dest_dir, limits)
-    if archive_path.suffix.lower() == '.rar':
+    if archive_type == 'rar':
         return _extract_rar_with_7z(archive_path, dest_dir, limits, seven_zip_path=seven_zip_path)
-    if any(s in suffixes for s in _SUPPORTED_SUFFIXES) and tarfile.is_tarfile(archive_path):
+    if archive_type == 'tar' or (any(s in suffixes for s in _SUPPORTED_SUFFIXES) and tarfile.is_tarfile(archive_path)):
         return _extract_tar(archive_path, dest_dir, limits)
     raise AndroidAnalysisError('unsupported_archive', 'Only zip, tar, and rar archives are supported for now.')
+
+
+def _detect_archive_type(archive_path: Path) -> str:
+    """Prefer file signatures over suffixes because user log archives are often mislabeled."""
+    try:
+        header = archive_path.read_bytes()[:8]
+    except OSError:
+        return ''
+    if header.startswith((b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08')):
+        return 'zip'
+    if header.startswith(b'Rar!\x1a\x07\x00') or header.startswith(b'Rar!\x1a\x07\x01\x00'):
+        return 'rar'
+    try:
+        if tarfile.is_tarfile(archive_path):
+            return 'tar'
+    except (OSError, tarfile.TarError):
+        return ''
+    return ''
 
 
 def _extract_zip(archive_path: Path, dest_dir: Path, limits: ExtractionLimits) -> Dict[str, int]:
@@ -49,19 +69,47 @@ def _extract_zip(archive_path: Path, dest_dir: Path, limits: ExtractionLimits) -
         files = 0
         dest_dir.mkdir(parents=True, exist_ok=True)
         for member in members:
+            member_name = _zip_member_name(member)
             if member.is_dir():
-                _safe_target(dest_dir, member.filename, limits).mkdir(parents=True, exist_ok=True)
+                _safe_target(dest_dir, member_name, limits).mkdir(parents=True, exist_ok=True)
                 continue
             if _zip_is_symlink(member):
                 raise AndroidAnalysisError('archive_symlink', 'Symbolic links are not allowed in archives.')
             total_size += int(member.file_size)
             _validate_sizes(member.file_size, total_size, limits)
-            target = _safe_target(dest_dir, member.filename, limits)
+            target = _safe_target(dest_dir, member_name, limits)
             target.parent.mkdir(parents=True, exist_ok=True)
             with zf.open(member, 'r') as src, open(target, 'wb') as dst:
                 shutil.copyfileobj(src, dst)
             files += 1
     return {'files': files, 'total_size': total_size}
+
+
+def _zip_member_name(member: zipfile.ZipInfo) -> str:
+    """Recover common Windows/Android ZIP names that were encoded as GBK/CP936."""
+    name = member.filename
+    if member.flag_bits & 0x800 and _zip_name_mojibake_score(name) <= 0:
+        return name
+    try:
+        raw = name.encode('cp437')
+    except UnicodeEncodeError:
+        return name
+    candidates = [name]
+    for encoding in ('gbk', 'cp936', 'utf-8'):
+        try:
+            decoded = raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+        if decoded not in candidates:
+            candidates.append(decoded)
+    return min(candidates, key=_zip_name_mojibake_score)
+
+
+def _zip_name_mojibake_score(name: str) -> int:
+    weird = sum(1 for ch in name if ch in '┐└┘┌┬┴┼═║╧╦╩╔╗╝╚╠╣�')
+    controls = sum(1 for ch in name if ord(ch) < 32)
+    cjk = len(re.findall(r'[\u4e00-\u9fff]', name))
+    return weird * 8 + controls * 12 - cjk
 
 
 def _extract_tar(archive_path: Path, dest_dir: Path, limits: ExtractionLimits) -> Dict[str, int]:

@@ -18,7 +18,7 @@ class AndroidAnalysisError(Exception):
 class ExtractionLimits:
     max_archive_size: int = 100 * 1024 * 1024
     max_total_size: int = 300 * 1024 * 1024
-    max_file_size: int = 80 * 1024 * 1024
+    max_file_size: int = 200 * 1024 * 1024
     max_files: int = 5000
     max_depth: int = 24
 
@@ -39,3 +39,13 @@ class SampleLimits:
     context_lines: int = 6
     max_keyword_matches_per_file: int = 8
     max_chars_per_file: int = 20000
+
+
+@dataclass(frozen=True)
+class PlannerPromptLimits:
+    """预算化控制 Planner 首轮 prompt，避免大日志包一次性塞满上下文。"""
+
+    prompt_budget_chars: int = 80000
+    max_tree_nodes: int = 300
+    max_sample_files: int = 24
+    max_sample_chars: int = 50000

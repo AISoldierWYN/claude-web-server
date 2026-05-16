@@ -1,0 +1,3 @@
+05-10 10:01:21.120 I NowInAndroid: ForYou feed refresh requested
+05-10 10:01:21.221 W TopicRepository: topic stream returned empty NewsResource list
+05-10 10:01:21.322 E SyncWorker: ForYou sync failed while updating bookmarks

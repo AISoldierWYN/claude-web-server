@@ -1,0 +1,3 @@
+05-10 10:02:11.000 I NowInAndroid: MainActivity startup finished, opening ForYou route
+05-10 10:02:11.240 I Choreographer: Skipped 42 frames! The application may be doing too much work on its main thread.
+05-10 10:02:11.300 W Perfetto: trace marker shows slow Compose first draw for ForYou

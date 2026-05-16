@@ -1,0 +1,15 @@
+{
+  "id": "nia-functional-feed",
+  "repo": "android/nowinandroid",
+  "bundle_id": "app-nowinandroid",
+  "rule_pack_id": "nowinandroid-generated",
+  "project_preset": "app",
+  "profiles": ["functional"],
+  "project_dirs": ["local://tests/github_apps/android__nowinandroid"],
+  "bundle": {
+    "title": "Now in Android",
+    "summary": "Google Now in Android sample app: ForYou feed, topics, bookmarks, news resources and sync.",
+    "keywords": ["nowinandroid", "ForYou", "Topic", "NewsResource", "Bookmark", "Repository", "sync"]
+  },
+  "log_path": "sample.log"
+}

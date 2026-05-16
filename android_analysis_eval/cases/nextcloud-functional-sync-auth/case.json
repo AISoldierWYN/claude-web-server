@@ -1,0 +1,15 @@
+{
+  "id": "nextcloud-functional-sync-auth",
+  "repo": "nextcloud/android",
+  "bundle_id": "app-nextcloud",
+  "rule_pack_id": "nextcloud-generated",
+  "project_preset": "app",
+  "profiles": ["functional"],
+  "project_dirs": ["local://tests/github_apps/nextcloud__android"],
+  "bundle": {
+    "title": "Nextcloud Android",
+    "summary": "Complex cloud file app with account authentication, WebDAV remote operations, upload/download and background sync.",
+    "keywords": ["Nextcloud", "OwnCloudClient", "UserAccountManager", "RemoteOperationResult", "FileSyncService", "UploadFileBroadcastReceiver"]
+  },
+  "log_path": "sample.log"
+}

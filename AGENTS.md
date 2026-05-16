@@ -134,6 +134,12 @@ v3_linux_deploy = false
 - `filename_sanitize.py`: 安全处理上传文件名，支持 Unicode
 - 非 ASCII 文件名存储为 `f_<uuid>.<ext>`，但返回给前端用原文件名
 
+### Markdown 渲染规范
+
+- 只要后端或前端确认某个文本块是 Markdown/报告/分析过程/AI 可见输出，就应在页面和离线 HTML 导出中使用同一套 Markdown 渲染路径。
+- 流式输出仍按增量追加原始文本，但展示层需要对累积文本做 Markdown 渲染，并保证长行、代码块、表格在桌面和移动端都不会横向溢出。
+- 不要把 `ai_text_delta`、`ai_thinking_delta` 等内部事件名直接作为正文展示；调试信息应聚合为可读的 Markdown 摘要或折叠详情。
+
 ### 错误处理
 
 - API 软错误（如 `invalid params`）会触发外环重试

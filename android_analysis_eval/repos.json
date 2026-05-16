@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "root": "tests/github_apps",
+  "repositories": [
+    {
+      "repo": "android/nowinandroid",
+      "url": "https://github.com/android/nowinandroid",
+      "local_dir": "tests/github_apps/android__nowinandroid",
+      "bundle_id": "app-nowinandroid",
+      "project_preset": "app",
+      "priority": "P0",
+      "profiles": ["functional", "performance"],
+      "sparse_paths": ["app", "core", "feature", "sync", "benchmarks", "gradle", "build-logic", "settings.gradle.kts", "build.gradle.kts"],
+      "notes": "Modern Kotlin/Compose app; validates module, repository, feature and baseline performance signals."
+    },
+    {
+      "repo": "AntennaPod/AntennaPod",
+      "url": "https://github.com/AntennaPod/AntennaPod",
+      "local_dir": "tests/github_apps/AntennaPod__AntennaPod",
+      "bundle_id": "app-antennapod",
+      "project_preset": "app",
+      "priority": "P0",
+      "profiles": ["functional", "stability"],
+      "sparse_paths": ["app", "core", "event", "model", "net", "parser", "playback", "storage", "gradle", "settings.gradle", "build.gradle"],
+      "notes": "Real Java/Kotlin podcast app; validates download, playback, database, service and crash signals."
+    },
+    {
+      "repo": "android/ndk-samples",
+      "url": "https://github.com/android/ndk-samples",
+      "local_dir": "tests/github_apps/android__ndk-samples",
+      "bundle_id": "app-ndk-samples",
+      "project_preset": "native",
+      "priority": "P0",
+      "profiles": ["stability", "performance"],
+      "sparse_paths": ["hello-jni", "native-activity", "gradle", "settings.gradle", "build.gradle"],
+      "notes": "NDK sample pool; Stage 4 uses Java/Manifest/Gradle signals, Stage 5 will add native source scanning."
+    },
+    {
+      "repo": "nextcloud/android",
+      "url": "https://github.com/nextcloud/android",
+      "local_dir": "tests/github_apps/nextcloud__android",
+      "bundle_id": "app-nextcloud",
+      "project_preset": "app",
+      "priority": "P1",
+      "profiles": ["functional", "stability"],
+      "sparse_paths": ["app", "gradle", "settings.gradle", "build.gradle", "gradle.properties"],
+      "notes": "Complex sync/file cloud app; validates account auth, WebDAV, upload/download, foreground/background sync and storage signals."
+    },
+    {
+      "repo": "thunderbird/thunderbird-android",
+      "url": "https://github.com/thunderbird/thunderbird-android",
+      "local_dir": "tests/github_apps/thunderbird__thunderbird-android",
+      "bundle_id": "app-thunderbird",
+      "project_preset": "app",
+      "priority": "P1",
+      "profiles": ["functional", "stability"],
+      "sparse_paths": ["app-common", "app-k9mail", "app-thunderbird", "backend", "core", "legacy", "mail", "ui-utils", "gradle", "settings.gradle.kts", "build.gradle.kts", "gradle.properties"],
+      "notes": "Complex mail client; validates account setup, OAuth/authentication, mail sync, database and background worker signals. Sparse checkout avoids deeply nested preview sources that exceed Windows path length."
+    },
+    {
+      "repo": "termux/termux-app",
+      "url": "https://github.com/termux/termux-app",
+      "local_dir": "tests/github_apps/termux__termux-app",
+      "bundle_id": "app-termux",
+      "project_preset": "app",
+      "priority": "P1",
+      "profiles": ["functional", "performance"],
+      "sparse_paths": ["app", "terminal-emulator", "terminal-view", "termux-shared", "gradle", "settings.gradle", "settings.gradle.kts", "build.gradle", "build.gradle.kts", "gradle.properties"],
+      "notes": "Terminal/process-heavy app; validates shell session, process execution, foreground service, terminal UI and Android process-limit signals."
+    }
+  ]
+}

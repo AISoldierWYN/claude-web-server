@@ -7,8 +7,15 @@ from pathlib import Path
 from flask import Flask
 
 from . import config
+from .android_analysis.expert_knowledge import build_expert_knowledge_cache
 from .claude_runner import CLAUDE_CLI_PATH
-from .routes import PATHS_BUNDLES_KEY, PATHS_NOTES_KEY, READONLY_DIRS_KEY, register_routes
+from .routes import (
+    ANDROID_EXPERT_KNOWLEDGE_KEY,
+    PATHS_BUNDLES_KEY,
+    PATHS_NOTES_KEY,
+    READONLY_DIRS_KEY,
+    register_routes,
+)
 from .session_manager import SessionManager
 
 
@@ -61,6 +68,12 @@ def create_app():
     app.config[READONLY_DIRS_KEY] = readonly
     app.config[PATHS_NOTES_KEY] = paths_notes
     app.config[PATHS_BUNDLES_KEY] = paths_bundles
+    app.config[ANDROID_EXPERT_KNOWLEDGE_KEY] = build_expert_knowledge_cache(
+        paths_bundles if config.FEATURE_ANDROID_ISSUE_ANALYSIS else [],
+        config.ANDROID_ANALYSIS_KNOWLEDGE_DIR,
+        config.ANDROID_ANALYSIS_PROJECT_KNOWLEDGE_RELATIVE_PATH,
+        log,
+    )
 
     register_routes(app, sm)
 

@@ -1,0 +1,3 @@
+05-10 12:01:00.000 F DEBUG: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+05-10 12:01:00.001 F DEBUG: tombstone written for com.example.hellojni
+05-10 12:01:00.002 F DEBUG: signal 11 (SIGSEGV), fault addr 0x0, backtrace contains libhello-jni.so HelloJni

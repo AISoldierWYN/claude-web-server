@@ -1,0 +1,15 @@
+{
+  "id": "thunderbird-functional-account-sync",
+  "repo": "thunderbird/thunderbird-android",
+  "bundle_id": "app-thunderbird",
+  "rule_pack_id": "thunderbird-generated",
+  "project_preset": "app",
+  "profiles": ["functional"],
+  "project_dirs": ["local://tests/github_apps/thunderbird__thunderbird-android"],
+  "bundle": {
+    "title": "Thunderbird Android",
+    "summary": "Complex mail app with account setup, IMAP/SMTP mail sync, message reader/list and database upgrade paths.",
+    "keywords": ["Thunderbird", "AccountCreator", "ImapStoreSettings", "MessageListWidgetManager", "WorkManagerConfigurationProvider"]
+  },
+  "log_path": "sample.log"
+}

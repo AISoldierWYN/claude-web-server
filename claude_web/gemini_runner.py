@@ -25,7 +25,7 @@ from .claude_runner import (
     _turn_attachment_instruction,
     _web_search_prompt_block,
 )
-from .session_manager import SESSION_MEMORY_FILENAME
+from .session_manager import SESSION_MEMORY_FILENAME, USER_GLOBAL_MEMORY_FILENAME
 from .user_session_log import append_cli_exit_summary, append_cli_line
 
 log = logging.getLogger('claude-web')
@@ -163,18 +163,23 @@ def _resolve_memory_tool_path(params: Dict[str, Any], session_workspace_dir: Opt
         return None
     try:
         session_dir = Path(session_workspace_dir).resolve()
-        memory_path = (session_dir / SESSION_MEMORY_FILENAME).resolve()
+        allowed = {
+            SESSION_MEMORY_FILENAME: (session_dir / SESSION_MEMORY_FILENAME).resolve(),
+            USER_GLOBAL_MEMORY_FILENAME: (session_dir / USER_GLOBAL_MEMORY_FILENAME).resolve(),
+        }
         raw_file_path = str(params.get('file_path') or params.get('path') or '').strip()
         if not raw_file_path:
             return None
         normalized_file_path = raw_file_path.replace('\\', '/')
         if normalized_file_path in {SESSION_MEMORY_FILENAME, './' + SESSION_MEMORY_FILENAME}:
-            requested_path = memory_path
+            requested_path = allowed[SESSION_MEMORY_FILENAME]
+        elif normalized_file_path in {USER_GLOBAL_MEMORY_FILENAME, './' + USER_GLOBAL_MEMORY_FILENAME}:
+            requested_path = allowed[USER_GLOBAL_MEMORY_FILENAME]
         else:
             requested_path = Path(raw_file_path).expanduser().resolve()
-        if requested_path != memory_path or memory_path.parent != session_dir:
+        if requested_path not in set(allowed.values()) or requested_path.parent != session_dir:
             return None
-        return memory_path
+        return requested_path
     except Exception as e:
         log.warning('[Gemini memory] 解析 memory.md 工具路径失败: %s', e)
         return None

@@ -112,6 +112,12 @@
 | `knowledge_dir` | `android_analysis_knowledge` | 本机共享规则、案例、索引目录；已加入 `.gitignore`，不会上传仓库。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_KNOWLEDGE_DIR` |
 | `seven_zip_path` | 空 | 可选 7-Zip 可执行文件路径，用于受控解压 `.rar` 日志包；空时自动查找 PATH 以及 Windows 常见路径，如 `C:\Program Files\7-Zip\7z.exe`。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_7Z_PATH` |
 | `planner_timeout_seconds` | `45` | 轻量 Planner 调用 Claude CLI 的超时时间。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS` |
+| `planner_prompt_budget_chars` | `80000` | Planner 首轮 prompt 字符预算；超出时优先裁剪 file tree 和日志样本，避免大日志包一次性消耗过多上下文。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_PROMPT_BUDGET_CHARS` |
+| `planner_max_tree_nodes` | `300` | Planner 首轮携带的 file tree 最大节点数。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_MAX_TREE_NODES` |
+| `planner_max_sample_files` | `24` | Planner 首轮携带的日志样本文件数上限。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_FILES` |
+| `planner_max_sample_chars` | `50000` | Planner 首轮日志样本文本总字符上限。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_CHARS` |
+| `debug_trace` | `true` | Android 分析调试 trace；开启后会把采样关键词、Planner 输入输出、规则命中统计、案例召回分数、报告/Verifier 输入输出、各 AI 环节 token 统计写入 `artifacts/android_debug_trace.jsonl`，并同步打印到服务端日志。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_DEBUG_TRACE` |
+| `auto_deep_confidence_threshold` | `0.72` | 首轮工作流报告低于该置信度时自动进入 Deep 分析；达到阈值时先停在首轮报告，并在前端保留可持久恢复的「Deep分析」按钮。环境变量：`CLAUDE_WEB_ANDROID_ANALYSIS_AUTO_DEEP_CONFIDENCE_THRESHOLD` |
 
 RAR 支持依赖 7-Zip。建议首次使用时手动确认 7-Zip 路径并写入 `config.ini`，例如：
 
@@ -121,6 +127,8 @@ seven_zip_path = C:\Program Files\7-Zip\7z.exe
 ```
 
 如果不配置，服务会自动扫描 PATH 和常见安装路径；自动扫描只用于运行时发现，不会自动改写 `config.ini`。
+
+Android 分析会先执行本地解压、采样、规则匹配、案例召回和首轮报告，并由 Verifier 估算首轮结论置信度。置信度达到阈值时不会自动消耗 Deep 成本，用户可在报告中的「Deep分析」按钮继续；该按钮通过消息 metadata 绑定 job，切换对话或刷新页面后仍会恢复。若用户在聊天框输入「继续深入分析」「deep分析」等类似请求，也会接续最近一个可 Deep 的 Android 分析 job。置信度低于阈值时，后端会自动进入 Deep/Verifier 流程，并把每个阶段事件和 debug trace 记录到 job artifacts，便于后续优化规则、采样策略和 token 消耗。
 
 ### `[proxy]` — 反向代理
 
@@ -171,6 +179,7 @@ seven_zip_path = C:\Program Files\7-Zip\7z.exe
 | `POST /feedback` | POST | 意见反馈（multipart：`text`、`contact`、`user_id` 可选、`images` 多文件） |
 | `GET /api/android-analysis/status` | GET | Android 分析状态、可用 bundle、规则目录摘要 |
 | `POST /api/android-analysis/jobs` | POST | 创建 Android 日志分析任务；支持后台 job + SSE |
+| `GET /api/android-analysis/jobs/latest?user_id=xxx&session_id=xxx` | GET | 获取当前会话最近一个 Android 分析 job，用于刷新后恢复 Deep 按钮和聊天框继续深入分析 |
 | `GET /api/android-analysis/jobs/<job_id>` | GET | 获取 Android 分析 job 状态 |
 | `GET /api/android-analysis/jobs/<job_id>/events` | GET | 获取 `events.jsonl` 事件列表 |
 | `GET /api/android-analysis/jobs/<job_id>/events/stream` | GET | Android 分析进度 SSE |
@@ -362,6 +371,11 @@ android_issue_analysis = true
 knowledge_dir = android_analysis_knowledge
 seven_zip_path = C:\Program Files\7-Zip\7z.exe
 planner_timeout_seconds = 45
+planner_prompt_budget_chars = 80000
+planner_max_tree_nodes = 300
+planner_max_sample_files = 24
+planner_max_sample_chars = 50000
+debug_trace = true
 ```
 
 首轮流水线：
@@ -377,10 +391,18 @@ planner_timeout_seconds = 45
 ```text
 cache/<ip>/<user_id>/<session_id>/android_analysis/<job_id>/
   extracted/       # 安全解压后的日志
-  artifacts/       # file_manifest、samples、matched_rules、report、metrics 等
+  artifacts/       # file_manifest、samples、matched_rules、report、metrics、android_debug_trace 等
   events.jsonl     # 前端 SSE/刷新恢复使用的事件流
   job.json
 ```
+
+`debug_trace` 默认开启，适合调试首轮效果。重点记录：
+
+- `sampling.keyword_plan / sampling_result`：实际用于采样的关键词、每个文件的关键词窗口命中、扫描轮次。
+- `planning.planner_input / planner_result`：Planner 看到的文件摘要、样本关键词、候选 bundle/rule pack、最终路由结果；`planner_input` 同时记录 `prompt_component_chars` 与 `prompt_clipping`，用于观察首轮 prompt 各部分成本和是否触发预算裁剪。
+- `matching_rules.rule_pack_selection / matching_result`：加载了哪些规则包、检查了多少条规则、关键词/包名/正则命中统计、Top evidence 的相关性原因。
+- `recalling_cases.case_recall_result`：案例库加载数量、每个候选案例分数和 match reasons、最终召回的案例。
+- `generating_report.* / verifying.*`：报告和校验阶段的输入摘要、prompt 长度、输出摘要、Verifier 判断。
 
 共享知识目录位于 `android_analysis_knowledge/`，用于保存所有用户共享的规则和案例，默认不提交 GitHub：
 
@@ -426,7 +448,13 @@ android_analysis_knowledge/
 
 ```powershell
 # 从 android-rdm 对应代码目录生成规则包
-python skills\android-log-rule-builder\scripts\rule_pack_manager.py generate --bundle-id android-rdm --rule-pack-id rdm-generated
+python skills\android-log-rule-builder\scripts\rule_pack_manager.py generate --bundle-id android-rdm
+
+# 普通 App 可声明项目类型和问题类型 Profile
+python skills\android-log-rule-builder\scripts\rule_pack_manager.py generate --bundle-id app-demo --project-preset app --profile functional --profile stability
+
+# NDK/native-heavy 项目可用 native preset 扫描 JNI、so、CMake、native log/trace
+python skills\android-log-rule-builder\scripts\rule_pack_manager.py generate --bundle-id app-ndk-samples --project-preset native --profile stability --profile performance
 
 # 校验 schema、正则、bundle id、规则 id
 python skills\android-log-rule-builder\scripts\rule_pack_manager.py validate --bundle-id android-rdm --rule-pack-id rdm-generated
@@ -437,9 +465,17 @@ python skills\android-log-rule-builder\scripts\rule_pack_manager.py get --bundle
 
 # 用日志样例做轻量命中验证
 python skills\android-log-rule-builder\scripts\rule_pack_manager.py test --bundle-id android-rdm --rule-pack-id rdm-generated --log-path temp\PNM-N49-2.zip --require-hit
+
+# 下载开源评测项目到 gitignored 的 tests/github_apps/
+python skills\android-log-rule-builder\scripts\bootstrap_eval_repos.py --proxy http://127.0.0.1:1080
+
+# 跑开源项目池评测 case，scorecard 建议输出到 gitignored 目录
+python skills\android-log-rule-builder\scripts\rule_pack_manager.py --json --knowledge-dir tests\android_eval_artifacts\generated_knowledge evaluate --eval-root android_analysis_eval --scorecard tests\android_eval_artifacts\stage6-scorecard.json
 ```
 
-脚本还支持 `add/update/delete`，用于人工或 AI 维护单条规则。生成的规则包会写入 `android_analysis_knowledge/bundles/<bundle_id>/rules/`，被 Android 分析阶段 4 自动按需加载。
+脚本还支持 `add/update/delete`，用于人工或 AI 维护单条规则。`generate` 默认使用 `<bundle-short-name>-generated` 命名，例如 `android-rdm` 会生成 `rdm-generated`；生成的规则包会写入 `android_analysis_knowledge/bundles/<bundle_id>/rules/`，并自动登记到 `bundle.json` 的 `rule_packs`，被 Android 分析阶段 4 自动按需加载。`--profile` 支持 `functional/stability/xts/memory/performance`，生成结果会写入 `metadata.profiles`、`bundle.json.supported_profiles` 和 `profile_overrides`，便于后续按问题类型路由规则。`--project-preset native` 会扫描 C/C++、CMake、Android.mk、JNI 入口、so 名、native log tag 和 trace/render 信号。复杂 App 的 app preset 会额外生成 `sync-account-signals`、`background-task-signals`、`process-terminal-signals`，用于同步/账号、后台任务和终端/进程类问题的首轮过滤。
+
+开源评测集位于 `android_analysis_eval/`，当前包含 `android/nowinandroid`、`AntennaPod/AntennaPod`、`android/ndk-samples`、`nextcloud/android`、`thunderbird/thunderbird-android`、`termux/termux-app` 六个项目共 12 个轻量 case，其中 ndk-samples 使用 native preset 验证 JNI/so/tombstone/trace，Nextcloud/Thunderbird/Termux 用于验证复杂 App 的同步、账号、后台任务、进程/终端信号。外部项目代码放在 `tests/github_apps/`，评测产物放在 `tests/android_eval_artifacts/`，两者均不会提交 Git。
 
 ### `CLAUDE_WEB_ISOLATE_HOME`（一般不推荐）
 
@@ -462,7 +498,7 @@ python skills\android-log-rule-builder\scripts\rule_pack_manager.py test --bundl
 | `CLAUDE_WEB_CLI_PATH` / `CLAUDE_WEB_MODEL` / `CLAUDE_WEB_EXTRA_CLI_ARGS` | 同 `config.ini` `[claude]` |
 | `CLAUDE_WEB_FORK_CLAUDE_HOME` | 同 `config.ini` `[claude] fork_claude_home` |
 | `TAVILY_API_KEY` / `TAVILY_SEARCH_DEPTH` / `TAVILY_MAX_RESULTS` | 同 `config.ini` `[tavily]` |
-| `CLAUDE_WEB_ANDROID_ANALYSIS_7Z_PATH` / `CLAUDE_WEB_ANDROID_ANALYSIS_KNOWLEDGE_DIR` / `CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS` | 同 `config.ini` `[android_analysis]` |
+| `CLAUDE_WEB_ANDROID_ANALYSIS_7Z_PATH` / `CLAUDE_WEB_ANDROID_ANALYSIS_KNOWLEDGE_DIR` / `CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS` / `CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_PROMPT_BUDGET_CHARS` / `CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_MAX_TREE_NODES` / `CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_FILES` / `CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_CHARS` / `CLAUDE_WEB_ANDROID_ANALYSIS_DEBUG_TRACE` | 同 `config.ini` `[android_analysis]` |
 | `CLAUDE_WEB_CACHE_DIR` 等 | 数据目录，同 `config.ini` `[paths]` |
 
 ## 自动化测试

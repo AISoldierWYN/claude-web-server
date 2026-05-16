@@ -71,7 +71,7 @@
           "severity": "high",
           "tags": ["package", "install"],
           "match": {
-            "keywords": ["INSTALL_FAILED", "PackageManager", "Failure [INSTALL_"],
+            "keywords": ["INSTALL_FAILED", "Failure [INSTALL_"],
             "regex": ["INSTALL_FAILED_[A-Z_]+|Failure \\[INSTALL_[A-Z_]+"]
           }
         },

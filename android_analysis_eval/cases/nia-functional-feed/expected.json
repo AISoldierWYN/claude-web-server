@@ -1,0 +1,10 @@
+{
+  "min_rule_count": 4,
+  "min_hit_count": 1,
+  "expected_profile": "functional",
+  "expected_keywords": ["ForYou", "Topic", "Repository"],
+  "must_hit_rule_tags": ["profile"],
+  "must_hit_terms": ["ForYou"],
+  "must_not_hit_terms": ["AndroidRuntime unrelated"],
+  "max_generic_term_ratio": 0.2
+}

@@ -1,0 +1,2 @@
+05-10 10:11:12.100 W Nextcloud: FileSyncService UserAccountManager RemoteOperationResult upload failed AuthenticatorException token expired
+05-10 10:11:12.180 E Nextcloud: UploadFileBroadcastReceiver OwnCloudClient WebDAV request denied during sync

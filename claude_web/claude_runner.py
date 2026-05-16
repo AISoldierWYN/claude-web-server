@@ -15,7 +15,12 @@ from typing import Any, Dict, List, Optional
 
 from . import config
 from .filename_sanitize import safe_client_filename
-from .session_manager import SESSION_MEMORY_FILENAME, ensure_session_memory_file
+from .session_manager import (
+    SESSION_MEMORY_FILENAME,
+    USER_GLOBAL_MEMORY_FILENAME,
+    ensure_session_global_memory_file,
+    ensure_session_memory_file,
+)
 from .user_session_log import append_cli_exit_summary, append_cli_line
 
 log = logging.getLogger('claude-web')
@@ -38,10 +43,26 @@ def stop_session_process(session_id: str) -> bool:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             proc.kill()
+            proc.wait(timeout=5)
         return True
     except Exception as e:
         log.warning('[CLI] 停止会话进程失败 session=%s: %s', sid, e)
         return False
+
+
+def _terminate_process(process: subprocess.Popen, *, reason: str) -> None:
+    if not process or process.poll() is not None:
+        return
+    try:
+        log.info('[CLI] 终止子进程 reason=%s pid=%s', reason, getattr(process, 'pid', None))
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+    except Exception as e:
+        log.warning('[CLI] 终止子进程失败 reason=%s: %s', reason, e)
 
 
 def _friendly_api_error_from_result(data: dict) -> str:
@@ -83,6 +104,32 @@ def _friendly_api_error_from_result(data: dict) -> str:
             + s_trim
         )
     return '执行失败：' + s_trim
+
+
+def _is_recoverable_resume_failure(data: dict, claude_session_id: str, visible_output_seen: bool) -> bool:
+    """判断旧 Claude CLI session 恢复失败是否适合后台重建。"""
+    if not claude_session_id or visible_output_seen or not data.get('is_error'):
+        return False
+    result = data.get('result')
+    if result is None:
+        return True
+    try:
+        haystack = json.dumps(data, ensure_ascii=False).lower()
+    except Exception:
+        haystack = str(data).lower()
+    markers = (
+        'session',
+        'resume',
+        'expired',
+        'not found',
+        'does not exist',
+        'invalid session',
+        'conversation',
+        '会话',
+        '过期',
+        '不存在',
+    )
+    return any(m in haystack for m in markers)
 
 
 def build_api_error_retry_user_message(friendly_error: str) -> str:
@@ -136,33 +183,43 @@ def _memory_prompt_block(session_workspace: str, shrink: bool = False) -> str:
     try:
         sd = Path(session_workspace).resolve()
         ensure_session_memory_file(sd)
+        ensure_session_global_memory_file(sd)
         mp = sd / SESSION_MEMORY_FILENAME
-        max_inject = 4000 if shrink else 20000
+        gp = sd / USER_GLOBAL_MEMORY_FILENAME
+        max_inject = 3000 if shrink else 12000
         rules = (
             '【记忆规则 — Web 服务注入，请务必遵守】\n'
-            '1. 本对话的「长期记忆」**仅**使用当前工作目录下的 `memory.md`（与 CLI 工作目录一致，已存在或可创建）。\n'
-            '2. 用户同意记录名字、偏好等需跨轮记住的信息时：请用 **Read** 读取、**Edit**/**Write** 更新 `memory.md`；'
-            '**不要**使用 Claude 内置「记忆」或向 ~/.claude 等全局路径写入（会无权限或不应写入）。\n'
-            '3. 需要回忆已记内容时：优先查看下方「memory.md 当前内容」；若过长再单独 Read `memory.md`。\n'
-            '4. 本服务已对 Claude CLI 使用 `--permission-mode`（默认 bypassPermissions，可选彻底跳过权限询问），'
-            '以便在非交互模式下操作本会话目录；若仍见权限错误，请重试 Edit/Write `memory.md`。\n\n'
+            f'1. 当前工作目录下有两个记忆文件：`{SESSION_MEMORY_FILENAME}` 用于**本对话私有记忆**，'
+            f'`{USER_GLOBAL_MEMORY_FILENAME}` 用于**同一 IP + user_id 的用户全局记忆**，会在所有对话之间共享。\n'
+            f'2. 用户明确要求“以后/所有对话/长期/记住我/我的称呼/我的偏好”等跨对话记忆时，'
+            f'请用 Read 读取并用 Edit/Write 更新 `{USER_GLOBAL_MEMORY_FILENAME}`；只属于当前会话的上下文写入 `{SESSION_MEMORY_FILENAME}`。\n'
+            '3. 不要使用 Claude/Codex 内置全局记忆，也不要写入 ~/.claude、HOME、其它用户或其它会话目录。\n'
+            f'4. 需要回忆已记内容时，优先使用下方已注入的 `{USER_GLOBAL_MEMORY_FILENAME}` 和 `{SESSION_MEMORY_FILENAME}` 当前内容；'
+            '若内容被截断，再单独 Read 对应文件。\n'
+            '5. 本服务已对 CLI 使用非交互权限模式，若仍见权限错误，请重试 Edit/Write 当前工作目录下的记忆文件。\n\n'
         )
-        body = ''
-        if mp.is_file():
+        body_parts = []
+
+        def append_memory_file(path: Path, title: str) -> None:
+            if not path.is_file():
+                return
             try:
-                raw = mp.read_text(encoding='utf-8', errors='replace')
+                raw = path.read_text(encoding='utf-8', errors='replace')
             except OSError:
                 raw = ''
             if len(raw) > max_inject:
-                body = (
-                    f'【memory.md 内容（已截断，全文 {len(raw)} 字符，其余请用 Read 读 memory.md）】\n'
-                    f'{raw[:max_inject]}…\n\n'
+                body_parts.append(
+                    f'【{title} 内容（已截断，全文 {len(raw)} 字符，其余请用 Read 读 `{path.name}`）】\n'
+                    f'{raw[:max_inject]}…\n'
                 )
             else:
-                body = f'【memory.md 当前内容】\n{raw}\n\n'
-        return rules + body
+                body_parts.append(f'【{title} 当前内容】\n{raw}\n')
+
+        append_memory_file(gp, USER_GLOBAL_MEMORY_FILENAME)
+        append_memory_file(mp, SESSION_MEMORY_FILENAME)
+        return rules + '\n'.join(body_parts) + ('\n' if body_parts else '')
     except Exception as e:
-        log.warning(f'[记忆] 处理 memory.md 失败: {e}')
+        log.warning(f'[记忆] 处理记忆文件失败: {e}')
         return ''
 
 
@@ -244,7 +301,7 @@ def _development_prompt_block(development_context: Optional[Dict[str, Any]]) -> 
         '开发模式规则：',
         '1. 你可以读取、搜索并修改上述项目目录内的文件；修改会直接落到 PC 本地真实项目。',
         '2. 不要访问或修改白名单项目目录之外的路径，除非它已经作为只读目录列出。',
-        '3. 长期记忆仍然写入会话 cache 下的 memory.md，不要在项目中创建会话记忆文件。',
+        '3. 长期记忆写入会话 cache 下的 AGENT.md（用户全局）或 memory.md（本对话私有），不要在项目中创建会话记忆文件。',
         '4. 高风险命令不要静默执行：不要执行 git reset --hard、git clean -fd、删除项目根目录、push、修改全局配置或系统环境变量。',
         '5. 需要运行测试时，优先建议用户点击页面里的“运行测试”；不要自行发起安装依赖、迁移数据库、push 等高风险操作。',
     ]
@@ -338,10 +395,10 @@ def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
         '【按需技能包与 Skill 优先级 — Web 服务注入】',
         '以下为管理员在 `claude_web_paths.config.json` 的 `bundles` 中配置的**技能包**。',
         '处理顺序必须遵守：',
-        '1. 先使用“本轮优先 Skill”中注入的 `SKILL.md` 工作流和规则，不要一上来大范围 grep 代码。',
-        '2. 若没有直接命中的 Skill，先看本轮已挂载包的 Skill 索引；判断需要时优先 Read 对应 `SKILL.md`。',
-        '3. 再使用你的通用能力做推理、提问和归纳。',
-        '4. 最后才按需读取本轮已挂载的资料/代码路径，并用 Read/Grep/Glob 获取证据。',
+        '1. 先判断本轮是否有可用 `SKILL.md`；只要命中或高度相关，就必须优先按该 SKILL 的工作流、限制和输出格式处理。',
+        '2. 若没有直接命中的 Skill，先看本轮已挂载包的 Skill 索引；判断需要时优先 Read 对应 `SKILL.md`，再继续分析。',
+        '3. 若 Skill 不足，再使用已挂载技能包中的 CLAUDE.md、资源索引、只读资料和代码路径获取证据。',
+        '4. 最后才使用你的通用能力做补充推理、提问和归纳；不要在未检查 Skill/技能包前直接发散搜索。',
         '5. 未挂载的包仅作为摘要索引；不要访问其路径。若判断需要额外包，可在回答中说明需要追加哪个 bundle/skill。',
         '说明：Claude CLI 对 `--add-dir` 目录下 `CLAUDE.md` 的自动加载不是默认可靠行为，本服务会对命中的包显式注入其根目录 `CLAUDE.md` 摘要。',
         '',
@@ -355,6 +412,7 @@ def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
         skills = b.get('skills') or []
         selected_skills = b.get('selected_skills') or []
         claude_md_paths = b.get('claude_md_paths') or []
+        rule_packs = b.get('rule_packs') or []
         mounted = bool(b.get('mounted'))
         reason = (b.get('mount_reason') or '').strip()
         lines.append(f'### 包 `{bid}`：{title}')
@@ -362,6 +420,8 @@ def _skill_bundles_instruction(bundles: Optional[List[Dict[str, Any]]]) -> str:
         if mounted and reason:
             lines.append(f'- **命中原因**：{reason}')
         lines.append(f'- **摘要**：{summary}')
+        if rule_packs:
+            lines.append(f'- **关联规则包**：{", ".join(str(x) for x in rule_packs[:8])}')
         if mounted:
             _append_selected_skill_blocks(lines, selected_skills)
             if skills:
@@ -410,12 +470,12 @@ def _sandbox_instruction(
     lines = [
         '【沙箱与目录约束】',
         f'当前 CLI 工作目录（以下路径为 POSIX/正斜杠形式）: {cwd}',
-        f'本会话 cache 目录（用于 uploads、memory.md、对话记录和运行状态）: {ws}',
-        'Claude CLI 能力来自服务端父机配置（skills、API、model、环境变量等），但本对话的长期记忆必须与其它对话隔离。',
-        f'长期记忆请只使用本目录下的 `{SESSION_MEMORY_FILENAME}`（见下方「记忆规则」）。',
+        f'本会话 cache 目录（用于 uploads、memory.md、AGENT.md、对话记录和运行状态）: {ws}',
+        'Claude CLI 能力来自服务端父机配置（skills、API、model、环境变量等），但父机全局记忆必须隔离；用户全局记忆只通过当前目录下的 AGENT.md 使用。',
+        f'记忆请只使用本目录下的 `{USER_GLOBAL_MEMORY_FILENAME}`（用户全局）和 `{SESSION_MEMORY_FILENAME}`（本对话私有，见下方「记忆规则」）。',
         '',
         '【工具与路径权限策略 — Web 服务注入】',
-        f'1. **本会话目录**（上述工作目录，含 uploads、memory.md 等）：视为你的「可写沙箱」。'
+        f'1. **本会话目录**（上述工作目录，含 uploads、AGENT.md、memory.md 等）：视为你的「可写沙箱」。'
         '在此范围内可进行 Read/Write/Edit、Bash（含 python、解压、本目录内脚本等）；不要尝试把路径改写到沙箱之外。',
         '2. **只读目录**（见下列路径，来自环境变量 CLAUDE_WEB_READONLY_DIRS 与仓库根目录 `claude_web_paths.config.json`）：'
         '仅允许读取、搜索（Read/Grep/Glob 等），**禁止**写入、删除或修改其中文件。',
@@ -424,7 +484,7 @@ def _sandbox_instruction(
         '5. **Read 的 file_path（必遵）**：只写**相对路径**，形如 `uploads/文件名.ext`，单段或多段均以 `uploads/` 开头、用 `/` 分隔。',
         '**禁止**使用绝对路径（含 `D:/`、`C:/`、`/home/` 等）；部分上游会对带盘符的 file_path 返回 invalid params（20024）。会话 cwd 即上述工作目录。',
         '6. 若用户消息中已内联某附件的全文或提取文本，**不要再对该附件调用 Read**；仅当未内联且确需读文件时再使用 Read＋相对路径。',
-        '7. **记忆隔离**：不要读取、引用或写入父机/全局 Claude 记忆（例如用户 HOME 下的 CLAUDE.md、全局 memory、其它会话 cache）。',
+        '7. **记忆隔离**：不要读取、引用或写入父机/全局 Claude 记忆（例如用户 HOME 下的 CLAUDE.md、全局 memory、其它会话 cache）；跨对话用户记忆仅使用当前目录下的 AGENT.md。',
     ]
     if readonly_dirs:
         lines.append('下列为只读目录（仅可读）：')
@@ -1007,6 +1067,7 @@ def stream_claude_output(
     stderr_lines = []
     stdout_recent = deque(maxlen=60)
     last_result_payload = None
+    successful_result_seen = False
 
     log_dir = None
     uid = None
@@ -1047,6 +1108,8 @@ def stream_claude_output(
     streamed_thinking_delta = False
     streamed_text_delta = False
     streamed_tool_block = False
+    visible_output_seen = False
+    client_disconnected = False
 
     def _tool_start_payload(cb: dict) -> dict:
         name = cb.get('name') or cb.get('tool_name') or ''
@@ -1092,13 +1155,16 @@ def stream_claude_output(
                     cb_type = (cb.get('type') or '').strip()
                     if cb_type == 'thinking' or cb_type == 'redacted_thinking':
                         stream_open_block = 'thinking'
+                        visible_output_seen = True
                         yield f'data: {json.dumps({"type": "thinking_start"})}\n\n'
                     elif cb_type == 'text':
                         stream_open_block = 'text'
+                        visible_output_seen = True
                         yield f'data: {json.dumps({"type": "text_start"})}\n\n'
                     elif cb_type in ('tool_use', 'tool_use_block', 'server_tool_use', 'tool_calls'):
                         stream_open_block = 'tool'
                         streamed_tool_block = True
+                        visible_output_seen = True
                         yield f'data: {json.dumps(_tool_start_payload(cb))}\n\n'
                     elif cb_type:
                         log.debug(f'[CLI] content_block_start 未识别类型: {cb_type}')
@@ -1110,11 +1176,13 @@ def stream_claude_output(
                         thinking_chunk = delta.get('thinking', '')
                         if thinking_chunk:
                             streamed_thinking_delta = True
+                            visible_output_seen = True
                             yield f'data: {json.dumps({"type": "thinking", "content": thinking_chunk})}\n\n'
                     elif delta_type == 'text_delta':
                         text_chunk = delta.get('text', '')
                         if text_chunk:
                             streamed_text_delta = True
+                            visible_output_seen = True
                             yield f'data: {json.dumps({"type": "text", "content": text_chunk})}\n\n'
                     elif delta_type in ('input_json_delta', 'input_json'):
                         partial = (
@@ -1126,6 +1194,7 @@ def stream_claude_output(
                         if isinstance(partial, dict):
                             partial = json.dumps(partial, ensure_ascii=False)
                         if partial:
+                            visible_output_seen = True
                             yield f'data: {json.dumps({"type": "tool_input_delta", "partial": partial})}\n\n'
 
                 elif event_type == 'content_block_stop':
@@ -1153,6 +1222,7 @@ def stream_claude_output(
                     if ctype in ('thinking', 'redacted_thinking'):
                         if streamed_thinking_delta:
                             continue
+                        visible_output_seen = True
                         yield f'data: {json.dumps({"type": "thinking_start"})}\n\n'
                         thinking_text = content.get('thinking', '')
                         if thinking_text:
@@ -1161,10 +1231,12 @@ def stream_claude_output(
                     elif ctype == 'text':
                         if streamed_text_delta:
                             continue
+                        visible_output_seen = True
                         yield f'data: {json.dumps({"type": "text", "content": content["text"]})}\n\n'
                     elif ctype in ('tool_use', 'tool_use_block', 'server_tool_use'):
                         if streamed_tool_block:
                             continue
+                        visible_output_seen = True
                         yield f'data: {json.dumps(_tool_start_payload(content))}\n\n'
                         inp = content.get('input')
                         if isinstance(inp, dict):
@@ -1175,6 +1247,7 @@ def stream_claude_output(
 
             elif msg_type == 'result':
                 last_result_payload = data
+                successful_result_seen = not bool(data.get('is_error'))
                 sid_val = data.get('session_id')
                 if sid_val and not claude_sid_returned:
                     claude_sid_returned = sid_val
@@ -1183,16 +1256,34 @@ def stream_claude_output(
                 if data.get('is_error'):
                     api_error_yet = True
                     friendly = _friendly_api_error_from_result(data)
-                    yield f'data: {json.dumps({"type": "error", "message": friendly, "soft": True})}\n\n'
-                yield f'data: {json.dumps({"type": "done", "ok": not bool(data.get("is_error")), "result": data.get("result", "")})}\n\n'
+                    recoverable_rebuild = _is_recoverable_resume_failure(data, claude_session_id, visible_output_seen)
+                    error_payload = {"type": "error", "message": friendly, "soft": True}
+                    if recoverable_rebuild:
+                        error_payload["recoverable_session_rebuild"] = True
+                    yield f'data: {json.dumps(error_payload)}\n\n'
+                done_payload = {"type": "done", "ok": not bool(data.get("is_error")), "result": data.get("result", "")}
+                if data.get('is_error') and _is_recoverable_resume_failure(data, claude_session_id, visible_output_seen):
+                    done_payload["recoverable_session_rebuild"] = True
+                yield f'data: {json.dumps(done_payload)}\n\n'
                 log.info(f'[CLI] 对话完成, returncode={process.poll()}')
 
+                break
+
     except queue.Empty:
+        if successful_result_seen:
+            log.warning('[CLI] already received successful result; suppressing timeout error')
+            return
         yield f'data: {json.dumps({"type": "error", "message": "Claude CLI 响应超时"})}\n\n'
+    except GeneratorExit:
+        client_disconnected = True
+        _terminate_process(process, reason='client_disconnected')
+        raise
     except Exception as e:
         log.error(f'[CLI] 处理输出时出错: {e}')
         yield f'data: {json.dumps({"type": "error", "message": f"处理输出时出错: {str(e)}"})}\n\n'
     finally:
+        if client_disconnected:
+            _terminate_process(process, reason='generator_closed')
         try:
             stdin_thread.join(timeout=60)
         except Exception:
@@ -1201,13 +1292,31 @@ def stream_claude_output(
             stderr_thread.join(timeout=5)
         except Exception:
             pass
-        process.wait()
+        try:
+            stdout_thread.join(timeout=5)
+        except Exception:
+            pass
+        if process.poll() is None:
+            if successful_result_seen:
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    _terminate_process(process, reason='stream_finally_after_success_result')
+            else:
+                _terminate_process(process, reason='stream_finally')
+        else:
+            process.wait()
         if session_id:
             with _RUNNING_PROCESSES_LOCK:
                 if _RUNNING_PROCESSES.get(str(session_id)) is process:
                     _RUNNING_PROCESSES.pop(str(session_id), None)
-        if process.returncode and process.returncode != 0:
-            if api_error_yet:
+        if not client_disconnected and process.returncode and process.returncode != 0:
+            if successful_result_seen:
+                log.warning(
+                    '[CLI] process exited with code=%s after success result; suppressing duplicate CLI error',
+                    process.returncode,
+                )
+            elif api_error_yet:
                 log.warning(
                     '[CLI] 子进程 exit=%s，已在 result 流中上报 API/软错误，不再推送重复的 CLI stderr/stdout 错误',
                     process.returncode,

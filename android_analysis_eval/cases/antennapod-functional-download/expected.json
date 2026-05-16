@@ -1,0 +1,9 @@
+{
+  "min_rule_count": 4,
+  "min_hit_count": 1,
+  "expected_profile": "functional",
+  "expected_keywords": ["DownloadRequester", "FeedItem", "PlaybackService"],
+  "must_hit_rule_tags": ["profile"],
+  "must_hit_terms": ["DownloadRequester"],
+  "max_generic_term_ratio": 0.2
+}

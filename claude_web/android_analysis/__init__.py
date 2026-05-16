@@ -2,8 +2,10 @@
 
 from .archive import ExtractionLimits, safe_extract_archive
 from .casebook import recall_case_cards
+from .classifier import run_question_classifier
 from .evidence import generate_first_evidence_pack
 from .jobs import AndroidAnalysisJobStore
+from .parameter_resolver import run_parameter_resolution
 from .planner import run_planner
 from .profiler import profile_extracted_tree
 from .reporter import generate_first_report
@@ -19,6 +21,8 @@ __all__ = [
     'load_rule_packs',
     'profile_extracted_tree',
     'recall_case_cards',
+    'run_question_classifier',
+    'run_parameter_resolution',
     'run_rule_matching',
     'run_planner',
     'sample_files',

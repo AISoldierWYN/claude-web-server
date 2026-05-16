@@ -1,0 +1,15 @@
+{
+  "id": "thunderbird-stability-database-upgrade",
+  "repo": "thunderbird/thunderbird-android",
+  "bundle_id": "app-thunderbird",
+  "rule_pack_id": "thunderbird-generated",
+  "project_preset": "app",
+  "profiles": ["stability"],
+  "project_dirs": ["local://tests/github_apps/thunderbird__thunderbird-android"],
+  "bundle": {
+    "title": "Thunderbird Android",
+    "summary": "Complex mail app with account setup, IMAP/SMTP mail sync, message reader/list and database upgrade paths.",
+    "keywords": ["Thunderbird", "DatabaseUpgradeInterceptor", "AccountCreator", "MessageListWidgetManager"]
+  },
+  "log_path": "sample.log"
+}

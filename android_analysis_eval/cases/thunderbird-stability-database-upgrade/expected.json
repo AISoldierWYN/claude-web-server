@@ -1,0 +1,19 @@
+{
+  "min_rule_count": 4,
+  "min_hit_count": 1,
+  "expected_profile": "stability",
+  "expected_keywords": [
+    "DatabaseUpgradeInterceptor",
+    "AccountCreator",
+    "MessageListWidgetManager"
+  ],
+  "must_hit_rule_tags": [
+    "profile",
+    "stability"
+  ],
+  "must_hit_terms": [
+    "DatabaseUpgradeInterceptor",
+    "FATAL EXCEPTION"
+  ],
+  "max_generic_term_ratio": 0.2
+}

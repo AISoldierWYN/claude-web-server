@@ -1,0 +1,3 @@
+05-10 11:20:01.010 I AntennaPod: enqueue FeedItem episode=42
+05-10 11:20:01.210 W DownloadRequester: download request ignored because media file already exists
+05-10 11:20:01.310 E DownloadService: failed to continue episode download from queue

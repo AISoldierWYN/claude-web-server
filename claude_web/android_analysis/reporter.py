@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from .models import AndroidAnalysisError
-from .planner import _run_claude_cli
+from .planner import _run_claude_cli, _trace_ai_stream, _trace_ai_token_usage
 
 
 _PROMPT_PATH = Path(__file__).resolve().parent / 'prompts' / 'first_pass.md'
@@ -20,6 +20,7 @@ def generate_first_report(
     timeout_seconds: int = 45,
     enable_ai: bool = True,
     ai_runner: Optional[Callable[[str], str]] = None,
+    debug_trace: Optional[Callable[[str, str, Dict[str, Any]], None]] = None,
 ) -> Dict[str, Any]:
     artifacts_dir = Path(artifacts_dir)
     evidence = _read_text(artifacts_dir / 'first_evidence_pack.md')
@@ -30,9 +31,60 @@ def generate_first_report(
     errors: List[Dict[str, str]] = []
     mode = 'fallback'
     try:
+        if debug_trace:
+            debug_trace(
+                'generating_report',
+                'first_report_input',
+                {
+                    'question': question,
+                    'enable_ai': enable_ai,
+                    'evidence_chars': len(evidence),
+                    'matched_event_count': matched.get('event_count', 0),
+                    'top_events': (matched.get('events') or [])[:12],
+                    'planner_result': planner,
+                    'case_card_count': len(case_cards.get('cards') or []),
+                    'case_cards': (case_cards.get('cards') or [])[:5],
+                },
+            )
         if enable_ai:
             prompt = build_first_report_prompt(question, evidence, matched, planner, case_cards)
-            report = ai_runner(prompt) if ai_runner else _run_claude_cli(prompt, cli_path, timeout_seconds, artifacts_dir)
+            if debug_trace:
+                debug_trace(
+                    'generating_report',
+                    'first_report_prompt',
+                    {
+                        'prompt_chars': len(prompt),
+                        'prompt_preview': prompt,
+                    },
+                )
+            if ai_runner:
+                report = ai_runner(prompt)
+                _trace_ai_token_usage(debug_trace, 'generating_report', 'first_report', prompt, report)
+            else:
+                report = _run_claude_cli(
+                    prompt,
+                    cli_path,
+                    timeout_seconds,
+                    artifacts_dir,
+                    stream_callback=lambda item: _trace_ai_stream(debug_trace, 'generating_report', 'first_report', item),
+                    usage_callback=lambda usage: _trace_ai_token_usage(
+                        debug_trace,
+                        'generating_report',
+                        'first_report',
+                        prompt,
+                        usage.get('output_text', ''),
+                        usage=usage,
+                    ),
+                )
+            if debug_trace:
+                debug_trace(
+                    'generating_report',
+                    'first_report_raw_output',
+                    {
+                        'output_chars': len(report or ''),
+                        'output_preview': report or '',
+                    },
+                )
             report = _clean_report(report)
             if not report:
                 raise AndroidAnalysisError('report_empty_output', 'Claude returned empty first-pass report.')
@@ -57,6 +109,15 @@ def generate_first_report(
     }
     with open(artifacts_dir / 'first_report_meta.json', 'w', encoding='utf-8') as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
+    if debug_trace:
+        debug_trace(
+            'generating_report',
+            'first_report_result',
+            {
+                **meta,
+                'report_preview': report,
+            },
+        )
     return meta
 
 

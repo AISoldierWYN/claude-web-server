@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 from .models import AndroidAnalysisError
 
 
-def generate_first_evidence_pack(artifacts_dir: Path, question: str = '') -> Dict[str, Any]:
+def generate_first_evidence_pack(
+    artifacts_dir: Path,
+    question: str = '',
+    debug_trace: Callable[[str, str, Dict[str, Any]], None] | None = None,
+) -> Dict[str, Any]:
     # Evidence Pack 是模型首轮报告的唯一主要输入之一，只放入排序后的少量证据。
     # 这样既控制 token 成本，也避免无关高严重日志淹没用户真正关心的业务问题。
     artifacts_dir = Path(artifacts_dir)
@@ -29,6 +33,17 @@ def generate_first_evidence_pack(artifacts_dir: Path, question: str = '') -> Dic
     }
     with open(artifacts_dir / 'first_evidence_pack.json', 'w', encoding='utf-8') as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
+    if debug_trace:
+        debug_trace(
+            'building_evidence',
+            'first_evidence_pack_result',
+            {
+                **summary,
+                'top_events': top_events,
+                'evidence_pack_chars': len(md),
+                'evidence_pack_preview': md,
+            },
+        )
     return summary
 
 
@@ -80,6 +95,12 @@ def _render_markdown(
             lines.append(f"- Source bundles: {', '.join(event.get('source_bundle_ids') or [])}")
         if event.get('matched_terms'):
             lines.append(f"- Matched terms: {', '.join(event.get('matched_terms') or [])}")
+        if event.get('template_meaning'):
+            lines.append(f"- Meaning: {event.get('template_meaning')}")
+        if event.get('code_location'):
+            lines.append(f"- Code location: {event.get('code_location')}")
+        if event.get('next_steps'):
+            lines.append(f"- Suggested next steps: {'; '.join(event.get('next_steps') or [])}")
         lines.append('')
         lines.append('```text')
         lines.append(str(event.get('snippet') or '').strip())

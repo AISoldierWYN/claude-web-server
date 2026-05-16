@@ -450,6 +450,10 @@ Evidence Pack 应包含原始日志短片段、文件名、行号范围、命中
 - 已复用现有 streaming lock，在 Android 分析、Deep、案例草稿生成和案例入库期间锁定输入区、侧栏、会话切换、删除、开发项目和 Android 分析入口，避免打断当前 job。
 - 已将 `events.jsonl` 作为可恢复进度源；完成后的分析气泡会重新读取事件列表并渲染最终过程面板，刷新/切换回来后依旧能看到过程记录。
 - 已在首轮报告后增加低成本本地 Verifier 门槛：若最高证据相关性不足，会生成 `verified_report.md` 风险提示，并把 job 状态降为 `needs_review`，避免无关高严重 crash 抢占结论。
+- 已增加首轮置信度阈值门控：`[android_analysis] auto_deep_confidence_threshold` 默认 `0.72`。首轮置信度达到阈值时停在首轮报告并保留可恢复的「Deep分析」按钮；低于阈值时自动进入 Deep/Verifier。
+- 已将 Android 分析消息 metadata 绑定到 job id，切换对话或刷新页面后会重新读取 job/events/artifacts，恢复报告操作区和 Deep 入口。
+- 已支持在聊天框输入「继续深入分析」「deep分析」等请求时，接续当前会话最近一个可 Deep 的 Android 分析 job，并把触发消息和 Deep 报告持久化到对话记录。
+- 已在每个 AI 交互环节输出 `ai_token_usage` debug 事件，记录 Planner、首轮报告、Deep 报告、Verifier 的输入/输出 token；若 Claude CLI 未返回真实 usage，则写入估算值并标记 `token_source=estimate`。
 
 ### 阶段 10：项目日志规则生成 Skill（已完成，2026-05-08）
 
@@ -503,3 +507,10 @@ skills/android-log-rule-builder/
 3. 是否需要为超过 100 MB 的 Android 日志单独做分片上传。
 4. 规则和案例的可视化管理 UI。
 5. Android 分析任务取消按钮与后端取消信号。
+
+### 阶段 12：分析过程可视化与持久化导出（进行中，2026-05-10）
+- 将 `android_debug_trace.jsonl` 暴露为按阶段聚合的 `process-details` 接口，前端不再只展示扁平事件列表，而是按“解压、扫描文件树、采样、Planner、规则匹配、证据包、报告、Verifier、Deep、Token 指标”等阶段折叠展示。
+- 每个阶段记录并展示关键输入/输出：文件树摘要、采样关键词、目标日志文件、Planner 路由结果、规则包选择、规则命中、案例召回、报告输入输出、Verifier 结论、置信度门控和 token 使用。
+- Deep 分析启动时保留首轮报告和首轮过程，只追加实时进度面板；完成后再刷新为最终报告与完整过程，避免短时间隐藏已有结果。
+- Claude CLI 如果返回可见的 `thinking_delta` / `text_delta` / 工具片段，则写入 debug trace 和 job events，用于前端过程面板、刷新恢复和离线 HTML 导出。
+- 离线 HTML 导出时补拉 Android job 的 process details，并把完整阶段详情随对话正文一起导出。

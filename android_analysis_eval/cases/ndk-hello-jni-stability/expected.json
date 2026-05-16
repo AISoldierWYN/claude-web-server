@@ -1,0 +1,19 @@
+{
+  "min_rule_count": 4,
+  "min_hit_count": 1,
+  "expected_profile": "stability",
+  "expected_keywords": [
+    "tombstone",
+    "HelloJni",
+    "JNI_OnLoad",
+    "libhello-jni.so"
+  ],
+  "must_hit_rule_tags": [
+    "native",
+    "stability"
+  ],
+  "must_hit_terms": [
+    "tombstone"
+  ],
+  "max_generic_term_ratio": 0.2
+}

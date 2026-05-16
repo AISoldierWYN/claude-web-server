@@ -1,0 +1,15 @@
+{
+  "id": "ndk-hello-jni-stability",
+  "repo": "android/ndk-samples",
+  "bundle_id": "app-ndk-samples",
+  "rule_pack_id": "ndk-samples-generated",
+  "project_preset": "native",
+  "profiles": ["stability"],
+  "project_dirs": ["local://tests/github_apps/android__ndk-samples/hello-jni"],
+  "bundle": {
+    "title": "Android NDK Samples",
+    "summary": "hello-jni sample, JNI bridge, native library, JNI_OnLoad, native crash and tombstone validation.",
+    "keywords": ["hello-jni", "HelloJni", "JNI", "NativeActivity", "libhello-jni", "tombstone"]
+  },
+  "log_path": "sample.log"
+}

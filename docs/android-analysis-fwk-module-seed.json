@@ -1,0 +1,294 @@
+{
+  "project_root": "D:/Code/FWK",
+  "knowledge_base_relative_path": ".claude-web/android-analysis/modules",
+  "modules": [
+    {
+      "id": "android-fwk-dpm",
+      "title": "Android DPM / ManagedProvisioning",
+      "description": "Android DevicePolicyManagerService、DevicePolicyManager API、DeviceAdmin/DeviceOwner/ProfileOwner 与 ManagedProvisioning 相关问题。",
+      "source_roots": [
+        "frameworks/base/services/devicepolicy/java/com/android/server",
+        "frameworks/base/core/java/android/app/admin",
+        "frameworks/proto_logging/stats/enums/stats/devicepolicy",
+        "packages/apps/ManagedProvisioning"
+      ],
+      "default_package_names": ["android", "com.android.managedprovisioning"],
+      "package_resolution": {
+        "required": true,
+        "reason": "DPM/ManagedProvisioning 常与目标管理应用、被管应用或 provision 包名相关。"
+      },
+      "subcategories": [
+        {
+          "id": "ae_provision_config_failed",
+          "title": "AE流程配置失败（DO、PO）",
+          "description": "Device Owner/Profile Owner provisioning 参数、Admin extras、AE 配置流程失败。",
+          "aliases": ["device owner", "profile owner", "managed provisioning", "admin extras", "provisioning config", "ACTION_PROVISION", "DeviceAdmin", "owner provisioning"]
+        },
+        {
+          "id": "do_activation_failed",
+          "title": "激活DO失败",
+          "description": "Device Owner 激活、setDeviceOwner、provision DO 阶段失败。",
+          "aliases": ["device owner", "setDeviceOwner", "provision", "owner installed", "device admin", "activation"]
+        },
+        {
+          "id": "dpm_api_call_failed",
+          "title": "调用任意DPM接口失败",
+          "description": "调用 DevicePolicyManager/DevicePolicyManagerService 接口直接报错、拒绝或异常。",
+          "aliases": ["DevicePolicyManager", "DevicePolicyManagerService", "SecurityException", "policy", "admin", "caller", "permission"]
+        },
+        {
+          "id": "dpm_api_not_effective",
+          "title": "调用任意DPM接口未生效",
+          "description": "DPM 接口调用成功但策略未落地、状态未变化或未广播。",
+          "aliases": ["policy", "set policy", "get policy", "not applied", "persist", "admin", "state"]
+        },
+        {
+          "id": "work_profile_setup_failed",
+          "title": "工作资料配置失败",
+          "description": "ManagedProvisioning/Profile Owner/Work profile 创建配置失败。",
+          "aliases": ["work profile", "profile owner", "managed profile", "ManagedProvisioning", "ProvisioningController", "user provisioning"]
+        },
+        {
+          "id": "dpm_xts_issue",
+          "title": "DPM相关XTS问题",
+          "description": "DPM/DeviceAdmin/ManagedProvisioning 相关 CTS/XTS 测试失败。",
+          "aliases": ["CTS", "XTS", "test", "DevicePolicy", "ManagedProvisioning", "test failure"]
+        }
+      ]
+    },
+    {
+      "id": "android-fwk-mdm",
+      "title": "Honor MDM / HDM Device Policy",
+      "description": "Honor OEM MDM/HDM 接口、扩展 DevicePolicy 服务、权限和策略生效链路。",
+      "source_roots": [
+        "vendor/honor/system/base/frameworks/hwCommInterface/base/core/java/com/hihonor/android/app/admin",
+        "vendor/honor/system/base/frameworks/hwCommInterface/base/core/java/android/app/admin",
+        "vendor/honor/system/base/frameworks/hwCommInterface/base/core/java/android/hdm",
+        "vendor/honor/system/base/frameworks/hwCommInterface/base/services/devicepolicy/java/com/android/server/devicepolicy",
+        "vendor/honor/system/base/frameworks/base/core/java/com/hihonor/android/app/admin",
+        "vendor/honor/system/base/frameworks/base/core/java/hihonor/android/app/admin",
+        "vendor/honor/system/base/frameworks/base/services/java/com/android/server/devicepolicy"
+      ],
+      "default_package_names": ["android"],
+      "package_resolution": {
+        "required": true,
+        "reason": "MDM 接口通常需要识别调用方包名、管理员包名和权限主体。"
+      },
+      "subcategories": [
+        {
+          "id": "mdm_activation_failed",
+          "title": "激活失败",
+          "description": "Honor MDM/HDM 管理员激活、注册或绑定失败。",
+          "aliases": ["MDM", "HDM", "activate", "active admin", "device admin", "enterprise admin"]
+        },
+        {
+          "id": "mdm_api_call_error",
+          "title": "调用MDM接口报错",
+          "description": "调用 Honor MDM/HDM 扩展接口时报错、权限异常或服务拒绝。",
+          "aliases": ["MDM", "HDM", "SecurityException", "permission", "caller", "policy", "admin"]
+        },
+        {
+          "id": "mdm_api_not_effective",
+          "title": "调用MDM接口未生效（功能未生效）",
+          "description": "MDM/HDM 接口返回成功但实际策略、配置或限制未生效。",
+          "aliases": ["MDM", "HDM", "policy", "not effective", "state", "set", "persist"]
+        },
+        {
+          "id": "mdm_permission_not_effective",
+          "title": "MDM权限未生效",
+          "description": "MDM 权限授予、校验、拦截或策略权限不生效。",
+          "aliases": ["permission", "MDM", "HDM", "authorized", "allow", "deny", "check permission"]
+        }
+      ]
+    },
+    {
+      "id": "android-fwk-ams",
+      "title": "Android AMS / ActivityManager",
+      "description": "ActivityManagerService、进程管理、广播、Activity/Service 生命周期、adj 与 Honor AMS 插装。",
+      "source_roots": [
+        "vendor/honor/system/base/frameworks/base/core/java/com/hihonor/android/app/ActivityManagerEx.java",
+        "vendor/honor/system/base/frameworks/base/services/java/hihonor/com/android/server/am",
+        "vendor/honor/system/base/frameworks/hwCommInterface/base/core/java/com/hihonor/android/app/HnActivityEx.java",
+        "frameworks/base/core/java/android/app/ActivityManager.java",
+        "frameworks/base/core/java/android/app/ContextImpl.java",
+        "frameworks/base/core/java/android/app/ActivityThread.java",
+        "frameworks/base/services/core/java/com/android/server/am"
+      ],
+      "default_package_names": [],
+      "package_resolution": {
+        "required": true,
+        "reason": "AMS 问题常需要从应用中文名或现象中解析目标包名、进程名、组件名。"
+      },
+      "subcategories": [
+        {
+          "id": "process_killed",
+          "title": "进程被杀死",
+          "description": "应用进程被 AMS/lmk/force-stop/后台策略杀死或退出。",
+          "aliases": ["kill", "killed", "process died", "force stop", "crash", "ANR", "ProcessRecord"]
+        },
+        {
+          "id": "process_start_reason",
+          "title": "进程未被拉起/被拉起原因",
+          "description": "进程启动失败、未启动，或需要判断进程被谁/为何拉起。",
+          "aliases": ["start process", "proc start", "ProcessRecord", "startProcess", "hostingType", "zygote"]
+        },
+        {
+          "id": "broadcast_missing_or_delayed",
+          "title": "广播没收到/收到时间晚",
+          "description": "广播投递、排队、超时、后台限制或接收延迟。",
+          "aliases": ["broadcast", "BroadcastQueue", "receiver", "deliver", "timeout", "enqueue"]
+        },
+        {
+          "id": "activity_start_reason",
+          "title": "activity启动原因",
+          "description": "Activity 启动来源、intent 解析、启动链路和阻塞原因。",
+          "aliases": ["startActivity", "ActivityRecord", "ActivityTaskManager", "intent", "launch", "START"]
+        },
+        {
+          "id": "component_lifecycle_abnormal",
+          "title": "四大组件生命周期异常",
+          "description": "Activity/Service/Broadcast/Provider 生命周期调用、切换或销毁异常。",
+          "aliases": ["lifecycle", "activity", "service", "provider", "receiver", "pause", "resume", "destroy"]
+        },
+        {
+          "id": "process_adj_abnormal",
+          "title": "进程adj异常",
+          "description": "进程 oom_adj/procstate 调整异常、保活或前后台状态异常。",
+          "aliases": ["adj", "oom_adj", "procstate", "ProcessList", "updateOomAdj", "importance"]
+        },
+        {
+          "id": "service_start_abnormal",
+          "title": "服务启动异常",
+          "description": "Service start/bind/foreground service 启动失败或超时。",
+          "aliases": ["startService", "bindService", "ServiceRecord", "foreground service", "FGS", "timeout"]
+        },
+        {
+          "id": "app_clone_enable_failed",
+          "title": "应用分身开启失败",
+          "description": "Honor 应用分身/clone 用户或双开相关 AMS 行为异常。",
+          "aliases": ["clone", "app clone", "dual app", "cloned user", "multi app", "parallel app"]
+        }
+      ]
+    },
+    {
+      "id": "android-fwk-pms",
+      "title": "Android PMS / PackageManager",
+      "description": "PackageManagerService、安装卸载、权限、Intent 解析、组件状态、开机扫描和默认应用。",
+      "source_roots": [
+        "frameworks/base/services/core/java/com/android/server/pm",
+        "frameworks/base/core/java/android/app/ApplicationPackageManager.java",
+        "vendor/honor/system/base/frameworks/base/services/java/hihonor/com/android/server/pm"
+      ],
+      "default_package_names": [],
+      "package_resolution": {
+        "required": true,
+        "reason": "PMS 问题通常强依赖目标包名、组件名、权限名或 Intent action。"
+      },
+      "subcategories": [
+        {
+          "id": "package_install_failed",
+          "title": "应用未安装成功",
+          "description": "安装、解析、签名、版本、存储或 commit 阶段失败。",
+          "aliases": ["install", "PackageInstaller", "PackageManager", "parse package", "signature", "INSTALL_FAILED"]
+        },
+        {
+          "id": "package_uninstall_failed",
+          "title": "应用卸载失败",
+          "description": "卸载失败、残留、用户态删除或系统应用删除受限。",
+          "aliases": ["delete package", "uninstall", "removePackage", "DELETE_FAILED", "PackageRemoved"]
+        },
+        {
+          "id": "permission_grant_request_abnormal",
+          "title": "应用权限授予/申请流程异常",
+          "description": "运行时权限、默认权限、权限组、授权/撤销流程异常。",
+          "aliases": ["permission", "grant", "revoke", "runtime permission", "PermissionManager", "AppPermission"]
+        },
+        {
+          "id": "intent_component_resolution_abnormal",
+          "title": "启动intent组件解析匹配异常",
+          "description": "Intent resolver、query、preferred activity 或组件匹配异常。",
+          "aliases": ["IntentResolver", "resolveIntent", "queryIntent", "preferred activity", "component match"]
+        },
+        {
+          "id": "boot_scan_missing_package",
+          "title": "开机扫描安装应用缺少某应用",
+          "description": "开机扫描、系统分区扫描、包丢失、package setting 缺失。",
+          "aliases": ["scanPackage", "scanDir", "boot scan", "PackageSetting", "missing package"]
+        },
+        {
+          "id": "component_disabled_reason",
+          "title": "应用组件被禁用原因",
+          "description": "组件 enabled/disabled 状态变化及原因定位。",
+          "aliases": ["setComponentEnabledSetting", "enabled state", "disabled", "ComponentInfo", "PackageSetting"]
+        },
+        {
+          "id": "component_not_found_on_launch",
+          "title": "启动某个应用组件时无法拉起（找不到该组件）",
+          "description": "启动组件时 Activity/Service/Receiver 不存在、禁用或无法解析。",
+          "aliases": ["ActivityNotFound", "Service not found", "component not found", "resolve", "MATCH_DEFAULT_ONLY"]
+        },
+        {
+          "id": "home_activity_resolution",
+          "title": "home属性应用解析",
+          "description": "HOME intent、launcher、默认桌面解析或切换异常。",
+          "aliases": ["HOME", "CATEGORY_HOME", "Launcher", "preferred home", "resolve home"]
+        },
+        {
+          "id": "default_app_issue",
+          "title": "默认应用问题",
+          "description": "默认浏览器、拨号、短信、桌面等默认应用设置和解析异常。",
+          "aliases": ["default app", "preferred activity", "RoleManager", "browser", "dialer", "sms"]
+        }
+      ]
+    },
+    {
+      "id": "android-fwk-dlc",
+      "title": "Android DeviceLock / DLC",
+      "description": "AOSP DeviceLock 模块与 DLC 锁机、激活、解锁、解绑、kiosk 下载等流程。",
+      "source_roots": ["packages/modules/DeviceLock"],
+      "default_package_names": ["com.android.devicelock"],
+      "package_resolution": {
+        "required": false,
+        "reason": "DeviceLock 模块自身包名固定，但具体 kiosk 应用可能仍需从问题描述解析。"
+      },
+      "subcategories": [
+        {
+          "id": "device_identification_failed",
+          "title": "设备识别失败",
+          "description": "DeviceLock 设备识别、check-in 前设备信息获取或校验失败。",
+          "aliases": ["device id", "device identifier", "imei", "serial", "checkin", "device lock"]
+        },
+        {
+          "id": "activation_failed",
+          "title": "激活不成功",
+          "description": "DeviceLock 激活、provision、check-in 或注册状态失败。",
+          "aliases": ["activate", "activation", "provision", "checkin", "setup", "register"]
+        },
+        {
+          "id": "activation_flow_not_started",
+          "title": "未能拉起激活流程",
+          "description": "DeviceLock 激活页面、通知、Activity 或引导流程未启动。",
+          "aliases": ["activity", "intent", "notification", "launch", "setup", "provisioning"]
+        },
+        {
+          "id": "lock_unlock_abnormal",
+          "title": "锁定/解锁异常",
+          "description": "DeviceLock 锁定、解锁、状态切换或限制策略异常。",
+          "aliases": ["lock", "unlock", "kiosk", "DeviceLockController", "policy", "state"]
+        },
+        {
+          "id": "unbind_abnormal",
+          "title": "解绑异常",
+          "description": "DeviceLock 解绑、deprovision、注销或云侧解除绑定异常。",
+          "aliases": ["unbind", "deprovision", "unregister", "remove", "clear", "release"]
+        },
+        {
+          "id": "kiosk_download_abnormal",
+          "title": "kiosk应用下载异常",
+          "description": "Kiosk 应用下载、安装、更新或拉起失败。",
+          "aliases": ["kiosk", "download", "install", "package", "apk", "update"]
+        }
+      ]
+    }
+  ]
+}

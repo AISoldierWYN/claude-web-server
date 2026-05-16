@@ -1,0 +1,2 @@
+05-10 12:20:15.010 W Termux: RunCommandService ExecutionCommand failed invalid runner TERMINAL_SESSION
+05-10 12:20:15.090 E Termux: TermuxService shell process denied while handling RUN_COMMAND

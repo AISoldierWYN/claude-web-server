@@ -1,0 +1,15 @@
+{
+  "id": "ndk-native-activity-performance",
+  "repo": "android/ndk-samples",
+  "bundle_id": "app-ndk-samples",
+  "rule_pack_id": "ndk-samples-generated",
+  "project_preset": "native",
+  "profiles": ["performance"],
+  "project_dirs": ["local://tests/github_apps/android__ndk-samples/native-activity"],
+  "bundle": {
+    "title": "Android NDK Samples",
+    "summary": "native-activity sample, JNI/native rendering, Choreographer, trace and frame pacing.",
+    "keywords": ["native-activity", "NativeActivity", "android_native_app_glue", "Choreographer", "trace", "frame"]
+  },
+  "log_path": "sample.log"
+}

@@ -1,0 +1,20 @@
+{
+  "min_rule_count": 5,
+  "min_hit_count": 2,
+  "expected_profile": "functional",
+  "expected_keywords": [
+    "FileSyncService",
+    "AccountAuthenticatorService",
+    "UploadFileBroadcastReceiver"
+  ],
+  "must_hit_rule_tags": [
+    "tier2",
+    "profile"
+  ],
+  "must_hit_terms": [
+    "FileSyncService",
+    "UserAccountManager",
+    "RemoteOperationResult"
+  ],
+  "max_generic_term_ratio": 0.2
+}

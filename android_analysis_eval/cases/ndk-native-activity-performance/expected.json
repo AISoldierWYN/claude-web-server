@@ -1,0 +1,20 @@
+{
+  "min_rule_count": 5,
+  "min_hit_count": 1,
+  "expected_profile": "performance",
+  "expected_keywords": [
+    "Choreographer",
+    "trace",
+    "NativeActivity",
+    "libnative-activity.so",
+    "AChoreographer"
+  ],
+  "must_hit_rule_tags": [
+    "native",
+    "performance"
+  ],
+  "must_hit_terms": [
+    "Choreographer"
+  ],
+  "max_generic_term_ratio": 0.2
+}

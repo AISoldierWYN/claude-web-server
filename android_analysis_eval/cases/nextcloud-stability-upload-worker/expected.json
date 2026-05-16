@@ -1,0 +1,20 @@
+{
+  "min_rule_count": 5,
+  "min_hit_count": 2,
+  "expected_profile": "stability",
+  "expected_keywords": [
+    "FolderDownloadWorkerReceiver",
+    "AccountManagerService",
+    "FileSyncService"
+  ],
+  "must_hit_rule_tags": [
+    "tier2",
+    "profile",
+    "stability"
+  ],
+  "must_hit_terms": [
+    "FolderDownloadWorkerReceiver",
+    "FATAL EXCEPTION"
+  ],
+  "max_generic_term_ratio": 0.2
+}

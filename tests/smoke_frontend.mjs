@@ -31,6 +31,12 @@ assertIncludes('waitAndroidAnalysisJob', 'Android analysis async job wait helper
 assertIncludes('streamAndroidAnalysisEvents', 'Android analysis SSE stream helper');
 assertIncludes('android-analysis-process', 'Android analysis process panel');
 assertIncludes('analysis_metrics_recorded', 'Android analysis metrics event');
+assertIncludes('androidAnalysisAutoDeepThreshold', 'Android analysis confidence threshold state');
+assertIncludes('first_pass_confidence', 'Android analysis first-pass confidence event');
+assertIncludes('auto_deep_triggered', 'Android analysis automatic Deep event');
+assertIncludes('/api/android-analysis/jobs/latest', 'Android analysis latest job endpoint');
+assertIncludes('isAndroidDeepRequest', 'Android analysis chat-box Deep trigger');
+assertIncludes('hydrateAndroidAnalysisMessage', 'Android analysis persisted button hydration');
 assertIncludes('id="providerPicker"', 'provider picker');
 assertIncludes('data-provider="gemini"', 'Gemini provider option');
 assertIncludes('session-provider-badge', 'session provider badge');
@@ -59,7 +65,10 @@ assert.match(androidStart, /isStreaming = true;/, 'Android analysis should enter
 assert.match(androidStart, /setStreamingLocked\(true\);/, 'Android analysis should lock page interactions');
 assert.match(androidStart, /setStreamingLocked\(false\);/, 'Android analysis should unlock page interactions');
 
-const start = script.indexOf('function escapeHtml');
+const start = Math.min(
+  script.indexOf('function cleanThinkingForDisplay'),
+  script.indexOf('function escapeHtml'),
+);
 const end = script.indexOf('async function saveHtmlFile');
 assert.ok(start >= 0 && end > start, 'Expected exportable Markdown and HTML functions');
 
@@ -114,14 +123,51 @@ const exported = context.buildExportHtml(
   { title: 'Smoke Export' },
   [
     { role: 'user', content: '| A | B |\n|---|---|\n| 1 | 2 |' },
-    { role: 'assistant', content: 'Done', thinking: 'checked files' },
+    {
+      role: 'assistant',
+      content: 'Done',
+      thinking: [
+        'Android 分析过程',
+        '- 阶段：planning',
+        '- ai_thinking_delta',
+        '- ai_thinking_delta',
+        '- ai_text_delta',
+        '- verifier_completed',
+      ].join('\n'),
+      metadata: { android_analysis_job_id: 'job-1' },
+      android_process_details: {
+        process_overview_title: 'Android RealtimeDeviceManager问题分析过程概览',
+        process_detail_title: 'Android RealtimeDeviceManager问题分析过程详情',
+        stages: [
+          {
+            id: 'planning',
+            title: 'Planner 路由',
+            item_count: 1,
+            duration_seconds: 1.2,
+            items: [
+              {
+                event: 'ai_text_stream',
+                title: 'AI 输出流',
+                data: { content: '| A | B |\n|---|---|\n| 1 | 2 |' },
+              },
+            ],
+          },
+        ],
+      },
+    },
   ],
 );
 assert.match(exported, /<!DOCTYPE html>/);
 assert.match(exported, /Smoke Export - Claude Chat Export/);
 assert.match(exported, /markdown-table-wrap/);
 assert.match(exported, /thinking-block/);
-assert.match(exported, /checked files/);
+assert.match(exported, /Android RealtimeDeviceManager问题分析过程概览/);
+assert.match(exported, /Android RealtimeDeviceManager问题分析过程详情/);
+assert.match(exported, /AI 可见思考流：2 个片段/);
+assert.match(exported, /AI 输出流：1 个片段/);
+assert.match(exported, /<details class="thinking-block">/);
+assert.doesNotMatch(exported, /ai_thinking_delta/);
+assert.doesNotMatch(exported, /ai_text_delta/);
 assert.doesNotMatch(exported, /<script>/i, 'Offline export should not depend on app scripts');
 
 console.log('Frontend smoke checks passed');

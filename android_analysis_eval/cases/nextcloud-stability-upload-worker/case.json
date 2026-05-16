@@ -1,0 +1,15 @@
+{
+  "id": "nextcloud-stability-upload-worker",
+  "repo": "nextcloud/android",
+  "bundle_id": "app-nextcloud",
+  "rule_pack_id": "nextcloud-generated",
+  "project_preset": "app",
+  "profiles": ["stability"],
+  "project_dirs": ["local://tests/github_apps/nextcloud__android"],
+  "bundle": {
+    "title": "Nextcloud Android",
+    "summary": "Complex cloud file app with account authentication, WebDAV remote operations, upload/download and background sync.",
+    "keywords": ["Nextcloud", "FileSyncService", "UploadFileBroadcastReceiver", "FolderDownloadWorkerReceiver", "AccountManagerService"]
+  },
+  "log_path": "sample.log"
+}

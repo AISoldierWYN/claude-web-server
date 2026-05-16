@@ -1,0 +1,19 @@
+{
+  "min_rule_count": 4,
+  "min_hit_count": 2,
+  "expected_profile": "performance",
+  "expected_keywords": [
+    "TermuxService",
+    "TerminalSession",
+    "ExecutionCommand"
+  ],
+  "must_hit_rule_tags": [
+    "tier2",
+    "performance"
+  ],
+  "must_hit_terms": [
+    "TerminalSession",
+    "Choreographer"
+  ],
+  "max_generic_term_ratio": 0.2
+}

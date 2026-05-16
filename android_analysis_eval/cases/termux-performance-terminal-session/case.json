@@ -1,0 +1,15 @@
+{
+  "id": "termux-performance-terminal-session",
+  "repo": "termux/termux-app",
+  "bundle_id": "app-termux",
+  "rule_pack_id": "termux-generated",
+  "project_preset": "app",
+  "profiles": ["performance"],
+  "project_dirs": ["local://tests/github_apps/termux__termux-app"],
+  "bundle": {
+    "title": "Termux",
+    "summary": "Terminal and process-heavy Android app with RUN_COMMAND intent, shell session, foreground service and plugin execution.",
+    "keywords": ["Termux", "TermuxService", "TerminalSession", "ExecutionCommand", "TerminalView"]
+  },
+  "log_path": "sample.log"
+}

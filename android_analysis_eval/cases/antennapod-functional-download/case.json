@@ -1,0 +1,15 @@
+{
+  "id": "antennapod-functional-download",
+  "repo": "AntennaPod/AntennaPod",
+  "bundle_id": "app-antennapod",
+  "rule_pack_id": "antennapod-generated",
+  "project_preset": "app",
+  "profiles": ["functional"],
+  "project_dirs": ["local://tests/github_apps/AntennaPod__AntennaPod"],
+  "bundle": {
+    "title": "AntennaPod",
+    "summary": "Podcast app with feed sync, download queue, playback service, episode database and media storage.",
+    "keywords": ["AntennaPod", "DownloadRequester", "DownloadService", "PlaybackService", "FeedItem", "Episode"]
+  },
+  "log_path": "sample.log"
+}

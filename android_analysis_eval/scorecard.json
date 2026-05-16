@@ -1,0 +1,839 @@
+{
+  "version": 1,
+  "ok": true,
+  "eval_root": "D:\\Code\\claude-web-server\\android_analysis_eval",
+  "case_count": 12,
+  "passed_count": 12,
+  "failed_count": 0,
+  "cases": [
+    {
+      "id": "antennapod-functional-download",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\antennapod-functional-download",
+      "bundle_id": "app-antennapod",
+      "rule_pack_id": "antennapod-generated",
+      "project_preset": "app",
+      "profiles": [
+        "functional"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\antennapod-functional-download\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 10,
+        "hit_rule_count": 2,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "functional"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 3,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 2
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "antennapod-generated",
+        "rule_count": 10,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "antennapod-generated-tier2-project-scope",
+          "rule_title": "AntennaPod 播客 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\antennapod-functional-download\\sample.log",
+          "matched_terms": [
+            "AntennaPod",
+            "DownloadRequester",
+            "DownloadService",
+            "FeedItem",
+            "Queue"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "antennapod-generated-functional-tier2-scope",
+          "rule_title": "AntennaPod 播客 App Generated Log Signals functional tier2 scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\antennapod-functional-download\\sample.log",
+          "matched_terms": [
+            "AntennaPod",
+            "DownloadRequester",
+            "DownloadService",
+            "FeedItem",
+            "Queue"
+          ],
+          "regex_hits": []
+        }
+      ]
+    },
+    {
+      "id": "antennapod-stability-playback-crash",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\antennapod-stability-playback-crash",
+      "bundle_id": "app-antennapod",
+      "rule_pack_id": "antennapod-generated",
+      "project_preset": "app",
+      "profiles": [
+        "stability"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\antennapod-stability-playback-crash\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 10,
+        "hit_rule_count": 3,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "stability"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 3,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 3
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "antennapod-generated",
+        "rule_count": 10,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "antennapod-generated-tier2-project-scope",
+          "rule_title": "AntennaPod 播客 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\antennapod-stability-playback-crash\\sample.log",
+          "matched_terms": [
+            "AntennaPod",
+            "PlaybackService",
+            "de.danoeh.antennapod"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "antennapod-generated-tier2-android-components",
+          "rule_title": "AntennaPod 播客 App Generated Log Signals tier2 Android component/action scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\antennapod-stability-playback-crash\\sample.log",
+          "matched_terms": [
+            "PlaybackService"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "antennapod-generated-stability-scoped-crash",
+          "rule_title": "AntennaPod 播客 App Generated Log Signals stability/crash signals scoped to project",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\antennapod-stability-playback-crash\\sample.log",
+          "matched_terms": [],
+          "regex_hits": [
+            "(?i)(?:(?:(?<![A-Za-z0-9_])AntennaPod(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadRequester(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItem(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedMedia(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayerStatus(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HttpDownloaderTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PsmpTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HTTPBin(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PodcastApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RxJavaErrorHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayActionButton(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OpmlImportBaseActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SelectSubscription(?![A-Za-z0-9_])|<\\(\\\\|(?<![A-Za-z0-9_])Timeline(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeItemViewHolder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeSelectHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesListFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItemMenuHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaSizeLoader(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AddFeedFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FavoritesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NewEpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackHistoryFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SearchFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ChaptersFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadsFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogAdapter(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogDetails(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BottomNavigation(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])hidden(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])shown(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])prefLastFragmentTag(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NavDrawerFragment(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:FATAL EXCEPTION)|(?:FATAL EXCEPTION)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])AntennaPod(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadRequester(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItem(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedMedia(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayerStatus(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HttpDownloaderTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PsmpTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HTTPBin(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PodcastApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RxJavaErrorHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayActionButton(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OpmlImportBaseActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SelectSubscription(?![A-Za-z0-9_])|<\\(\\\\|(?<![A-Za-z0-9_])Timeline(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeItemViewHolder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeSelectHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesListFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItemMenuHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaSizeLoader(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AddFeedFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FavoritesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NewEpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackHistoryFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SearchFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ChaptersFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadsFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogAdapter(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogDetails(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BottomNavigation(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])hidden(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])shown(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])prefLastFragmentTag(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NavDrawerFragment(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])AntennaPod(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadRequester(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItem(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedMedia(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayerStatus(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HttpDownloaderTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PsmpTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HTTPBin(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PodcastApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RxJavaErrorHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayActionButton(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OpmlImportBaseActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SelectSubscription(?![A-Za-z0-9_])|<\\(\\\\|(?<![A-Za-z0-9_])Timeline(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeItemViewHolder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeSelectHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesListFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItemMenuHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaSizeLoader(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AddFeedFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FavoritesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NewEpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackHistoryFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SearchFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ChaptersFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadsFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogAdapter(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogDetails(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BottomNavigation(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])hidden(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])shown(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])prefLastFragmentTag(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NavDrawerFragment(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:AndroidRuntime)|(?:AndroidRuntime)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])AntennaPod(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadRequester(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItem(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedMedia(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayerStatus(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HttpDownloaderTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PsmpTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HTTPBin(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PodcastApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RxJavaErrorHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayActionButton(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OpmlImportBaseActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SelectSubscription(?![A-Za-z0-9_])|<\\(\\\\|(?<![A-Za-z0-9_])Timeline(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeItemViewHolder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeSelectHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesListFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItemMenuHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaSizeLoader(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AddFeedFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FavoritesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NewEpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackHistoryFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SearchFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ChaptersFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadsFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogAdapter(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogDetails(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BottomNavigation(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])hidden(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])shown(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])prefLastFragmentTag(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NavDrawerFragment(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])AntennaPod(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadRequester(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItem(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedMedia(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayerStatus(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HttpDownloaderTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PsmpTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HTTPBin(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PodcastApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RxJavaErrorHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayActionButton(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OpmlImportBaseActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SelectSubscription(?![A-Za-z0-9_])|<\\(\\\\|(?<![A-Za-z0-9_])Timeline(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeItemViewHolder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeSelectHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesListFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItemMenuHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaSizeLoader(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AddFeedFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FavoritesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NewEpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackHistoryFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SearchFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ChaptersFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadsFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogAdapter(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogDetails(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BottomNavigation(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])hidden(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])shown(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])prefLastFragmentTag(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NavDrawerFragment(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:[A-Za-z0-9_.]*(?:Exception|Error|Failure|Failed))|(?:[A-Za-z0-9_.]*(?:Exception|Error|Failure|Failed))[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])AntennaPod(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadRequester(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItem(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedMedia(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayerStatus(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HttpDownloaderTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PsmpTest(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HTTPBin(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PodcastApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RxJavaErrorHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlayActionButton(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OpmlImportBaseActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SelectSubscription(?![A-Za-z0-9_])|<\\(\\\\|(?<![A-Za-z0-9_])Timeline(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeItemViewHolder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodeSelectHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesListFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeedItemMenuHandler(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaSizeLoader(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AddFeedFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])EpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FavoritesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NewEpisodesFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PlaybackHistoryFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SearchFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ChaptersFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadsFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogAdapter(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogDetails(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DownloadLogFragment(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BottomNavigation(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])hidden(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])shown(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])prefLastFragmentTag(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NavDrawerFragment(?![A-Za-z0-9_])))"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ndk-hello-jni-stability",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-hello-jni-stability",
+      "bundle_id": "app-ndk-samples",
+      "rule_pack_id": "ndk-samples-generated",
+      "project_preset": "native",
+      "profiles": [
+        "stability"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-hello-jni-stability\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 4,
+        "hit_rule_count": 4,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "stability"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 4,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 4
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "ndk-samples-generated",
+        "rule_count": 4,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "ndk-samples-generated-tier2-project-scope",
+          "rule_title": "Android NDK Samples Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-hello-jni-stability\\sample.log",
+          "matched_terms": [
+            "JNI",
+            "SIGSEGV",
+            "libhello-jni.so",
+            "HelloJni",
+            "com.example.hellojni"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "ndk-samples-generated-tier2-native-scope",
+          "rule_title": "Android NDK Samples Generated Log Signals tier2 native library/JNI/log/trace scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-hello-jni-stability\\sample.log",
+          "matched_terms": [
+            "libhello-jni.so"
+          ],
+          "regex_hits": [
+            "(?i)\\b(hello\\-jni|libhello\\-jni\\.so|stringFromJNI|JNI_OnLoad|LIBHELLOJNI)\\b",
+            "(?i)(trace|Choreographer|Skipped \\d+ frames|jank|frame|render|latency|slow)"
+          ]
+        },
+        {
+          "rule_id": "ndk-samples-generated-tier2-android-components",
+          "rule_title": "Android NDK Samples Generated Log Signals tier2 Android component/action scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-hello-jni-stability\\sample.log",
+          "matched_terms": [
+            "HelloJni"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "ndk-samples-generated-stability-scoped-crash",
+          "rule_title": "Android NDK Samples Generated Log Signals stability/crash signals scoped to project",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-hello-jni-stability\\sample.log",
+          "matched_terms": [],
+          "regex_hits": [
+            "(?i)(?:(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LIBHELLOJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HelloJni(?![A-Za-z0-9_])|:app|com\\.example\\.hellojni|hello\\-jni|(?<![A-Za-z0-9_])stringFromJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:tombstone)|(?:tombstone)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LIBHELLOJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HelloJni(?![A-Za-z0-9_])|:app|com\\.example\\.hellojni|hello\\-jni|(?<![A-Za-z0-9_])stringFromJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LIBHELLOJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HelloJni(?![A-Za-z0-9_])|:app|com\\.example\\.hellojni|hello\\-jni|(?<![A-Za-z0-9_])stringFromJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:SIGSEGV)|(?:SIGSEGV)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LIBHELLOJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HelloJni(?![A-Za-z0-9_])|:app|com\\.example\\.hellojni|hello\\-jni|(?<![A-Za-z0-9_])stringFromJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LIBHELLOJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HelloJni(?![A-Za-z0-9_])|:app|com\\.example\\.hellojni|hello\\-jni|(?<![A-Za-z0-9_])stringFromJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:backtrace)|(?:backtrace)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LIBHELLOJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])HelloJni(?![A-Za-z0-9_])|:app|com\\.example\\.hellojni|hello\\-jni|(?<![A-Za-z0-9_])stringFromJNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])))"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ndk-native-activity-performance",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-native-activity-performance",
+      "bundle_id": "app-ndk-samples",
+      "rule_pack_id": "ndk-samples-generated",
+      "project_preset": "native",
+      "profiles": [
+        "performance"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-native-activity-performance\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 5,
+        "hit_rule_count": 4,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "performance"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 5,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 4
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "ndk-samples-generated",
+        "rule_count": 5,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "ndk-samples-generated-tier2-project-scope",
+          "rule_title": "Android NDK Samples Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-native-activity-performance\\sample.log",
+          "matched_terms": [
+            "NativeActivity"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "ndk-samples-generated-tier2-native-scope",
+          "rule_title": "Android NDK Samples Generated Log Signals tier2 native library/JNI/log/trace scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-native-activity-performance\\sample.log",
+          "matched_terms": [
+            "NativeActivity"
+          ],
+          "regex_hits": [
+            "(?i)\\b(native\\-activity|NativeActivity|libnative\\-activity\\.so|ANativeActivity_onCreate|NativeActivity|RegisterNatives|JNI_OnLoad|android_main|ANativeWindow_setBuffersGeometry|AChoreographer_postFrameCallback|AChoreographer_getInstance|AChoreographer_postFrameCallback64|ANativeWindow_Buffer|ANativeWindow_lock|ANativeWindow_unlockAndPost|ScheduleNextTick|DoTick)\\b"
+          ]
+        },
+        {
+          "rule_id": "ndk-samples-generated-tier2-android-components",
+          "rule_title": "Android NDK Samples Generated Log Signals tier2 Android component/action scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-native-activity-performance\\sample.log",
+          "matched_terms": [
+            "NativeActivity"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "ndk-samples-generated-performance-scoped",
+          "rule_title": "Android NDK Samples Generated Log Signals performance signals scoped to project",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\ndk-native-activity-performance\\sample.log",
+          "matched_terms": [],
+          "regex_hits": [
+            "(?i)(?:(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANative(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer(?![A-Za-z0-9_])|native\\-activity|:app|com\\.example\\.native_activity|libnative\\-activity\\.so|(?<![A-Za-z0-9_])ANativeActivity_onCreate(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RegisterNatives(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])android_main(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_setBuffersGeometry(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_getInstance(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback64(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_Buffer(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_lock(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_unlockAndPost(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ScheduleNextTick(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DoTick(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:Skipped \\d+ frames)|(?:Skipped \\d+ frames)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANative(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer(?![A-Za-z0-9_])|native\\-activity|:app|com\\.example\\.native_activity|libnative\\-activity\\.so|(?<![A-Za-z0-9_])ANativeActivity_onCreate(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RegisterNatives(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])android_main(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_setBuffersGeometry(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_getInstance(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback64(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_Buffer(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_lock(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_unlockAndPost(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ScheduleNextTick(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DoTick(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANative(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer(?![A-Za-z0-9_])|native\\-activity|:app|com\\.example\\.native_activity|libnative\\-activity\\.so|(?<![A-Za-z0-9_])ANativeActivity_onCreate(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RegisterNatives(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])android_main(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_setBuffersGeometry(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_getInstance(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback64(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_Buffer(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_lock(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_unlockAndPost(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ScheduleNextTick(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DoTick(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:Choreographer)|(?:Choreographer)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANative(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer(?![A-Za-z0-9_])|native\\-activity|:app|com\\.example\\.native_activity|libnative\\-activity\\.so|(?<![A-Za-z0-9_])ANativeActivity_onCreate(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RegisterNatives(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])android_main(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_setBuffersGeometry(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_getInstance(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback64(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_Buffer(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_lock(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_unlockAndPost(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ScheduleNextTick(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DoTick(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANative(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer(?![A-Za-z0-9_])|native\\-activity|:app|com\\.example\\.native_activity|libnative\\-activity\\.so|(?<![A-Za-z0-9_])ANativeActivity_onCreate(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RegisterNatives(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])android_main(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_setBuffersGeometry(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_getInstance(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback64(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_Buffer(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_lock(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_unlockAndPost(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ScheduleNextTick(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DoTick(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:trace)|(?:trace)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANative(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer(?![A-Za-z0-9_])|native\\-activity|:app|com\\.example\\.native_activity|libnative\\-activity\\.so|(?<![A-Za-z0-9_])ANativeActivity_onCreate(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RegisterNatives(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])android_main(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_setBuffersGeometry(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_getInstance(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback64(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_Buffer(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_lock(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_unlockAndPost(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ScheduleNextTick(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DoTick(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANative(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer(?![A-Za-z0-9_])|native\\-activity|:app|com\\.example\\.native_activity|libnative\\-activity\\.so|(?<![A-Za-z0-9_])ANativeActivity_onCreate(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RegisterNatives(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])android_main(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_setBuffersGeometry(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_getInstance(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback64(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_Buffer(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_lock(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_unlockAndPost(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ScheduleNextTick(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DoTick(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:Perfetto)|(?:Perfetto)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])JNI(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGSEGV(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SIGABRT(?![A-Za-z0-9_])|libhello\\-jni\\.so|(?<![A-Za-z0-9_])NativeActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ATrace(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANative(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer(?![A-Za-z0-9_])|native\\-activity|:app|com\\.example\\.native_activity|libnative\\-activity\\.so|(?<![A-Za-z0-9_])ANativeActivity_onCreate(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RegisterNatives(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])JNI_OnLoad(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])android_main(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_setBuffersGeometry(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_getInstance(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AChoreographer_postFrameCallback64(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_Buffer(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_lock(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ANativeWindow_unlockAndPost(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ScheduleNextTick(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DoTick(?![A-Za-z0-9_])))"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nextcloud-functional-sync-auth",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-functional-sync-auth",
+      "bundle_id": "app-nextcloud",
+      "rule_pack_id": "nextcloud-generated",
+      "project_preset": "app",
+      "profiles": [
+        "functional"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-functional-sync-auth\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 5,
+        "hit_rule_count": 3,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "functional"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 3,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 3
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "nextcloud-generated",
+        "rule_count": 5,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "nextcloud-generated-tier2-project-scope",
+          "rule_title": "Nextcloud Android 云盘 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-functional-sync-auth\\sample.log",
+          "matched_terms": [
+            "OwnCloudClient",
+            "RemoteOperationResult",
+            "FileSyncService",
+            "UploadFileBroadcastReceiver",
+            "UserAccountManager",
+            "AuthenticatorException"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "nextcloud-generated-tier2-android-components",
+          "rule_title": "Nextcloud Android 云盘 App Generated Log Signals tier2 Android component/action scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-functional-sync-auth\\sample.log",
+          "matched_terms": [
+            "UploadFileBroadcastReceiver",
+            "FileSyncService"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "nextcloud-generated-functional-tier2-scope",
+          "rule_title": "Nextcloud Android 云盘 App Generated Log Signals functional tier2 scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-functional-sync-auth\\sample.log",
+          "matched_terms": [
+            "OwnCloudClient",
+            "RemoteOperationResult",
+            "FileSyncService",
+            "UploadFileBroadcastReceiver",
+            "UserAccountManager",
+            "AuthenticatorException"
+          ],
+          "regex_hits": []
+        }
+      ]
+    },
+    {
+      "id": "nextcloud-stability-upload-worker",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-stability-upload-worker",
+      "bundle_id": "app-nextcloud",
+      "rule_pack_id": "nextcloud-generated",
+      "project_preset": "app",
+      "profiles": [
+        "stability"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-stability-upload-worker\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 5,
+        "hit_rule_count": 3,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "stability"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 3,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 3
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "nextcloud-generated",
+        "rule_count": 5,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "nextcloud-generated-tier2-project-scope",
+          "rule_title": "Nextcloud Android 云盘 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-stability-upload-worker\\sample.log",
+          "matched_terms": [
+            "FileSyncService"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "nextcloud-generated-tier2-android-components",
+          "rule_title": "Nextcloud Android 云盘 App Generated Log Signals tier2 Android component/action scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-stability-upload-worker\\sample.log",
+          "matched_terms": [
+            "FileSyncService",
+            "FolderDownloadWorkerReceiver",
+            "AccountManagerService"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "nextcloud-generated-stability-scoped-crash",
+          "rule_title": "Nextcloud Android 云盘 App Generated Log Signals stability/crash signals scoped to project",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nextcloud-stability-upload-worker\\sample.log",
+          "matched_terms": [],
+          "regex_hits": [
+            "(?i)(?:(?:(?<![A-Za-z0-9_])OwnCloudClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RemoteOperationResult(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileSyncService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UploadFileBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserAccountManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AuthenticatorException(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OCFile(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MDMConfig(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IUnified(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileDisplayActivityScreenshotIT(?![A-Za-z0-9_])|invalidprefix:value|(?<![A-Za-z0-9_])TestMainApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])adshfas98ferqw8f9yu2(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])2adshfas98ferqw8f9yu(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NCFirebaseMessagingService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GooglePlayUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PushUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CmsVerifier(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])InputStreamBinder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AssistantViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TranslationViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePdfFromImagesWo(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePDFUseCase(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AccountRemovalJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManagerImpl(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])name(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])user(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])class(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])timestamp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CalendarImportWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ContactsImportWork(?![A-Za-z0-9_])|Health\\ Status|(?<![A-Za-z0-9_])InternalTwoWaySyncWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaFoldersDetectionJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NotificationJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OfflineSyncJob(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:FATAL EXCEPTION)|(?:FATAL EXCEPTION)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])OwnCloudClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RemoteOperationResult(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileSyncService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UploadFileBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserAccountManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AuthenticatorException(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OCFile(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MDMConfig(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IUnified(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileDisplayActivityScreenshotIT(?![A-Za-z0-9_])|invalidprefix:value|(?<![A-Za-z0-9_])TestMainApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])adshfas98ferqw8f9yu2(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])2adshfas98ferqw8f9yu(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NCFirebaseMessagingService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GooglePlayUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PushUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CmsVerifier(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])InputStreamBinder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AssistantViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TranslationViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePdfFromImagesWo(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePDFUseCase(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AccountRemovalJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManagerImpl(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])name(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])user(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])class(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])timestamp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CalendarImportWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ContactsImportWork(?![A-Za-z0-9_])|Health\\ Status|(?<![A-Za-z0-9_])InternalTwoWaySyncWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaFoldersDetectionJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NotificationJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OfflineSyncJob(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])OwnCloudClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RemoteOperationResult(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileSyncService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UploadFileBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserAccountManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AuthenticatorException(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OCFile(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MDMConfig(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IUnified(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileDisplayActivityScreenshotIT(?![A-Za-z0-9_])|invalidprefix:value|(?<![A-Za-z0-9_])TestMainApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])adshfas98ferqw8f9yu2(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])2adshfas98ferqw8f9yu(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NCFirebaseMessagingService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GooglePlayUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PushUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CmsVerifier(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])InputStreamBinder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AssistantViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TranslationViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePdfFromImagesWo(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePDFUseCase(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AccountRemovalJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManagerImpl(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])name(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])user(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])class(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])timestamp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CalendarImportWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ContactsImportWork(?![A-Za-z0-9_])|Health\\ Status|(?<![A-Za-z0-9_])InternalTwoWaySyncWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaFoldersDetectionJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NotificationJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OfflineSyncJob(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:AndroidRuntime)|(?:AndroidRuntime)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])OwnCloudClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RemoteOperationResult(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileSyncService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UploadFileBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserAccountManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AuthenticatorException(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OCFile(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MDMConfig(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IUnified(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileDisplayActivityScreenshotIT(?![A-Za-z0-9_])|invalidprefix:value|(?<![A-Za-z0-9_])TestMainApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])adshfas98ferqw8f9yu2(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])2adshfas98ferqw8f9yu(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NCFirebaseMessagingService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GooglePlayUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PushUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CmsVerifier(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])InputStreamBinder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AssistantViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TranslationViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePdfFromImagesWo(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePDFUseCase(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AccountRemovalJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManagerImpl(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])name(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])user(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])class(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])timestamp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CalendarImportWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ContactsImportWork(?![A-Za-z0-9_])|Health\\ Status|(?<![A-Za-z0-9_])InternalTwoWaySyncWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaFoldersDetectionJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NotificationJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OfflineSyncJob(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])OwnCloudClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RemoteOperationResult(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileSyncService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UploadFileBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserAccountManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AuthenticatorException(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OCFile(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MDMConfig(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IUnified(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileDisplayActivityScreenshotIT(?![A-Za-z0-9_])|invalidprefix:value|(?<![A-Za-z0-9_])TestMainApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])adshfas98ferqw8f9yu2(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])2adshfas98ferqw8f9yu(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NCFirebaseMessagingService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GooglePlayUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PushUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CmsVerifier(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])InputStreamBinder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AssistantViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TranslationViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePdfFromImagesWo(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePDFUseCase(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AccountRemovalJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManagerImpl(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])name(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])user(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])class(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])timestamp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CalendarImportWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ContactsImportWork(?![A-Za-z0-9_])|Health\\ Status|(?<![A-Za-z0-9_])InternalTwoWaySyncWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaFoldersDetectionJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NotificationJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OfflineSyncJob(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:[A-Za-z0-9_.]*(?:Exception|Error|Failure|Failed))|(?:[A-Za-z0-9_.]*(?:Exception|Error|Failure|Failed))[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])OwnCloudClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RemoteOperationResult(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileSyncService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UploadFileBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserAccountManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AuthenticatorException(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OCFile(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MDMConfig(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SQLite(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IUnified(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileDisplayActivityScreenshotIT(?![A-Za-z0-9_])|invalidprefix:value|(?<![A-Za-z0-9_])TestMainApp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])adshfas98ferqw8f9yu2(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])2adshfas98ferqw8f9yu(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NCFirebaseMessagingService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GooglePlayUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PushUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CmsVerifier(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])InputStreamBinder(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AssistantViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TranslationViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DocumentScanViewModel(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePdfFromImagesWo(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])GeneratePDFUseCase(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AccountRemovalJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])BackgroundJobManagerImpl(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])name(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])user(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])class(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])timestamp(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CalendarImportWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ContactsImportWork(?![A-Za-z0-9_])|Health\\ Status|(?<![A-Za-z0-9_])InternalTwoWaySyncWork(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MediaFoldersDetectionJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NotificationJob(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OfflineSyncJob(?![A-Za-z0-9_])))"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nia-functional-feed",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nia-functional-feed",
+      "bundle_id": "app-nowinandroid",
+      "rule_pack_id": "nowinandroid-generated",
+      "project_preset": "app",
+      "profiles": [
+        "functional"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nia-functional-feed\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 5,
+        "hit_rule_count": 2,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "functional"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 3,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 2
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "nowinandroid-generated",
+        "rule_count": 5,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "nowinandroid-generated-tier2-project-scope",
+          "rule_title": "Now in Android 示例 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nia-functional-feed\\sample.log",
+          "matched_terms": [
+            "ForYou"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "nowinandroid-generated-functional-tier2-scope",
+          "rule_title": "Now in Android 示例 App Generated Log Signals functional tier2 scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nia-functional-feed\\sample.log",
+          "matched_terms": [
+            "ForYou"
+          ],
+          "regex_hits": []
+        }
+      ]
+    },
+    {
+      "id": "nia-performance-startup",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nia-performance-startup",
+      "bundle_id": "app-nowinandroid",
+      "rule_pack_id": "nowinandroid-generated",
+      "project_preset": "app",
+      "profiles": [
+        "performance"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nia-performance-startup\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 5,
+        "hit_rule_count": 3,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "performance"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 3,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 3
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "nowinandroid-generated",
+        "rule_count": 5,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "nowinandroid-generated-tier2-project-scope",
+          "rule_title": "Now in Android 示例 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nia-performance-startup\\sample.log",
+          "matched_terms": [
+            "ForYou",
+            "MainActivity"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "nowinandroid-generated-tier2-android-components",
+          "rule_title": "Now in Android 示例 App Generated Log Signals tier2 Android component/action scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nia-performance-startup\\sample.log",
+          "matched_terms": [
+            "MainActivity"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "nowinandroid-generated-performance-scoped",
+          "rule_title": "Now in Android 示例 App Generated Log Signals performance signals scoped to project",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\nia-performance-startup\\sample.log",
+          "matched_terms": [],
+          "regex_hits": [
+            "(?i)(?:(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore)[\\s\\S]{0,800}(?:Skipped \\d+ frames)|(?:Skipped \\d+ frames)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore)[\\s\\S]{0,800}(?:Choreographer)|(?:Choreographer)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore)[\\s\\S]{0,800}(?:\\bslow\\b)|(?:\\bslow\\b)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore)[\\s\\S]{0,800}(?:trace)|(?:trace)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore)[\\s\\S]{0,800}(?:Perfetto)|(?:Perfetto)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])NiA(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ForYou(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DataStore(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])WorkManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProfileInstaller(?![A-Za-z0-9_])|NiA\\ Jank|(?<![A-Za-z0-9_])StubAnalyticsHelper(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])suspendRunCatching(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])NiaPreferences(?![A-Za-z0-9_])|forYou:topicSelection|interests:topics|(?<![A-Za-z0-9_])StubSyncSubscriber(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MainActivity(?![A-Za-z0-9_])|android\\.intent\\.action\\.MAIN|android\\.intent\\.action\\.VIEW|(?<![A-Za-z0-9_])firebase_analytics_collection_deactivated(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])google_analytics_adid_collection_enabled(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesMenuActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OssLicensesActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SyncNotificationsService(?![A-Za-z0-9_])|com\\.google\\.firebase\\.MESSAGING_EVENT|android\\.permission\\.INTERNET|android\\.permission\\.ACCESS_NETWORK_STATE|android\\.permission\\.POST_NOTIFICATIONS|android\\.permission\\.WAKE_LOCK|android\\.permission\\.RECEIVE_BOOT_COMPLETED|android\\.permission\\.FOREGROUND_SERVICE|android\\.permission\\.ACCESS_ADSERVICES_ATTRIBUTION|android\\.permission\\.ACCESS_ADSERVICES_AD_ID|(?<![A-Za-z0-9_])POST_NOTIFICATIONS(?![A-Za-z0-9_])|com\\.google\\.android\\.gms\\.permission\\.AD_ID|:app|:app\\-nia\\-catalog|:benchmarks|:core:analytics|:core:common|:core:data|:core:data\\-test|:core:database|:core:datastore))"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "termux-functional-run-command",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-functional-run-command",
+      "bundle_id": "app-termux",
+      "rule_pack_id": "termux-generated",
+      "project_preset": "app",
+      "profiles": [
+        "functional"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-functional-run-command\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 4,
+        "hit_rule_count": 3,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "functional"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 4,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 3
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "termux-generated",
+        "rule_count": 4,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "termux-generated-tier2-project-scope",
+          "rule_title": "Termux 终端 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-functional-run-command\\sample.log",
+          "matched_terms": [
+            "RUN_COMMAND",
+            "RunCommandService",
+            "ExecutionCommand",
+            "TermuxService"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "termux-generated-tier2-android-components",
+          "rule_title": "Termux 终端 App Generated Log Signals tier2 Android component/action scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-functional-run-command\\sample.log",
+          "matched_terms": [
+            "TermuxService",
+            "RunCommandService"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "termux-generated-functional-tier2-scope",
+          "rule_title": "Termux 终端 App Generated Log Signals functional tier2 scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-functional-run-command\\sample.log",
+          "matched_terms": [
+            "RUN_COMMAND",
+            "RunCommandService",
+            "ExecutionCommand",
+            "TermuxService"
+          ],
+          "regex_hits": []
+        }
+      ]
+    },
+    {
+      "id": "termux-performance-terminal-session",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-performance-terminal-session",
+      "bundle_id": "app-termux",
+      "rule_pack_id": "termux-generated",
+      "project_preset": "app",
+      "profiles": [
+        "performance"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-performance-terminal-session\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 4,
+        "hit_rule_count": 3,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "performance"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 3,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 3
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "termux-generated",
+        "rule_count": 4,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "termux-generated-tier2-project-scope",
+          "rule_title": "Termux 终端 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-performance-terminal-session\\sample.log",
+          "matched_terms": [
+            "ExecutionCommand",
+            "TermuxService",
+            "TerminalSession"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "termux-generated-tier2-android-components",
+          "rule_title": "Termux 终端 App Generated Log Signals tier2 Android component/action scope",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-performance-terminal-session\\sample.log",
+          "matched_terms": [
+            "TermuxService"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "termux-generated-performance-scoped",
+          "rule_title": "Termux 终端 App Generated Log Signals performance signals scoped to project",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\termux-performance-terminal-session\\sample.log",
+          "matched_terms": [],
+          "regex_hits": [
+            "(?i)(?:(?:(?<![A-Za-z0-9_])RUN_COMMAND(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RunCommandService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ExecutionCommand(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalSession(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileReceiverActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SystemEventReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxApplication(?![A-Za-z0-9_])|termux\\-storage|(?<![A-Za-z0-9_])TermuxContentProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivityRootView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionActivityClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionServiceClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalViewClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalExtraKeys(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalEmulator(?![A-Za-z0-9_])|local\\-socket|(?<![A-Za-z0-9_])ReportActivityBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TextIOActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AppCompatActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeatureFlagUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PackageUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PermissionUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PhantomProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SELinuxUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SettingsProviderUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ResourceUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CrashUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IntentUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Errno(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtilsTests(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ShareUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Logger(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LocalClientSocket(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:Skipped \\d+ frames)|(?:Skipped \\d+ frames)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])RUN_COMMAND(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RunCommandService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ExecutionCommand(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalSession(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileReceiverActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SystemEventReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxApplication(?![A-Za-z0-9_])|termux\\-storage|(?<![A-Za-z0-9_])TermuxContentProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivityRootView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionActivityClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionServiceClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalViewClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalExtraKeys(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalEmulator(?![A-Za-z0-9_])|local\\-socket|(?<![A-Za-z0-9_])ReportActivityBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TextIOActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AppCompatActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeatureFlagUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PackageUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PermissionUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PhantomProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SELinuxUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SettingsProviderUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ResourceUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CrashUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IntentUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Errno(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtilsTests(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ShareUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Logger(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LocalClientSocket(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])RUN_COMMAND(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RunCommandService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ExecutionCommand(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalSession(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileReceiverActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SystemEventReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxApplication(?![A-Za-z0-9_])|termux\\-storage|(?<![A-Za-z0-9_])TermuxContentProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivityRootView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionActivityClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionServiceClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalViewClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalExtraKeys(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalEmulator(?![A-Za-z0-9_])|local\\-socket|(?<![A-Za-z0-9_])ReportActivityBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TextIOActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AppCompatActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeatureFlagUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PackageUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PermissionUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PhantomProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SELinuxUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SettingsProviderUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ResourceUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CrashUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IntentUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Errno(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtilsTests(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ShareUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Logger(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LocalClientSocket(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:Choreographer)|(?:Choreographer)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])RUN_COMMAND(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RunCommandService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ExecutionCommand(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalSession(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileReceiverActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SystemEventReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxApplication(?![A-Za-z0-9_])|termux\\-storage|(?<![A-Za-z0-9_])TermuxContentProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivityRootView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionActivityClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionServiceClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalViewClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalExtraKeys(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalEmulator(?![A-Za-z0-9_])|local\\-socket|(?<![A-Za-z0-9_])ReportActivityBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TextIOActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AppCompatActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeatureFlagUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PackageUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PermissionUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PhantomProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SELinuxUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SettingsProviderUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ResourceUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CrashUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IntentUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Errno(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtilsTests(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ShareUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Logger(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LocalClientSocket(?![A-Za-z0-9_])))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])RUN_COMMAND(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RunCommandService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ExecutionCommand(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalSession(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileReceiverActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SystemEventReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxApplication(?![A-Za-z0-9_])|termux\\-storage|(?<![A-Za-z0-9_])TermuxContentProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivityRootView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionActivityClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionServiceClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalViewClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalExtraKeys(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalEmulator(?![A-Za-z0-9_])|local\\-socket|(?<![A-Za-z0-9_])ReportActivityBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TextIOActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AppCompatActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeatureFlagUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PackageUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PermissionUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PhantomProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SELinuxUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SettingsProviderUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ResourceUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CrashUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IntentUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Errno(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtilsTests(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ShareUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Logger(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LocalClientSocket(?![A-Za-z0-9_]))[\\s\\S]{0,800}(?:\\bslow\\b)|(?:\\bslow\\b)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])RUN_COMMAND(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])RunCommandService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ExecutionCommand(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxService(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalSession(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileReceiverActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SystemEventReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxApplication(?![A-Za-z0-9_])|termux\\-storage|(?<![A-Za-z0-9_])TermuxContentProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxActivityRootView(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionActivityClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalSessionServiceClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalViewClient(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TermuxTerminalExtraKeys(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TerminalEmulator(?![A-Za-z0-9_])|local\\-socket|(?<![A-Za-z0-9_])ReportActivityBroadcastReceiver(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TextIOActivity(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])AppCompatActivityUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FeatureFlagUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PackageUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PermissionUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])PhantomProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ProcessUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SELinuxUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SettingsProviderUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])UserUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ResourceUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])CrashUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])IntentUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Errno(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])FileUtilsTests(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ShareUtils(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])Logger(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LocalClientSocket(?![A-Za-z0-9_])))"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "thunderbird-functional-account-sync",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\thunderbird-functional-account-sync",
+      "bundle_id": "app-thunderbird",
+      "rule_pack_id": "thunderbird-generated",
+      "project_preset": "app",
+      "profiles": [
+        "functional"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\thunderbird-functional-account-sync\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 4,
+        "hit_rule_count": 2,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "functional"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 3,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 2
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "thunderbird-generated",
+        "rule_count": 4,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "thunderbird-generated-tier2-project-scope",
+          "rule_title": "Thunderbird Android 邮件 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\thunderbird-functional-account-sync\\sample.log",
+          "matched_terms": [
+            "AccountCreator",
+            "OAuth",
+            "ImapStoreSettings",
+            "MessageListWidgetManager"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "thunderbird-generated-functional-tier2-scope",
+          "rule_title": "Thunderbird Android 邮件 App Generated Log Signals functional tier2 scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\thunderbird-functional-account-sync\\sample.log",
+          "matched_terms": [
+            "AccountCreator",
+            "OAuth",
+            "ImapStoreSettings",
+            "MessageListWidgetManager"
+          ],
+          "regex_hits": []
+        }
+      ]
+    },
+    {
+      "id": "thunderbird-stability-database-upgrade",
+      "ok": true,
+      "case_dir": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\thunderbird-stability-database-upgrade",
+      "bundle_id": "app-thunderbird",
+      "rule_pack_id": "thunderbird-generated",
+      "project_preset": "app",
+      "profiles": [
+        "stability"
+      ],
+      "paths_config": "D:\\Code\\claude-web-server\\claude_web_paths.config.json",
+      "log_path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\thunderbird-stability-database-upgrade\\sample.log",
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "rule_count": 4,
+        "hit_rule_count": 2,
+        "generic_term_ratio": 0.0,
+        "profile_coverage": [
+          "stability"
+        ],
+        "expected_profile_count": 1,
+        "expected_keyword_count": 3,
+        "missing_expected_keyword_count": 0,
+        "schema_ok": true,
+        "validation_warning_count": 0,
+        "hit_count": 2
+      },
+      "validation": {
+        "errors": [],
+        "warnings": [],
+        "pack_id": "thunderbird-generated",
+        "rule_count": 4,
+        "ok": true
+      },
+      "hits": [
+        {
+          "rule_id": "thunderbird-generated-tier2-project-scope",
+          "rule_title": "Thunderbird Android 邮件 App Generated Log Signals tier2 project scope signals",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\thunderbird-stability-database-upgrade\\sample.log",
+          "matched_terms": [
+            "AccountCreator",
+            "MessageListWidgetManager",
+            "DatabaseUpgradeInterceptor"
+          ],
+          "regex_hits": []
+        },
+        {
+          "rule_id": "thunderbird-generated-stability-scoped-crash",
+          "rule_title": "Thunderbird Android 邮件 App Generated Log Signals stability/crash signals scoped to project",
+          "path": "D:\\Code\\claude-web-server\\android_analysis_eval\\cases\\thunderbird-stability-database-upgrade\\sample.log",
+          "matched_terms": [],
+          "regex_hits": [
+            "(?i)(?:(?:(?<![A-Za-z0-9_])AccountCreator(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OAuth(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ImapStoreSettings(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SMTP(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MessageListWidgetManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DatabaseUpgradeInterceptor(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TConfig(?![A-Za-z0-9_])|Updating\\ application\\ configuration\\ with\\ locale|Resources\\ configuration\\ was\\ reset\\.\\ Re\\-applying\\ locale\\ override\\.|(?<![A-Za-z0-9_])DefaultActivityProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DefaultAppVersionProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])syncDebug(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LegacyUpdateSortCriteria(?![A-Za-z0-9_])|processPendingExpunge:\\ folder\\ =\\ %s|processPendingExpunge:\\ complete\\ for\\ folder\\ =\\ %s|moveOrCopyMessages:\\ no\\ remote\\ messages\\ to\\ move,\\ skipping|(?<![A-Za-z0-9_])CommandRefreshFolderList(?![A-Za-z0-9_])|ImapBackendPusher\\.updateFolders\\(\\):\\ %s|\\.\\.limiting\\ Push\\ to\\ %d\\ folders:\\ %s|ImapBackendPusher\\.stop\\(\\)|ImapBackendPusher\\.reconnect\\(\\)|ImapBackendPusher\\ for\\ folder\\ %s\\ sleeping\\ for\\ %d\\ ms|Canceling\\ ImapBackendPusher\\ retry\\ timer\\ for\\ folder\\ %s|Refreshing\\ ImapBackendPusher\\ \\(at\\ least\\ one\\ retry\\ timer\\ has\\ expired\\)|Starting\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Starting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Exiting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Refreshing\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Stopping\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Synchronizing\\ folder\\ %s:%s|SYNC:\\ About\\ to\\ get\\ local\\ folder\\ %s|SYNC:\\ About\\ to\\ get\\ remote\\ folder\\ %s|SYNC:\\ About\\ to\\ open\\ remote\\ folder\\ %s|SYNC:\\ Expunging\\ folder\\ %s:%s|SYNC:\\ Saving\\ UIDVALIDITY\\ for\\ %s|SYNC:\\ UIDVALIDITY\\ for\\ %s\\ changed;\\ clearing\\ local\\ message\\ cache|SYNC:\\ Remote\\ message\\ count\\ for\\ folder\\ %s\\ is\\ %d|SYNC:\\ About\\ to\\ get\\ messages\\ %d\\ through\\ %d\\ for\\ folder\\ %s|SYNC:\\ Got\\ %d\\ messages\\ for\\ folder\\ %s|Done\\ synchronizing\\ folder\\ %s:%s\\ @\\ %tc)[\\s\\S]{0,800}(?:FATAL EXCEPTION)|(?:FATAL EXCEPTION)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])AccountCreator(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OAuth(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ImapStoreSettings(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SMTP(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MessageListWidgetManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DatabaseUpgradeInterceptor(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TConfig(?![A-Za-z0-9_])|Updating\\ application\\ configuration\\ with\\ locale|Resources\\ configuration\\ was\\ reset\\.\\ Re\\-applying\\ locale\\ override\\.|(?<![A-Za-z0-9_])DefaultActivityProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DefaultAppVersionProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])syncDebug(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LegacyUpdateSortCriteria(?![A-Za-z0-9_])|processPendingExpunge:\\ folder\\ =\\ %s|processPendingExpunge:\\ complete\\ for\\ folder\\ =\\ %s|moveOrCopyMessages:\\ no\\ remote\\ messages\\ to\\ move,\\ skipping|(?<![A-Za-z0-9_])CommandRefreshFolderList(?![A-Za-z0-9_])|ImapBackendPusher\\.updateFolders\\(\\):\\ %s|\\.\\.limiting\\ Push\\ to\\ %d\\ folders:\\ %s|ImapBackendPusher\\.stop\\(\\)|ImapBackendPusher\\.reconnect\\(\\)|ImapBackendPusher\\ for\\ folder\\ %s\\ sleeping\\ for\\ %d\\ ms|Canceling\\ ImapBackendPusher\\ retry\\ timer\\ for\\ folder\\ %s|Refreshing\\ ImapBackendPusher\\ \\(at\\ least\\ one\\ retry\\ timer\\ has\\ expired\\)|Starting\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Starting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Exiting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Refreshing\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Stopping\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Synchronizing\\ folder\\ %s:%s|SYNC:\\ About\\ to\\ get\\ local\\ folder\\ %s|SYNC:\\ About\\ to\\ get\\ remote\\ folder\\ %s|SYNC:\\ About\\ to\\ open\\ remote\\ folder\\ %s|SYNC:\\ Expunging\\ folder\\ %s:%s|SYNC:\\ Saving\\ UIDVALIDITY\\ for\\ %s|SYNC:\\ UIDVALIDITY\\ for\\ %s\\ changed;\\ clearing\\ local\\ message\\ cache|SYNC:\\ Remote\\ message\\ count\\ for\\ folder\\ %s\\ is\\ %d|SYNC:\\ About\\ to\\ get\\ messages\\ %d\\ through\\ %d\\ for\\ folder\\ %s|SYNC:\\ Got\\ %d\\ messages\\ for\\ folder\\ %s|Done\\ synchronizing\\ folder\\ %s:%s\\ @\\ %tc))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])AccountCreator(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OAuth(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ImapStoreSettings(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SMTP(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MessageListWidgetManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DatabaseUpgradeInterceptor(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TConfig(?![A-Za-z0-9_])|Updating\\ application\\ configuration\\ with\\ locale|Resources\\ configuration\\ was\\ reset\\.\\ Re\\-applying\\ locale\\ override\\.|(?<![A-Za-z0-9_])DefaultActivityProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DefaultAppVersionProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])syncDebug(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LegacyUpdateSortCriteria(?![A-Za-z0-9_])|processPendingExpunge:\\ folder\\ =\\ %s|processPendingExpunge:\\ complete\\ for\\ folder\\ =\\ %s|moveOrCopyMessages:\\ no\\ remote\\ messages\\ to\\ move,\\ skipping|(?<![A-Za-z0-9_])CommandRefreshFolderList(?![A-Za-z0-9_])|ImapBackendPusher\\.updateFolders\\(\\):\\ %s|\\.\\.limiting\\ Push\\ to\\ %d\\ folders:\\ %s|ImapBackendPusher\\.stop\\(\\)|ImapBackendPusher\\.reconnect\\(\\)|ImapBackendPusher\\ for\\ folder\\ %s\\ sleeping\\ for\\ %d\\ ms|Canceling\\ ImapBackendPusher\\ retry\\ timer\\ for\\ folder\\ %s|Refreshing\\ ImapBackendPusher\\ \\(at\\ least\\ one\\ retry\\ timer\\ has\\ expired\\)|Starting\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Starting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Exiting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Refreshing\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Stopping\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Synchronizing\\ folder\\ %s:%s|SYNC:\\ About\\ to\\ get\\ local\\ folder\\ %s|SYNC:\\ About\\ to\\ get\\ remote\\ folder\\ %s|SYNC:\\ About\\ to\\ open\\ remote\\ folder\\ %s|SYNC:\\ Expunging\\ folder\\ %s:%s|SYNC:\\ Saving\\ UIDVALIDITY\\ for\\ %s|SYNC:\\ UIDVALIDITY\\ for\\ %s\\ changed;\\ clearing\\ local\\ message\\ cache|SYNC:\\ Remote\\ message\\ count\\ for\\ folder\\ %s\\ is\\ %d|SYNC:\\ About\\ to\\ get\\ messages\\ %d\\ through\\ %d\\ for\\ folder\\ %s|SYNC:\\ Got\\ %d\\ messages\\ for\\ folder\\ %s|Done\\ synchronizing\\ folder\\ %s:%s\\ @\\ %tc)[\\s\\S]{0,800}(?:AndroidRuntime)|(?:AndroidRuntime)[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])AccountCreator(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OAuth(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ImapStoreSettings(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SMTP(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MessageListWidgetManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DatabaseUpgradeInterceptor(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TConfig(?![A-Za-z0-9_])|Updating\\ application\\ configuration\\ with\\ locale|Resources\\ configuration\\ was\\ reset\\.\\ Re\\-applying\\ locale\\ override\\.|(?<![A-Za-z0-9_])DefaultActivityProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DefaultAppVersionProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])syncDebug(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LegacyUpdateSortCriteria(?![A-Za-z0-9_])|processPendingExpunge:\\ folder\\ =\\ %s|processPendingExpunge:\\ complete\\ for\\ folder\\ =\\ %s|moveOrCopyMessages:\\ no\\ remote\\ messages\\ to\\ move,\\ skipping|(?<![A-Za-z0-9_])CommandRefreshFolderList(?![A-Za-z0-9_])|ImapBackendPusher\\.updateFolders\\(\\):\\ %s|\\.\\.limiting\\ Push\\ to\\ %d\\ folders:\\ %s|ImapBackendPusher\\.stop\\(\\)|ImapBackendPusher\\.reconnect\\(\\)|ImapBackendPusher\\ for\\ folder\\ %s\\ sleeping\\ for\\ %d\\ ms|Canceling\\ ImapBackendPusher\\ retry\\ timer\\ for\\ folder\\ %s|Refreshing\\ ImapBackendPusher\\ \\(at\\ least\\ one\\ retry\\ timer\\ has\\ expired\\)|Starting\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Starting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Exiting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Refreshing\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Stopping\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Synchronizing\\ folder\\ %s:%s|SYNC:\\ About\\ to\\ get\\ local\\ folder\\ %s|SYNC:\\ About\\ to\\ get\\ remote\\ folder\\ %s|SYNC:\\ About\\ to\\ open\\ remote\\ folder\\ %s|SYNC:\\ Expunging\\ folder\\ %s:%s|SYNC:\\ Saving\\ UIDVALIDITY\\ for\\ %s|SYNC:\\ UIDVALIDITY\\ for\\ %s\\ changed;\\ clearing\\ local\\ message\\ cache|SYNC:\\ Remote\\ message\\ count\\ for\\ folder\\ %s\\ is\\ %d|SYNC:\\ About\\ to\\ get\\ messages\\ %d\\ through\\ %d\\ for\\ folder\\ %s|SYNC:\\ Got\\ %d\\ messages\\ for\\ folder\\ %s|Done\\ synchronizing\\ folder\\ %s:%s\\ @\\ %tc))",
+            "(?i)(?:(?:(?<![A-Za-z0-9_])AccountCreator(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OAuth(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ImapStoreSettings(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SMTP(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MessageListWidgetManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DatabaseUpgradeInterceptor(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TConfig(?![A-Za-z0-9_])|Updating\\ application\\ configuration\\ with\\ locale|Resources\\ configuration\\ was\\ reset\\.\\ Re\\-applying\\ locale\\ override\\.|(?<![A-Za-z0-9_])DefaultActivityProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DefaultAppVersionProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])syncDebug(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LegacyUpdateSortCriteria(?![A-Za-z0-9_])|processPendingExpunge:\\ folder\\ =\\ %s|processPendingExpunge:\\ complete\\ for\\ folder\\ =\\ %s|moveOrCopyMessages:\\ no\\ remote\\ messages\\ to\\ move,\\ skipping|(?<![A-Za-z0-9_])CommandRefreshFolderList(?![A-Za-z0-9_])|ImapBackendPusher\\.updateFolders\\(\\):\\ %s|\\.\\.limiting\\ Push\\ to\\ %d\\ folders:\\ %s|ImapBackendPusher\\.stop\\(\\)|ImapBackendPusher\\.reconnect\\(\\)|ImapBackendPusher\\ for\\ folder\\ %s\\ sleeping\\ for\\ %d\\ ms|Canceling\\ ImapBackendPusher\\ retry\\ timer\\ for\\ folder\\ %s|Refreshing\\ ImapBackendPusher\\ \\(at\\ least\\ one\\ retry\\ timer\\ has\\ expired\\)|Starting\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Starting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Exiting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Refreshing\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Stopping\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Synchronizing\\ folder\\ %s:%s|SYNC:\\ About\\ to\\ get\\ local\\ folder\\ %s|SYNC:\\ About\\ to\\ get\\ remote\\ folder\\ %s|SYNC:\\ About\\ to\\ open\\ remote\\ folder\\ %s|SYNC:\\ Expunging\\ folder\\ %s:%s|SYNC:\\ Saving\\ UIDVALIDITY\\ for\\ %s|SYNC:\\ UIDVALIDITY\\ for\\ %s\\ changed;\\ clearing\\ local\\ message\\ cache|SYNC:\\ Remote\\ message\\ count\\ for\\ folder\\ %s\\ is\\ %d|SYNC:\\ About\\ to\\ get\\ messages\\ %d\\ through\\ %d\\ for\\ folder\\ %s|SYNC:\\ Got\\ %d\\ messages\\ for\\ folder\\ %s|Done\\ synchronizing\\ folder\\ %s:%s\\ @\\ %tc)[\\s\\S]{0,800}(?:[A-Za-z0-9_.]*(?:Exception|Error|Failure|Failed))|(?:[A-Za-z0-9_.]*(?:Exception|Error|Failure|Failed))[\\s\\S]{0,800}(?:(?<![A-Za-z0-9_])AccountCreator(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])OAuth(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])ImapStoreSettings(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])SMTP(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])MessageListWidgetManager(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DatabaseUpgradeInterceptor(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])TConfig(?![A-Za-z0-9_])|Updating\\ application\\ configuration\\ with\\ locale|Resources\\ configuration\\ was\\ reset\\.\\ Re\\-applying\\ locale\\ override\\.|(?<![A-Za-z0-9_])DefaultActivityProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DefaultAppVersionProvider(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])syncDebug(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])LegacyUpdateSortCriteria(?![A-Za-z0-9_])|processPendingExpunge:\\ folder\\ =\\ %s|processPendingExpunge:\\ complete\\ for\\ folder\\ =\\ %s|moveOrCopyMessages:\\ no\\ remote\\ messages\\ to\\ move,\\ skipping|(?<![A-Za-z0-9_])CommandRefreshFolderList(?![A-Za-z0-9_])|ImapBackendPusher\\.updateFolders\\(\\):\\ %s|\\.\\.limiting\\ Push\\ to\\ %d\\ folders:\\ %s|ImapBackendPusher\\.stop\\(\\)|ImapBackendPusher\\.reconnect\\(\\)|ImapBackendPusher\\ for\\ folder\\ %s\\ sleeping\\ for\\ %d\\ ms|Canceling\\ ImapBackendPusher\\ retry\\ timer\\ for\\ folder\\ %s|Refreshing\\ ImapBackendPusher\\ \\(at\\ least\\ one\\ retry\\ timer\\ has\\ expired\\)|Starting\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Starting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Exiting\\ ImapFolderPusher\\ thread\\ for\\ %s\\ /\\ %s|Refreshing\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Stopping\\ ImapFolderPusher\\ for\\ %s\\ /\\ %s|Synchronizing\\ folder\\ %s:%s|SYNC:\\ About\\ to\\ get\\ local\\ folder\\ %s|SYNC:\\ About\\ to\\ get\\ remote\\ folder\\ %s|SYNC:\\ About\\ to\\ open\\ remote\\ folder\\ %s|SYNC:\\ Expunging\\ folder\\ %s:%s|SYNC:\\ Saving\\ UIDVALIDITY\\ for\\ %s|SYNC:\\ UIDVALIDITY\\ for\\ %s\\ changed;\\ clearing\\ local\\ message\\ cache|SYNC:\\ Remote\\ message\\ count\\ for\\ folder\\ %s\\ is\\ %d|SYNC:\\ About\\ to\\ get\\ messages\\ %d\\ through\\ %d\\ for\\ folder\\ %s|SYNC:\\ Got\\ %d\\ messages\\ for\\ folder\\ %s|Done\\ synchronizing\\ folder\\ %s:%s\\ @\\ %tc))"
+          ]
+        }
+      ]
+    }
+  ]
+}

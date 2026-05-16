@@ -132,6 +132,7 @@ def stream_orchestrated_turns(
     current_message = first_message
     current_files = file_paths
     total_rounds = total_rounds_offset
+    transparent_rebuild_retry = False
 
     base_kw: Dict[str, Any] = dict(
         session_id=session_id,
@@ -161,7 +162,10 @@ def stream_orchestrated_turns(
                 'total_rounds': total_rounds,
             }
         )
-        if round_idx > 1:
+        if round_idx > 1 and transparent_rebuild_retry:
+            log.info('[Orchestrator] 旧 Claude session 恢复失败，已切换为新 session 并复用 Web 历史重试')
+            transparent_rebuild_retry = False
+        elif round_idx > 1:
             yield _sse(
                 {
                     'type': 'info',
@@ -181,30 +185,53 @@ def stream_orchestrated_turns(
         last_sid = None
         done_seen = False
         fatal_error = False
+        visible_output_seen = False
+        recoverable_session_rebuild = False
 
         for event_str in inner:
-            yield event_str
+            parsed_evt = None
             if not event_str.startswith('data: '):
+                yield event_str
                 continue
             try:
-                evt = json.loads(event_str[6:].strip())
+                parsed_evt = json.loads(event_str[6:].strip())
             except json.JSONDecodeError:
+                yield event_str
                 continue
-            t = evt.get('type')
+            t = parsed_evt.get('type')
             if t == 'session':
-                sid = evt.get('session_id')
+                sid = parsed_evt.get('session_id')
                 if sid:
                     last_sid = sid
-            elif t == 'error' and evt.get('soft'):
-                last_soft = evt.get('message') or ''
-                if evt.get('fatal'):
+            elif t in ('text', 'thinking', 'tool_start', 'tool_input_delta', 'tool_stop'):
+                visible_output_seen = True
+            elif t == 'error' and parsed_evt.get('soft'):
+                last_soft = parsed_evt.get('message') or ''
+                if parsed_evt.get('recoverable_session_rebuild') and resume_id and not visible_output_seen:
+                    recoverable_session_rebuild = True
+                    log.info(
+                        '[Orchestrator] detected expired/unusable Claude session_id=%s; rebuilding from messages.json',
+                        resume_id,
+                    )
+                    continue
+                if parsed_evt.get('fatal'):
                     fatal_error = True
             elif t == 'done':
                 done_seen = True
-                last_ok = evt.get('ok') is not False
+                last_ok = parsed_evt.get('ok') is not False
+                if recoverable_session_rebuild and parsed_evt.get('recoverable_session_rebuild'):
+                    continue
+
+            yield event_str
 
         if not done_seen:
             last_ok = False
+
+        if recoverable_session_rebuild and not visible_output_seen:
+            resume_id = None
+            transparent_rebuild_retry = True
+            current_files = file_paths if current_message == first_message else current_files
+            continue
 
         if last_sid:
             resume_id = last_sid

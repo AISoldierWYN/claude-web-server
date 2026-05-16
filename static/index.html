@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Claude Chat</title>
+    <link rel="icon" href="/static/assets/assistant-logo.svg" type="image/svg+xml">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -457,16 +458,27 @@
         }
 
         .app.streaming-locked .input-area {
-            pointer-events: none !important;
-            opacity: 0.65;
+            pointer-events: auto !important;
+            opacity: 1;
         }
 
         .app.streaming-locked .main {
-            pointer-events: none;
+            pointer-events: auto;
         }
 
         .app.streaming-locked .main .chat-container {
             pointer-events: auto;
+            opacity: 1;
+        }
+
+        .app.streaming-locked .input-actions,
+        .app.streaming-locked .input-wrapper textarea {
+            pointer-events: none !important;
+            opacity: 0.55;
+        }
+
+        .app.streaming-locked .send-btn {
+            pointer-events: auto !important;
             opacity: 1;
         }
 
@@ -698,8 +710,8 @@
         }
 
         .reasoning-panel-detail {
-            padding: 10px 12px;
-            border-top: 1px solid rgba(124,58,237,0.15);
+            padding: 8px 0 0;
+            border-top: 0;
         }
 
         /* ============ Main Area ============ */
@@ -902,6 +914,9 @@
             padding: 8px 10px;
             color: var(--text-secondary);
             font-size: 12px;
+            max-width: 100%;
+            min-width: 0;
+            overflow: hidden;
         }
         .android-analysis-process summary {
             cursor: pointer;
@@ -913,6 +928,7 @@
             flex-direction: column;
             gap: 5px;
             margin-top: 8px;
+            min-width: 0;
         }
         .android-analysis-process-item {
             display: flex;
@@ -920,11 +936,127 @@
             justify-content: space-between;
             border-top: 1px solid rgba(255,255,255,0.06);
             padding-top: 5px;
+            min-width: 0;
         }
-        .android-analysis-process-item span:first-child { color: var(--text-primary); }
+        .android-analysis-process-item span:first-child {
+            color: var(--text-primary);
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
         .android-analysis-process-item span:last-child {
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
+        }
+        .android-analysis-process-item.android-ai-stream-item {
+            display: block;
+        }
+        .android-ai-stream-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .android-ai-stream-text {
+            display: block;
+            margin-top: 5px;
+            color: var(--text-secondary);
+            max-width: 100%;
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.55;
+        }
+        .android-ai-stream-text.markdown-body p,
+        .android-ai-stream-text.markdown-body ul,
+        .android-ai-stream-text.markdown-body ol,
+        .android-ai-stream-text.markdown-body pre,
+        .android-ai-stream-text.markdown-body blockquote,
+        .android-ai-stream-text.markdown-body .markdown-table-wrap {
+            margin-bottom: 0.65em;
+        }
+        .android-stage-detail {
+            border-top: 1px solid rgba(255,255,255,0.07);
+            padding-top: 6px;
+        }
+        .android-stage-detail:first-child { border-top: 0; padding-top: 0; }
+        .android-stage-detail summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            list-style: none;
+        }
+        .android-stage-detail summary::-webkit-details-marker { display: none; }
+        .android-stage-title {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .android-stage-meta {
+            color: var(--text-muted);
+            font-size: 11px;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        .android-stage-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 8px 0 2px;
+        }
+        .android-stage-item {
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: var(--radius-sm);
+            background: rgba(0,0,0,0.12);
+            padding: 8px;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .android-stage-item-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .android-stage-item-time {
+            color: var(--text-muted);
+            font-size: 11px;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        .android-stage-item-summary {
+            color: var(--text-secondary);
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+        .android-stage-data {
+            margin-top: 7px;
+            max-height: 260px;
+            overflow: auto;
+            border-radius: var(--radius-sm);
+            background: rgba(4, 4, 14, 0.42);
+            padding: 8px;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+        .android-stage-item.ai-stream .android-stage-data {
+            max-height: 340px;
+            font-family: inherit;
+            font-size: 12px;
+            white-space: normal;
+        }
+        .android-analysis-live-progress {
+            border: 1px solid rgba(124,58,237,0.35);
+            border-radius: var(--radius-sm);
+            padding: 9px 10px;
+            background: rgba(124,58,237,0.08);
         }
 
         .icon-btn {
@@ -1124,6 +1256,12 @@
             overflow-y: auto;
             white-space: pre-wrap;
             display: none;
+        }
+
+        .thinking-body.markdown-body {
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .thinking-body.open { display: block; }
@@ -1563,31 +1701,1051 @@
                 padding: 10px 12px;
             }
         }
-    </style>
+
+        /* ============ Claude-style light surface refresh ============ */
+        :root {
+            --bg-primary: #faf9f5;
+            --bg-secondary: #faf9f5;
+            --bg-sidebar: #f4f1e8;
+            --bg-chat: #faf9f5;
+            --bg-input: #ffffff;
+            --bg-hover: #ebe7dc;
+            --bg-active: #e7dfd2;
+            --text-primary: #2f2a25;
+            --text-secondary: #6f675c;
+            --text-muted: #9a9286;
+            --accent: #d97757;
+            --accent-hover: #c96343;
+            --accent-light: #b45335;
+            --accent-glow: rgba(196, 99, 67, 0.16);
+            --user-bubble: #d97757;
+            --ai-bubble: transparent;
+            --thinking-bg: #f2eee4;
+            --border: #ded8cc;
+            --success: #2f8f4e;
+            --danger: #c24134;
+            --warning: #b7791f;
+            --sidebar-width: 292px;
+            --radius: 18px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --shadow-card: 0 12px 40px rgba(47, 42, 37, 0.08);
+            --shadow-soft: 0 1px 2px rgba(47, 42, 37, 0.05), 0 14px 38px rgba(47, 42, 37, 0.08);
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        .sidebar {
+            background: var(--bg-sidebar);
+            border-right: 1px solid #ddd6ca;
+            box-shadow: none;
+            transition: width 0.22s ease, transform 0.24s ease, border-color 0.22s ease;
+            overflow: hidden;
+        }
+
+        body.sidebar-collapsed .sidebar {
+            width: 0;
+            border-right-color: transparent;
+        }
+
+        body.sidebar-collapsed .main-header .menu-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+        }
+
+        .sidebar-header {
+            padding: 12px 14px 8px;
+            border-bottom: 0;
+        }
+
+        .sidebar-logo {
+            margin-bottom: 0;
+            justify-content: space-between;
+        }
+
+        .brand-lockup {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            min-width: 0;
+        }
+
+        .brand-mark {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: block;
+            flex: 0 0 auto;
+        }
+
+        .sidebar-logo .logo-icon {
+            display: none;
+        }
+
+        .sidebar-logo .logo-text {
+            font-family: Georgia, "Times New Roman", "Songti SC", serif;
+            font-size: 21px;
+            font-weight: 600;
+            color: #211f1b;
+            background: none;
+            -webkit-text-fill-color: currentColor;
+        }
+
+        .sidebar-rail-btn {
+            width: 28px;
+            height: 28px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .sidebar-rail-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .sidebar-rail-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .sidebar-nav {
+            padding: 8px 10px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-nav-item {
+            width: 100%;
+            min-height: 34px;
+            padding: 7px 8px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            color: #35302a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 450;
+            text-align: left;
+            transition: background 0.14s ease, color 0.14s ease;
+        }
+
+        .sidebar-nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .sidebar-nav-item.active {
+            background: rgba(217, 119, 87, 0.12);
+            color: var(--accent-light);
+        }
+
+        .sidebar-nav-item:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .sidebar-nav-item:disabled:hover {
+            background: transparent;
+            color: #35302a;
+        }
+
+        .sidebar-nav-item svg {
+            width: 17px;
+            height: 17px;
+            flex: 0 0 auto;
+        }
+
+        .sidebar-nav .new-chat-btn {
+            background: transparent;
+            color: #35302a;
+            box-shadow: none;
+            justify-content: flex-start;
+            font-weight: 500;
+        }
+
+        .sidebar-nav .new-chat-btn:hover {
+            background: var(--bg-hover);
+            box-shadow: none;
+        }
+
+        #sidebarAndroidAnalysisBtn,
+        #sidebarDevProjectBtn {
+            display: none;
+        }
+
+        #sidebarAndroidAnalysisBtn.show,
+        #sidebarDevProjectBtn.show {
+            display: flex;
+        }
+
+        .provider-picker {
+            margin: 8px 2px 0;
+            padding: 3px;
+            border: 1px solid #ddd6ca;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.45);
+        }
+
+        .provider-option {
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .provider-option.active {
+            background: #ffffff;
+            color: var(--text-primary);
+            box-shadow: 0 1px 5px rgba(47, 42, 37, 0.08);
+        }
+
+        .sidebar-list-wrap {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 0 8px 10px;
+        }
+
+        .sidebar-section-title {
+            padding: 10px 4px 7px;
+            color: #8a8176;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .sidebar-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 0 0 8px;
+        }
+
+        .session-item {
+            border-radius: 10px;
+            margin-bottom: 1px;
+            padding: 8px 7px;
+            color: var(--text-primary);
+        }
+
+        .session-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .session-item.active {
+            background: var(--bg-active);
+        }
+
+        .session-provider-badge {
+            display: none;
+        }
+
+        .session-item .session-title {
+            font-size: 13px;
+            font-weight: 450;
+            color: #2f2a25;
+        }
+
+        .session-item .session-time {
+            color: #9a9286;
+        }
+
+        .session-empty,
+        .session-loading {
+            padding: 10px 6px;
+            color: var(--text-muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .session-loading::before {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            margin-right: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+            vertical-align: 1px;
+            animation: pulseDot 1.1s ease-in-out infinite;
+        }
+
+        @keyframes pulseDot {
+            0%, 100% { opacity: 0.35; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        .session-item .session-menu-btn {
+            color: var(--text-muted);
+        }
+
+        .session-item .session-menu-btn:hover,
+        .session-item.menu-open .session-menu-btn {
+            background: rgba(47, 42, 37, 0.08);
+            color: var(--text-primary);
+        }
+
+        .session-menu {
+            background: #fffdf8;
+            border-color: #ded8cc;
+            box-shadow: 0 16px 40px rgba(47, 42, 37, 0.16);
+        }
+
+        .session-menu button {
+            color: var(--text-secondary);
+        }
+
+        .session-menu button:hover {
+            background: #f2eee4;
+            color: var(--text-primary);
+        }
+
+        .sidebar-footer {
+            padding: 10px 12px 14px;
+            border-top: 1px solid #ded8cc;
+            color: var(--text-secondary);
+            text-align: left;
+        }
+
+        .sidebar-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 38px;
+        }
+
+        .sidebar-user-avatar {
+            width: 31px;
+            height: 31px;
+            border-radius: 50%;
+            background: #2f2a25;
+            color: #fffdf8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .sidebar-user-text {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            line-height: 1.25;
+        }
+
+        .sidebar-user-text strong {
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .sidebar-user-text span {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .main {
+            background:
+                radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.92), rgba(250, 249, 245, 0) 34%),
+                var(--bg-chat);
+        }
+
+        .main-header {
+            min-height: 48px;
+            padding: 8px 18px;
+            border-bottom: 0;
+            background: rgba(250, 249, 245, 0.86);
+            backdrop-filter: blur(12px);
+        }
+
+        .main-header .header-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2f2a25;
+        }
+
+        .menu-toggle,
+        .icon-btn,
+        .dev-project-btn,
+        .android-analysis-btn,
+        .dev-mini-btn {
+            background: rgba(255, 255, 255, 0.48);
+            border-color: #ded8cc;
+            color: var(--text-secondary);
+            box-shadow: none;
+        }
+
+        .menu-toggle:hover,
+        .icon-btn:hover,
+        .dev-project-btn:hover,
+        .android-analysis-btn:hover,
+        .dev-mini-btn:hover {
+            background: #f0ebe1;
+            color: var(--text-primary);
+        }
+
+        .dev-project-btn.active,
+        .android-analysis-btn.active,
+        .input-action-btn.active {
+            color: var(--accent-light);
+            border-color: rgba(196, 99, 67, 0.35);
+            background: rgba(217, 119, 87, 0.1);
+        }
+
+        .chat-container {
+            padding: 24px max(22px, calc((100% - 980px) / 2)) 18px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb,
+        .sidebar-list::-webkit-scrollbar-thumb {
+            background: #d0c7b8;
+        }
+
+        .welcome {
+            justify-content: center;
+            gap: 10px;
+            color: var(--text-secondary);
+            transform: translateY(30px);
+        }
+
+        .welcome-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .welcome-icon {
+            width: auto;
+            height: auto;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            color: var(--accent);
+            font-size: 33px;
+            line-height: 1;
+        }
+
+        .welcome h2 {
+            font-family: Georgia, "Times New Roman", "Songti SC", serif;
+            font-size: clamp(28px, 3.2vw, 42px);
+            line-height: 1.15;
+            font-weight: 500;
+            color: #3a342d;
+        }
+
+        .welcome p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .message-row {
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 22px;
+        }
+
+        .message-content {
+            max-width: min(760px, 78%);
+        }
+
+        .message-row.ai .message-content {
+            max-width: min(820px, 86%);
+        }
+
+        .message-avatar {
+            border-radius: 50%;
+            box-shadow: none;
+        }
+
+        .message-avatar.ai {
+            background: transparent;
+            color: transparent;
+            overflow: visible;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message-avatar.ai img {
+            width: 34px;
+            height: 34px;
+            display: block;
+            border-radius: 50%;
+        }
+
+        .message-avatar.user-av {
+            background: #2f2a25;
+            color: #fffdf8;
+        }
+
+        .message-bubble {
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.72;
+        }
+
+        .message-row.ai .message-bubble {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 1px 0;
+        }
+
+        .message-row.user .message-bubble {
+            background: var(--user-bubble);
+            color: #fffdf8;
+            border-radius: 18px;
+            border-bottom-right-radius: 6px;
+            box-shadow: 0 10px 24px rgba(196, 99, 67, 0.16);
+        }
+
+        .message-bubble.answer-bubble,
+        .message-row.ai .message-bubble.android-analysis-result {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 1px 0;
+            box-shadow: none;
+        }
+
+        .markdown-body code {
+            background: rgba(47, 42, 37, 0.07);
+            color: #2f2a25;
+        }
+
+        .markdown-body pre,
+        .android-stage-data {
+            background: #f4f1e8;
+            color: #312c25;
+            border: 1px solid #e1d9ca;
+        }
+
+        .markdown-body blockquote {
+            border-left-color: var(--accent);
+            color: var(--text-secondary);
+            background: rgba(217, 119, 87, 0.08);
+        }
+
+        .markdown-body a {
+            color: #9f4f35;
+        }
+
+        .markdown-body table {
+            background: #fffdf8;
+            border-color: #ded8cc;
+        }
+
+        .markdown-body th {
+            background: #f1ebe0;
+            color: #2f2a25;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+            border-color: #ded8cc;
+        }
+
+        .markdown-body tr:nth-child(even) td {
+            background: #fbf8f1;
+        }
+
+        .thinking-block,
+        .reasoning-panel,
+        .android-analysis-process,
+        .android-analysis-live-progress {
+            border-color: transparent;
+            background: transparent;
+            color: var(--text-secondary);
+            box-shadow: none;
+        }
+
+        .thinking-header,
+        .thinking-body,
+        .reasoning-panel-header,
+        .reasoning-panel-head {
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .thinking-header:hover {
+            background: rgba(47, 42, 37, 0.04);
+        }
+
+        .input-area {
+            padding: 10px 24px 24px;
+            border-top: 0;
+            background: linear-gradient(180deg, rgba(250,249,245,0), rgba(250,249,245,0.96) 30%);
+        }
+
+        .input-wrapper {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            grid-template-areas:
+                "text text text"
+                "actions spacer send";
+            max-width: 680px;
+            min-height: 98px;
+            gap: 10px;
+            align-items: flex-end;
+            background: #fffdf8;
+            border: 1px solid #ded8cc;
+            border-radius: 18px;
+            box-shadow: var(--shadow-soft);
+            padding: 12px;
+        }
+
+        .input-actions {
+            grid-area: actions;
+            position: relative;
+            gap: 2px;
+        }
+
+        .input-action-btn {
+            border: 0;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 10px;
+        }
+
+        .input-action-btn:hover {
+            background: #f1ebe0;
+            color: var(--text-primary);
+        }
+
+        .input-plus-wrap {
+            position: relative;
+        }
+
+        .input-plus-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .input-plus-btn svg {
+            width: 19px;
+            height: 19px;
+        }
+
+        .input-plus-menu {
+            position: absolute;
+            left: 0;
+            bottom: calc(100% + 10px);
+            z-index: 80;
+            width: 238px;
+            padding: 8px;
+            border: 1px solid #d8d0c2;
+            border-radius: 14px;
+            background: #fffdf8;
+            box-shadow: 0 18px 48px rgba(47, 42, 37, 0.18);
+            display: none;
+        }
+
+        .input-plus-menu.show {
+            display: block;
+        }
+
+        .input-plus-menu-item {
+            width: 100%;
+            min-height: 38px;
+            padding: 8px 10px;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .input-plus-menu-item:hover {
+            background: #f1ebe0;
+        }
+
+        .input-plus-menu-item svg {
+            width: 18px;
+            height: 18px;
+            color: var(--text-secondary);
+            flex: 0 0 auto;
+        }
+
+        .input-plus-menu-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .input-plus-check {
+            color: #1a73e8;
+            font-size: 15px;
+            line-height: 1;
+            visibility: hidden;
+        }
+
+        .input-plus-check.show {
+            visibility: visible;
+        }
+
+        .input-plus-menu-item.active .input-plus-menu-text {
+            color: #1a73e8;
+        }
+
+        .input-wrapper textarea {
+            grid-area: text;
+            width: 100%;
+            min-height: 58px;
+            max-height: 170px;
+            border: 0;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--text-primary);
+            padding: 8px 10px;
+            font-size: 14px;
+        }
+
+        .input-wrapper textarea:focus {
+            border-color: transparent;
+            box-shadow: none;
+        }
+
+        .input-wrapper textarea::placeholder {
+            color: #8c8377;
+        }
+
+        .send-btn {
+            grid-area: send;
+            border-radius: 13px;
+            background: #2f2a25;
+            color: #fffdf8;
+            min-height: 40px;
+            box-shadow: none;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: #201d19;
+            box-shadow: none;
+        }
+
+        .send-btn.stop-mode {
+            min-width: 42px;
+            width: 42px;
+            border-radius: 14px;
+            background: #f0ebe1;
+            color: #2f2a25;
+            border: 1px solid #ded8cc;
+            font-size: 0;
+            position: relative;
+        }
+
+        .send-btn.stop-mode::before {
+            content: "";
+            width: 12px;
+            height: 12px;
+            border: 2px solid currentColor;
+            border-radius: 4px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .send-btn.stop-mode:hover {
+            background: #e8dfd2;
+        }
+
+        .interrupted-notice {
+            margin-top: 14px;
+            padding: 10px 12px;
+            border: 1px solid #ded8cc;
+            border-radius: 13px;
+            background: rgba(255, 253, 248, 0.75);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .interrupted-notice span {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .interrupted-notice button {
+            border: 1px solid #ded8cc;
+            border-radius: 10px;
+            background: #fffdf8;
+            color: var(--text-primary);
+            padding: 7px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .interrupted-notice button:hover {
+            background: #f1ebe0;
+        }
+
+        .upload-tag,
+        .file-tag {
+            background: #f1ebe0;
+            border-color: #ded8cc;
+            color: #6b4a39;
+        }
+
+        .markdown-preview,
+        .feedback-modal,
+        .confirm-box,
+        .dev-project-card {
+            background: #fffdf8;
+            border-color: #ded8cc;
+            box-shadow: var(--shadow-card);
+        }
+
+        .feedback-overlay,
+        .confirm-overlay {
+            background: rgba(47, 42, 37, 0.24);
+            backdrop-filter: blur(4px);
+        }
+
+        .feedback-modal textarea,
+        .feedback-modal input[type="text"],
+        .android-analysis-form select,
+        .android-analysis-form textarea {
+            background: #fff;
+            color: var(--text-primary);
+            border-color: #ded8cc;
+        }
+
+        .feedback-modal .btn-primary {
+            background: #2f2a25;
+        }
+
+        .feedback-modal .btn-secondary,
+        .btn-cancel {
+            background: #fffdf8;
+            color: var(--text-secondary);
+            border-color: #ded8cc;
+        }
+
+        .toast {
+            background: #fffdf8;
+            border-color: #ded8cc;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .drop-zone {
+            background: rgba(250, 249, 245, 0.9);
+        }
+
+        .drop-zone-inner {
+            border-color: var(--accent);
+            color: var(--text-secondary);
+            background: #fffdf8;
+            box-shadow: var(--shadow-card);
+        }
+
+        body.empty-chat .main {
+            justify-content: flex-start;
+        }
+
+        body.empty-chat .chat-container {
+            flex: 0 0 min(30vh, 260px);
+            overflow: visible;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 18px;
+        }
+
+        body.empty-chat .welcome {
+            height: auto;
+            transform: none;
+        }
+
+        body.empty-chat .input-area {
+            background: transparent;
+            padding-top: 0;
+            padding-bottom: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                background: var(--bg-sidebar);
+            }
+
+            .sidebar-rail-btn {
+                display: none;
+            }
+
+            .chat-container {
+                padding: 18px 12px;
+            }
+
+            .welcome {
+                transform: none;
+                max-width: calc(100vw - 32px);
+                text-align: center;
+            }
+
+            body.empty-chat .chat-container {
+                flex-basis: min(34vh, 280px);
+                padding-bottom: 10px;
+            }
+
+            .welcome-title-row {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .welcome h2 {
+                font-size: 28px;
+            }
+
+            .welcome p {
+                max-width: min(300px, calc(100vw - 72px));
+                line-height: 1.6;
+            }
+
+            .message-row {
+                max-width: none;
+            }
+
+            .message-content,
+            .message-row.ai .message-content {
+                max-width: 86%;
+            }
+
+            .input-area {
+                padding: 10px 10px calc(12px + env(safe-area-inset-bottom));
+                width: 100vw;
+                max-width: 100vw;
+                overflow-x: hidden;
+            }
+
+            .input-wrapper {
+                display: grid;
+                grid-template-columns: auto minmax(0, 1fr) auto;
+                grid-template-areas:
+                    "text text text"
+                    "actions spacer send";
+                max-width: none;
+                width: min(100%, calc(100vw - 24px));
+                min-height: 0;
+                padding: 8px;
+                border-radius: 18px;
+                overflow: visible;
+            }
+
+            .input-actions {
+                grid-area: actions;
+                display: flex;
+                gap: 0;
+            }
+
+            .input-wrapper textarea {
+                grid-area: text;
+                min-height: 42px;
+                min-width: 0;
+                padding: 9px 10px;
+            }
+
+            .send-btn {
+                grid-area: send;
+                min-width: 64px;
+                height: 42px;
+                padding: 10px 12px;
+            }
+
+            .input-plus-menu {
+                width: min(260px, calc(100vw - 40px));
+            }
+        }
+</style>
 </head>
-<body>
+<body class="empty-chat">
     <div class="app">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo">
-                    <div class="logo-icon">C</div>
-                    <div class="logo-text">Claude Chat</div>
+                    <div class="brand-lockup">
+                        <img class="brand-mark" src="/static/assets/assistant-logo.svg" alt="">
+                        <div class="logo-text">Claude</div>
+                    </div>
+                    <button type="button" class="sidebar-rail-btn" onclick="toggleSidebar()" title="收起侧边栏">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M10 5v14"/></svg>
+                    </button>
                 </div>
-                <button class="new-chat-btn" onclick="createNewSession()">
+            </div>
+            <nav class="sidebar-nav" aria-label="主菜单">
+                <button class="sidebar-nav-item new-chat-btn" onclick="createNewSession()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    新对话
+                    <span>New chat</span>
+                </button>
+                <button class="sidebar-nav-item" type="button" onclick="sessionListEl && sessionListEl.scrollTo({top:0,behavior:'smooth'})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+                    <span>Chats</span>
+                </button>
+                <button class="sidebar-nav-item" id="sidebarAndroidAnalysisBtn" type="button" onclick="openAndroidAnalysisPanel()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 16V8a7 7 0 0 1 14 0v8"/><path d="M7 16h10"/><path d="M9 20h6"/><path d="M9 8h.01"/><path d="M15 8h.01"/></svg>
+                    <span>Android 分析</span>
+                </button>
+                <button class="sidebar-nav-item" id="sidebarDevProjectBtn" type="button" onclick="openDevProjectPicker()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    <span>开发项目</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" id="apiConfigBtn" onclick="openApiConfig()" style="display:none">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>
+                    <span>API 配置</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" onclick="openFeedback()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.7 8.7 0 0 1-3.8-.9L3 21l1.8-4.7A8.4 8.4 0 1 1 21 11.5z"/></svg>
+                    <span>意见反馈</span>
                 </button>
                 <div class="provider-picker" id="providerPicker" aria-label="新对话模型">
                     <button type="button" class="provider-option active" data-provider="claude" onclick="setNewSessionProvider('claude')">Claude</button>
                     <button type="button" class="provider-option" data-provider="gemini" onclick="setNewSessionProvider('gemini')">Gemini</button>
                 </div>
+            </nav>
+            <div class="sidebar-list-wrap">
+                <div class="sidebar-section-title">Recents</div>
+                <div class="sidebar-list" id="sessionList"></div>
             </div>
-            <div class="sidebar-list" id="sessionList"></div>
             <div class="sidebar-footer">
-                <span class="footer-hint">局域网 AI 对话服务</span>
-                <button type="button" class="feedback-btn" id="apiConfigBtn" onclick="openApiConfig()" style="display:none">API 配置</button>
-                <button type="button" class="feedback-btn" onclick="openFeedback()">意见反馈</button>
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar">W</div>
+                    <div class="sidebar-user-text">
+                        <strong>wang</strong>
+                        <span>Local AI chat</span>
+                    </div>
+                </div>
             </div>
         </aside>
 
@@ -1628,9 +2786,11 @@
 
             <div class="chat-container" id="chatContainer">
                 <div class="welcome" id="welcome">
-                    <div class="welcome-icon">✦</div>
-                    <h2>欢迎使用 Claude Chat</h2>
-                    <p>局域网 AI 对话服务，支持多会话管理、文件上传和流式输出。<br>点击「新对话」开始聊天。</p>
+                    <div class="welcome-title-row">
+                        <div class="welcome-icon">✳</div>
+                        <h2>今天想聊点什么呢？</h2>
+                    </div>
+                    <p>选择一个会话，上传资料，或直接开始和本地 AI 一起分析问题。</p>
                 </div>
             </div>
 
@@ -1639,19 +2799,31 @@
                 <div class="markdown-preview markdown-body" id="markdownPreview"></div>
                 <div class="input-wrapper">
                     <div class="input-actions">
-                        <button class="input-action-btn" onclick="document.getElementById('fileInput').click()" title="上传文件">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                        </button>
-                        <label class="input-action-btn markdown-toggle" id="markdownToggleWrap" title="实时预览 Markdown">
-                            <input type="checkbox" id="markdownToggle">
-                            <span>Markdown</span>
-                        </label>
-                        <label class="input-action-btn markdown-toggle" id="webSearchToggleWrap" title="使用 Tavily 联网搜索">
-                            <input type="checkbox" id="webSearchToggle">
-                            <span>联网</span>
-                        </label>
+                        <div class="input-plus-wrap">
+                            <button type="button" class="input-action-btn input-plus-btn" id="inputPlusBtn" onclick="toggleInputPlusMenu(event)" title="更多操作">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            </button>
+                            <div class="input-plus-menu" id="inputPlusMenu">
+                                <button type="button" class="input-plus-menu-item" onclick="chooseUploadFromPlus(event)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                                    <span class="input-plus-menu-text">上传附件</span>
+                                </button>
+                                <button type="button" class="input-plus-menu-item" id="markdownMenuItem" onclick="toggleMarkdownFromMenu(event)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/><path d="M15 16l2 2 4-5"/></svg>
+                                    <span class="input-plus-menu-text">Markdown</span>
+                                    <span class="input-plus-check" id="markdownMenuCheck">✓</span>
+                                </button>
+                                <button type="button" class="input-plus-menu-item" id="webSearchMenuItem" onclick="toggleWebSearchFromMenu(event)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/></svg>
+                                    <span class="input-plus-menu-text">联网搜索</span>
+                                    <span class="input-plus-check" id="webSearchMenuCheck">✓</span>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="checkbox" id="markdownToggle" hidden>
+                        <input type="checkbox" id="webSearchToggle" hidden>
                     </div>
-                    <textarea id="messageInput" placeholder="输入消息... (Enter 发送, Shift+Enter 换行)" rows="1" autofocus></textarea>
+                    <textarea id="messageInput" placeholder="输入消息..." rows="1" autofocus></textarea>
                     <button class="send-btn" id="sendBtn" onclick="handleSend()">发送</button>
                 </div>
                 <input type="file" id="fileInput" multiple hidden onchange="handleFileSelect(this.files)">
@@ -1779,6 +2951,10 @@
     let currentSessionId = null;
     let sessions = [];
     let isStreaming = false;
+    const AI_LOGO_SRC = '/static/assets/assistant-logo.svg';
+    let assistantLogoDataUri = AI_LOGO_SRC;
+    let activeStreamAbortController = null;
+    let activeStreamStopping = false;
     let pendingFiles = []; // {name, size} 文件名须与 /upload 返回的 name 一致，供 /chat 在服务端解析
     let markdownPreviewEnabled = localStorage.getItem('claude_markdown_preview') === '1';
     let webSearchEnabled = localStorage.getItem('claude_web_search_enabled') === '1';
@@ -1788,6 +2964,7 @@
     let newSessionProvider = localStorage.getItem('claude_new_session_provider') || 'claude';
     let devProjects = [];
     let androidAnalysisBundles = [];
+    let androidAnalysisAutoDeepThreshold = 0.72;
     let currentDevStatus = { mode: 'chat', attached: false };
 
     // ==================== DOM ====================
@@ -1803,8 +2980,15 @@
     const markdownToggleWrap = document.getElementById('markdownToggleWrap');
     const webSearchToggle = document.getElementById('webSearchToggle');
     const webSearchToggleWrap = document.getElementById('webSearchToggleWrap');
+    const inputPlusMenu = document.getElementById('inputPlusMenu');
+    const markdownMenuItem = document.getElementById('markdownMenuItem');
+    const markdownMenuCheck = document.getElementById('markdownMenuCheck');
+    const webSearchMenuItem = document.getElementById('webSearchMenuItem');
+    const webSearchMenuCheck = document.getElementById('webSearchMenuCheck');
     const devProjectBtn = document.getElementById('devProjectBtn');
     const androidAnalysisBtn = document.getElementById('androidAnalysisBtn');
+    const sidebarDevProjectBtn = document.getElementById('sidebarDevProjectBtn');
+    const sidebarAndroidAnalysisBtn = document.getElementById('sidebarAndroidAnalysisBtn');
     const androidAnalysisFile = document.getElementById('androidAnalysisFile');
     const androidAnalysisFileInput = document.getElementById('androidAnalysisFileInput');
     const androidAnalysisQuestion = document.getElementById('androidAnalysisQuestion');
@@ -1828,11 +3012,12 @@
 
     if (markdownToggle) {
         markdownToggle.checked = markdownPreviewEnabled;
-        markdownToggleWrap.classList.toggle('active', markdownPreviewEnabled);
+        if (markdownToggleWrap) markdownToggleWrap.classList.toggle('active', markdownPreviewEnabled);
         markdownToggle.addEventListener('change', function() {
             markdownPreviewEnabled = !!this.checked;
             localStorage.setItem('claude_markdown_preview', markdownPreviewEnabled ? '1' : '0');
-            markdownToggleWrap.classList.toggle('active', markdownPreviewEnabled);
+            if (markdownToggleWrap) markdownToggleWrap.classList.toggle('active', markdownPreviewEnabled);
+            syncInputMenuState();
             updateMarkdownPreview();
         });
     }
@@ -1840,13 +3025,15 @@
 
     if (webSearchToggle) {
         webSearchToggle.checked = webSearchEnabled;
-        webSearchToggleWrap.classList.toggle('active', webSearchEnabled);
+        if (webSearchToggleWrap) webSearchToggleWrap.classList.toggle('active', webSearchEnabled);
         webSearchToggle.addEventListener('change', function() {
             webSearchEnabled = !!this.checked;
             localStorage.setItem('claude_web_search_enabled', webSearchEnabled ? '1' : '0');
-            webSearchToggleWrap.classList.toggle('active', webSearchEnabled);
+            if (webSearchToggleWrap) webSearchToggleWrap.classList.toggle('active', webSearchEnabled);
+            syncInputMenuState();
         });
     }
+    syncInputMenuState();
 
     messageInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -1858,6 +3045,9 @@
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.session-menu') && !e.target.closest('.session-menu-btn')) {
             closeAllSessionMenus();
+        }
+        if (!e.target.closest('.input-plus-wrap')) {
+            closeInputPlusMenu();
         }
     });
 
@@ -1935,19 +3125,76 @@
     function updateApiConfigButtonVisibility() {
         const btn = document.getElementById('apiConfigBtn');
         if (!btn || !window.__featuresV2) return;
-        btn.style.display = (!isLocalAccessHostname()) ? 'block' : 'none';
+        btn.style.display = (!isLocalAccessHostname()) ? 'flex' : 'none';
+    }
+
+    function closeInputPlusMenu() {
+        if (inputPlusMenu) inputPlusMenu.classList.remove('show');
+    }
+
+    function toggleInputPlusMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!inputPlusMenu) return;
+        inputPlusMenu.classList.toggle('show');
+    }
+
+    function chooseUploadFromPlus(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeInputPlusMenu();
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) fileInput.click();
+    }
+
+    function syncInputMenuState() {
+        if (markdownToggle) markdownToggle.checked = !!markdownPreviewEnabled;
+        if (markdownMenuItem) markdownMenuItem.classList.toggle('active', !!markdownPreviewEnabled);
+        if (markdownMenuCheck) markdownMenuCheck.classList.toggle('show', !!markdownPreviewEnabled);
+
+        const webOk = !!window.__tavilySearchConfigured;
+        if (webSearchToggle) {
+            webSearchToggle.checked = !!webSearchEnabled;
+            webSearchToggle.disabled = !webOk;
+        }
+        if (webSearchMenuItem) {
+            webSearchMenuItem.style.display = webOk ? 'flex' : 'none';
+            webSearchMenuItem.classList.toggle('active', webOk && !!webSearchEnabled);
+        }
+        if (webSearchMenuCheck) webSearchMenuCheck.classList.toggle('show', webOk && !!webSearchEnabled);
+    }
+
+    function toggleMarkdownFromMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        markdownPreviewEnabled = !markdownPreviewEnabled;
+        localStorage.setItem('claude_markdown_preview', markdownPreviewEnabled ? '1' : '0');
+        if (markdownToggleWrap) markdownToggleWrap.classList.toggle('active', markdownPreviewEnabled);
+        syncInputMenuState();
+        updateMarkdownPreview();
+    }
+
+    function toggleWebSearchFromMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!window.__tavilySearchConfigured) return;
+        webSearchEnabled = !webSearchEnabled;
+        localStorage.setItem('claude_web_search_enabled', webSearchEnabled ? '1' : '0');
+        if (webSearchToggleWrap) webSearchToggleWrap.classList.toggle('active', webSearchEnabled);
+        syncInputMenuState();
     }
 
     function updateWebSearchToggleAvailability() {
-        if (!webSearchToggle || !webSearchToggleWrap) return;
+        if (!webSearchToggle) return;
         const ok = !!window.__tavilySearchConfigured;
         webSearchToggle.disabled = !ok;
-        webSearchToggleWrap.style.display = ok ? 'inline-flex' : 'none';
+        if (webSearchToggleWrap) webSearchToggleWrap.style.display = ok ? 'inline-flex' : 'none';
         if (!ok) {
             webSearchEnabled = false;
             webSearchToggle.checked = false;
-            webSearchToggleWrap.classList.remove('active');
+            if (webSearchToggleWrap) webSearchToggleWrap.classList.remove('active');
         }
+        syncInputMenuState();
     }
 
     async function loadFeatures() {
@@ -1958,6 +3205,7 @@
             window.__tavilySearchConfigured = !!j.tavily_search_configured;
             devFeatureEnabled = !!j.mobile_remote_development;
             androidAnalysisFeatureEnabled = !!j.android_issue_analysis;
+            androidAnalysisAutoDeepThreshold = Number(j.android_analysis_auto_deep_confidence_threshold || 0.72);
             geminiFeatureEnabled = !!j.gemini_support;
             if (!geminiFeatureEnabled && newSessionProvider === 'gemini') {
                 newSessionProvider = 'claude';
@@ -2013,8 +3261,13 @@
     function updateAndroidAnalysisUi() {
         if (androidAnalysisBtn) {
             androidAnalysisBtn.classList.toggle('show', !!androidAnalysisFeatureEnabled);
-            androidAnalysisBtn.disabled = !currentSessionId;
-            androidAnalysisBtn.title = currentSessionId ? 'Android 问题分析' : '请先创建或选择会话';
+            androidAnalysisBtn.disabled = !androidAnalysisFeatureEnabled;
+            androidAnalysisBtn.title = 'Android 问题分析';
+        }
+        if (sidebarAndroidAnalysisBtn) {
+            sidebarAndroidAnalysisBtn.classList.toggle('show', !!androidAnalysisFeatureEnabled);
+            sidebarAndroidAnalysisBtn.disabled = !androidAnalysisFeatureEnabled;
+            sidebarAndroidAnalysisBtn.title = 'Android 问题分析';
         }
     }
 
@@ -2023,6 +3276,7 @@
         try {
             const data = await apiGet('/api/android-analysis/status');
             androidAnalysisBundles = data.bundles || [];
+            androidAnalysisAutoDeepThreshold = Number(data.auto_deep_confidence_threshold || androidAnalysisAutoDeepThreshold || 0.72);
         } catch (_) {
             androidAnalysisBundles = [];
         }
@@ -2033,11 +3287,14 @@
         document.getElementById('androidAnalysisOverlay').classList.remove('show');
     }
 
-    function openAndroidAnalysisPanel() {
+    async function openAndroidAnalysisPanel() {
         if (!androidAnalysisFeatureEnabled) return;
         if (!currentSessionId) {
-            alert('请先创建或选择一个会话');
-            return;
+            await createNewSession('claude');
+            if (!currentSessionId) {
+                showToast('会话创建失败，请稍后重试');
+                return;
+            }
         }
         if (androidAnalysisQuestion) androidAnalysisQuestion.value = messageInput.value.trim();
         renderAndroidAnalysisFileOptions();
@@ -2132,7 +3389,7 @@
         bubble.className = 'message-bubble answer-bubble markdown-body android-analysis-result';
         renderMarkdownInto(bubble, title || '正在创建 Android 分析任务…');
         contentEl.appendChild(bubble);
-        row.innerHTML = '<div class="message-avatar ai">A</div>';
+        row.innerHTML = aiAvatarHtml();
         row.appendChild(contentEl);
         chatContainer.appendChild(row);
         scrollToBottom();
@@ -2145,6 +3402,11 @@
 
     function androidEventsStreamUrl(jobId) {
         return `/api/android-analysis/jobs/${encodeURIComponent(jobId)}/events/stream?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`;
+    }
+
+    function androidProcessDetailsUrl(jobId, sessionIdOverride) {
+        const sid = sessionIdOverride || currentSessionId;
+        return `/api/android-analysis/jobs/${encodeURIComponent(jobId)}/process-details?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(sid)}`;
     }
 
     async function startAndroidAnalysis() {
@@ -2202,9 +3464,17 @@
         }
     }
 
-    function renderAndroidAnalysisProgress(bubble, title) {
-        bubble.innerHTML = '';
+    function renderAndroidAnalysisProgress(bubble, title, options) {
+        const append = !!(options && options.append) || /Deep/.test(title || '');
+        if (!append) {
+            bubble.innerHTML = '';
+        } else {
+            const old = bubble.querySelector('.android-analysis-live-progress');
+            if (old) old.remove();
+        }
         const startedAt = Date.now();
+        const wrap = document.createElement('div');
+        wrap.className = append ? 'android-analysis-live-progress' : '';
         const stage = document.createElement('div');
         stage.className = 'android-analysis-stage';
         stage.innerHTML = `<strong>${escapeHtml(title || 'Android 分析中')}</strong><br><span class="android-progress-elapsed">用时：0s</span>`;
@@ -2212,14 +3482,16 @@
         process.className = 'android-analysis-process';
         process.open = true;
         process.innerHTML = '<summary>分析过程</summary><div class="android-analysis-process-list"></div>';
-        bubble.appendChild(stage);
-        bubble.appendChild(process);
+        wrap.appendChild(stage);
+        wrap.appendChild(process);
+        bubble.appendChild(wrap);
         const progress = {
             stage,
             list: process.querySelector('.android-analysis-process-list'),
             startedAt,
             timer: null,
             seen: new Set(),
+            streamItems: new Map(),
         };
         progress.timer = setInterval(() => {
             const elapsed = Math.round((Date.now() - startedAt) / 1000);
@@ -2238,6 +3510,10 @@
 
     function updateAndroidProgress(progress, event) {
         if (!progress || !event) return;
+        if (isAndroidAiStreamEvent(event)) {
+            updateAndroidAiStreamProgress(progress, event);
+            return;
+        }
         const label = formatAndroidAnalysisEvent(event);
         if (!label) return;
         const key = `${event.type}:${label}:${JSON.stringify(event.data || {})}`;
@@ -2249,6 +3525,42 @@
         progress.list.appendChild(item);
         const elapsed = Math.round((Date.now() - progress.startedAt) / 1000);
         progress.stage.innerHTML = `<strong>${escapeHtml(label)}</strong><br><span class="android-progress-elapsed">用时：${elapsed}s</span>`;
+        scrollToBottom();
+    }
+
+    function isAndroidAiStreamEvent(event) {
+        return event && ['ai_thinking_delta', 'ai_text_delta', 'ai_tool_event'].includes(event.type);
+    }
+
+    function updateAndroidAiStreamProgress(progress, event) {
+        const data = event.data || {};
+        const content = data.content || '';
+        if (!content) return;
+        const kind = event.type === 'ai_thinking_delta' ? '可见思考' : (event.type === 'ai_tool_event' ? '工具片段' : '输出');
+        const interaction = data.interaction || '';
+        const key = `${event.type}:${data.stage || ''}:${interaction}`;
+        let item = progress.streamItems && progress.streamItems.get(key);
+        if (!item) {
+            item = document.createElement('div');
+            item.className = 'android-analysis-process-item android-ai-stream-item';
+            item.innerHTML = `
+                <div class="android-ai-stream-head">
+                    <span>AI ${escapeHtml(kind)}${interaction ? `（${escapeHtml(interaction)}）` : ''}</span>
+                    <span>${escapeHtml(event.timestamp || '')}</span>
+                </div>
+                <div class="android-ai-stream-text markdown-body"></div>
+            `;
+            progress.list.appendChild(item);
+            if (progress.streamItems) progress.streamItems.set(key, item);
+        }
+        const text = item.querySelector('.android-ai-stream-text');
+        if (text) {
+            const raw = (text.dataset.raw || '') + content;
+            text.dataset.raw = raw;
+            renderMarkdownInto(text, raw);
+        }
+        const elapsed = Math.round((Date.now() - progress.startedAt) / 1000);
+        progress.stage.innerHTML = `<strong>AI ${escapeHtml(kind)}${interaction ? `（${escapeHtml(interaction)}）` : ''}</strong><br><span class="android-progress-elapsed">用时：${elapsed}s</span>`;
         scrollToBottom();
     }
 
@@ -2304,13 +3616,16 @@
         throw new Error('Android 分析等待超时');
     }
 
-    function renderAndroidAnalysisResult(bubble, job, events, report) {
+    function renderAndroidAnalysisResult(bubble, job, events, report, details) {
         bubble.innerHTML = '';
         const stage = document.createElement('div');
         stage.className = 'android-analysis-stage';
         const eventLabels = (events || []).map(e => formatAndroidAnalysisEvent(e)).filter(Boolean);
-        stage.innerHTML = `<strong>Android 分析完成</strong><br>状态：${escapeHtml(job.status || '')}<br>${eventLabels.slice(-6).map(escapeHtml).join('<br>')}`;
-        const process = makeAndroidProcessPanel(events || []);
+        const confidenceLine = job.first_pass_confidence != null
+            ? `<br>首轮信心：${escapeHtml(String(job.first_pass_confidence))} / 自动 Deep 阈值：${escapeHtml(String(job.auto_deep_threshold || androidAnalysisAutoDeepThreshold))}`
+            : '';
+        stage.innerHTML = `<strong>Android 分析完成</strong><br>状态：${escapeHtml(job.status || '')}${confidenceLine}<br>${eventLabels.slice(-6).map(escapeHtml).join('<br>')}`;
+        const process = makeAndroidProcessPanel(events || [], details);
         const actions = document.createElement('div');
         actions.className = 'android-analysis-actions';
         const reportBtn = makeArtifactButton(job.id, 'final_report.md', '下载报告');
@@ -2321,7 +3636,7 @@
         actions.appendChild(reportBtn);
         actions.appendChild(evidenceBtn);
         actions.appendChild(rulesBtn);
-        actions.appendChild(deepBtn);
+        if (job.deep_available !== false) actions.appendChild(deepBtn);
         actions.appendChild(draftBtn);
         if (job.artifacts && job.artifacts.verified_report) {
             actions.appendChild(makeArtifactButton(job.id, 'verified_report.md', '下载校验报告'));
@@ -2346,11 +3661,19 @@
         scrollToBottom();
     }
 
-    function makeAndroidProcessPanel(events) {
+    function makeAndroidProcessPanel(events, details) {
         const process = document.createElement('details');
         process.className = 'android-analysis-process';
-        process.innerHTML = '<summary>分析过程</summary><div class="android-analysis-process-list"></div>';
+        process.open = true;
+        const detailTitle = (details && details.process_detail_title) || 'Android 问题分析过程详情';
+        process.innerHTML = `<summary>${escapeHtml(detailTitle)}</summary><div class="android-analysis-process-list"></div>`;
         const list = process.querySelector('.android-analysis-process-list');
+        if (details && Array.isArray(details.stages) && details.stages.length) {
+            for (const stage of details.stages) {
+                list.appendChild(makeAndroidStageDetail(stage));
+            }
+            return process;
+        }
         for (const event of events || []) {
             const label = formatAndroidAnalysisEvent(event);
             if (!label) continue;
@@ -2360,6 +3683,60 @@
             list.appendChild(item);
         }
         return process;
+    }
+
+    function makeAndroidStageDetail(stage) {
+        const item = document.createElement('details');
+        item.className = 'android-stage-detail';
+        const meta = [];
+        if (stage.duration_seconds !== null && stage.duration_seconds !== undefined) meta.push(`${stage.duration_seconds}s`);
+        if (stage.item_count) meta.push(`${stage.item_count} 项`);
+        if (stage.finished_at) meta.push(stage.finished_at);
+        item.innerHTML = `
+            <summary>
+                <span class="android-stage-title">${escapeHtml(stage.title || stage.id || '')}</span>
+                <span class="android-stage-meta">${escapeHtml(meta.join(' · '))}</span>
+            </summary>
+            <div class="android-stage-items"></div>
+        `;
+        const box = item.querySelector('.android-stage-items');
+        const entries = Array.isArray(stage.items) ? stage.items : [];
+        if (!entries.length) {
+            const empty = document.createElement('div');
+            empty.className = 'android-stage-item-summary';
+            empty.textContent = '该阶段暂无详细 trace，仅记录了阶段耗时。';
+            box.appendChild(empty);
+            return item;
+        }
+        for (const entry of entries) {
+            const row = document.createElement('div');
+            const isAiStream = ['ai_thinking_stream', 'ai_text_stream', 'ai_tool_stream'].includes(entry.event);
+            row.className = 'android-stage-item' + (isAiStream ? ' ai-stream' : '');
+            const dataText = isAiStream ? ((entry.data && entry.data.content) || '') : formatAndroidTraceData(entry.data || {});
+            row.innerHTML = `
+                <div class="android-stage-item-head">
+                    <span>${escapeHtml(entry.title || entry.event || '')}</span>
+                    <span class="android-stage-item-time">${escapeHtml(entry.timestamp || '')}</span>
+                </div>
+                ${entry.summary ? `<div class="android-stage-item-summary">${escapeHtml(entry.summary)}</div>` : ''}
+                ${dataText ? (
+                    isAiStream
+                        ? `<div class="android-stage-data markdown-body">${renderMarkdown(dataText)}</div>`
+                        : `<pre class="android-stage-data">${escapeHtml(dataText)}</pre>`
+                ) : ''}
+            `;
+            box.appendChild(row);
+        }
+        return item;
+    }
+
+    function formatAndroidTraceData(data) {
+        if (!data || typeof data !== 'object') return '';
+        try {
+            return JSON.stringify(data, null, 2);
+        } catch (_) {
+            return String(data);
+        }
     }
 
     function makeArtifactButton(jobId, artifactName, label) {
@@ -2385,14 +3762,23 @@
         if (event.type === 'job_queued') return `阶段：${androidStatusLabel(event.data && event.data.status)}`;
         if (event.type === 'job_updated') return `阶段：${androidStatusLabel(event.data && event.data.status)}`;
         if (event.type === 'stage_timing') return `${androidStatusLabel(event.data && event.data.stage)} 用时 ${event.data && event.data.duration_seconds}s`;
+        if (event.type === 'ai_thinking_delta') return `AI 可见思考：${((event.data && event.data.content) || '').slice(0, 80)}`;
+        if (event.type === 'ai_text_delta') return `AI 输出片段：${((event.data && event.data.content) || '').slice(0, 80)}`;
+        if (event.type === 'ai_tool_event') return `AI 工具片段：${((event.data && event.data.content) || '').slice(0, 80)}`;
         const map = {
             archive_extracted: '解压完成',
             files_sampled: '采样完成',
+            files_resampled: 'Planner 定向采样完成',
             planner_completed: 'Planner 完成',
             rules_matched: '规则匹配完成',
             evidence_pack_created: '证据包完成',
             case_cards_recalled: '案例召回完成',
             first_report_generated: '首轮报告完成',
+            first_pass_confidence: event.data && event.data.auto_deep
+                ? `首轮可信度 ${event.data.confidence}，低于阈值 ${event.data.threshold}`
+                : `首轮可信度 ${event.data && event.data.confidence}`,
+            auto_deep_triggered: '首轮可信度不足，自动进入 Deep 分析',
+            deep_started: 'Deep 分析开始',
             deep_evidence_created: 'Deep 证据完成',
             deep_report_generated: 'Deep 报告完成',
             verifier_completed: 'Verifier 完成',
@@ -2415,6 +3801,9 @@
             recalling_cases: '召回案例',
             generating_report: '生成首轮报告',
             verifying_first_report: '首轮报告校验',
+            sampling_refined: 'Planner 定向采样',
+            auto_deep_pending: '准备自动 Deep 分析',
+            deep_queued: 'Deep 排队中',
             report_ready: '首轮报告完成',
             deep_scoping: 'Deep 范围校验',
             deep_reporting: '生成 Deep 报告',
@@ -2432,6 +3821,12 @@
         const eventsData = await apiGet(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}/events?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`);
         const jobData = await apiGet(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`);
         const job = jobData.job || {};
+        let details = null;
+        try {
+            details = (await apiGet(androidProcessDetailsUrl(jobId))).details || null;
+        } catch (_) {
+            details = null;
+        }
         const reportName = preferredReportName || (job.artifacts && job.artifacts.verified_report ? 'verified_report.md' : 'final_report.md');
         let report = '';
         try {
@@ -2439,24 +3834,34 @@
         } catch (_) {
             report = await apiText(androidArtifactUrl(jobId, 'final_report.md'));
         }
-        renderAndroidAnalysisResult(bubble, job, eventsData.events || [], report);
+        renderAndroidAnalysisResult(bubble, job, eventsData.events || [], report, details);
     }
 
-    async function runAndroidDeepAnalysis(jobId, bubble) {
+    async function runAndroidDeepAnalysis(jobId, bubble, triggerMessage) {
         if (isStreaming) return;
         isStreaming = true;
         setStreamingLocked(true);
         sendBtn.disabled = true;
         sendBtn.textContent = '分析中...';
+        let progress = null;
         try {
-            renderMarkdownInto(bubble, '正在执行 Deep 分析并校验证据…');
+            progress = renderAndroidAnalysisProgress(bubble, '正在执行 Deep 分析并校验证据…');
             await apiPost(`/api/android-analysis/jobs/${encodeURIComponent(jobId)}/deep`, {
                 user_id: userId,
                 session_id: currentSessionId,
+                background: true,
+                trigger: triggerMessage ? 'chat_request' : 'manual',
+                trigger_message: triggerMessage || '',
             });
+            const finalJob = await waitAndroidAnalysisJob(jobId, progress);
+            if (finalJob.status === 'error') {
+                const err = finalJob.error || {};
+                throw new Error(err.message || err.code || 'Deep 分析失败');
+            }
             await refreshAndroidAnalysisBubble(jobId, bubble, 'verified_report.md');
             showToast('Deep 分析完成');
         } catch (e) {
+            finishAndroidProgress(progress);
             showToast(`Deep 分析失败：${e.message}`);
         } finally {
             setStreamingLocked(false);
@@ -2538,6 +3943,12 @@
             devProjectBtn.classList.toggle('active', !!(currentDevStatus && currentDevStatus.attached));
             devProjectBtn.disabled = !!geminiSession;
             devProjectBtn.title = geminiSession ? 'Gemini 第一版暂不支持开发模式' : '开发项目';
+        }
+        if (sidebarDevProjectBtn) {
+            sidebarDevProjectBtn.classList.toggle('show', !!devFeatureEnabled);
+            sidebarDevProjectBtn.classList.toggle('active', !!(currentDevStatus && currentDevStatus.attached));
+            sidebarDevProjectBtn.disabled = !!geminiSession;
+            sidebarDevProjectBtn.title = geminiSession ? 'Gemini 第一版暂不支持开发模式' : '开发项目';
         }
         const attached = !!(devFeatureEnabled && currentDevStatus && currentDevStatus.attached && currentDevStatus.project);
         if (devProjectBar) devProjectBar.classList.toggle('show', attached);
@@ -2799,17 +4210,52 @@
     }
 
     // ==================== Session Management ====================
+    function sessionSnapshotKey() {
+        return `claude_sessions_snapshot:${userId}`;
+    }
+
+    function loadSessionSnapshot() {
+        try {
+            const raw = localStorage.getItem(sessionSnapshotKey());
+            if (!raw) return false;
+            const cached = JSON.parse(raw);
+            if (!Array.isArray(cached) || cached.length === 0) return false;
+            sessions = cached;
+            renderSessionList();
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function saveSessionSnapshot() {
+        try {
+            localStorage.setItem(sessionSnapshotKey(), JSON.stringify((sessions || []).slice(0, 80)));
+        } catch (_) {}
+    }
+
+    function renderSessionState(text, className) {
+        sessionListEl.innerHTML = `<div class="${className}">${escapeHtml(text)}</div>`;
+    }
+
     async function loadSessions() {
+        if (!sessions.length) renderSessionState('正在加载最近对话...', 'session-loading');
         try {
             sessions = await apiGet(`/sessions?user_id=${encodeURIComponent(userId)}`);
+            saveSessionSnapshot();
             renderSessionList();
         } catch (e) {
             console.error('加载会话列表失败:', e);
+            if (!sessions.length) renderSessionState('最近对话加载失败，请稍后重试。', 'session-empty');
         }
     }
 
     function renderSessionList() {
         sessionListEl.innerHTML = '';
+        if (!sessions || sessions.length === 0) {
+            renderSessionState('暂无最近对话', 'session-empty');
+            return;
+        }
         for (const s of sessions) {
             const item = document.createElement('div');
             const provider = normalizeProvider(s.provider);
@@ -2850,14 +4296,15 @@
         if (item && !isOpen) item.classList.add('menu-open');
     }
 
-    async function createNewSession() {
+    async function createNewSession(providerOverride) {
         if (isStreaming) return;
         try {
-            const provider = geminiFeatureEnabled ? newSessionProvider : 'claude';
+            const provider = providerOverride ? normalizeProvider(providerOverride) : (geminiFeatureEnabled ? newSessionProvider : 'claude');
             const session = await apiPost('/sessions', { user_id: userId, provider });
             sessions.unshift(session);
             currentSessionId = session.id;
             renderSessionList();
+            saveSessionSnapshot();
             renderChat([]);
             headerTitle.textContent = session.title;
             await refreshDevStatus();
@@ -2928,6 +4375,7 @@
                 updateAndroidAnalysisUi();
             }
             renderSessionList();
+            saveSessionSnapshot();
             if (delRes && delRes.backed_up_to) {
                 showToast('会话已备份至：' + delRes.backed_up_to, 6000);
             }
@@ -2937,32 +4385,84 @@
     }
 
     // ==================== Sidebar Toggle ====================
+    function isMobileSidebarMode() {
+        return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    }
+
     function toggleSidebar() {
-        sidebar.classList.toggle('open');
-        sidebarOverlay.classList.toggle('show');
+        if (isMobileSidebarMode()) {
+            document.body.classList.remove('sidebar-collapsed');
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('show');
+            return;
+        }
+        sidebar.classList.remove('open');
+        sidebarOverlay.classList.remove('show');
+        document.body.classList.toggle('sidebar-collapsed');
     }
 
     function closeSidebar() {
-        sidebar.classList.remove('open');
-        sidebarOverlay.classList.remove('show');
+        if (isMobileSidebarMode()) {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('show');
+        }
     }
+
+    window.addEventListener('resize', function() {
+        if (!isMobileSidebarMode()) {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('show');
+        } else {
+            document.body.classList.remove('sidebar-collapsed');
+        }
+    });
 
     // ==================== Chat Rendering ====================
     function renderChat(messages) {
         chatContainer.innerHTML = '';
         if (!messages || messages.length === 0) {
+            document.body.classList.add('empty-chat');
             chatContainer.appendChild(welcomeEl);
             welcomeEl.style.display = 'flex';
             return;
         }
+        document.body.classList.remove('empty-chat');
         welcomeEl.style.display = 'none';
         for (const m of messages) {
-            appendMessage(m.role, m.content, m.thinking, m.files);
+            appendMessage(m.role, m.content, m.thinking, m.files, m.metadata);
         }
         scrollToBottom();
     }
 
-    function appendMessage(role, content, thinking, files) {
+    function cleanThinkingForDisplay(thinking) {
+        const text = String(thinking || '');
+        const streamTypes = {
+            ai_thinking_delta: 'AI 可见思考流',
+            ai_text_delta: 'AI 输出流',
+            ai_tool_event: 'AI 工具流',
+        };
+        if (!Object.keys(streamTypes).some(type => text.includes(type))) return text;
+        const counts = { ai_thinking_delta: 0, ai_text_delta: 0, ai_tool_event: 0 };
+        const cleaned = [];
+        for (const rawLine of text.split(/\r?\n/)) {
+            const line = rawLine.trim();
+            const matched = line.match(/^-\s*(ai_thinking_delta|ai_text_delta|ai_tool_event)\s*$/);
+            if (matched) {
+                counts[matched[1]] += 1;
+                continue;
+            }
+            cleaned.push(rawLine);
+        }
+        for (const [type, label] of Object.entries(streamTypes)) {
+            if (counts[type]) {
+                cleaned.push(`- ${label}：${counts[type]} 个片段（详见 Android 分析过程详情）`);
+            }
+        }
+        return cleaned.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
+    function appendMessage(role, content, thinking, files, metadata) {
+        document.body.classList.remove('empty-chat');
         const isAi = role === 'ai' || role === 'assistant';
         const row = document.createElement('div');
         row.className = 'message-row ' + (isAi ? 'ai' : 'user');
@@ -2972,7 +4472,7 @@
         let thinkingHtml = '';
 
         if (isAi) {
-            avatarHtml = `<div class="message-avatar ai">${currentSessionProvider() === 'gemini' ? 'G' : 'C'}</div>`;
+            avatarHtml = aiAvatarHtml();
         } else {
             avatarHtml = '<div class="message-avatar user-av">U</div>';
         }
@@ -2986,7 +4486,8 @@
             filesHtml += '</div>';
         }
 
-        if (thinking) {
+        const displayThinking = cleanThinkingForDisplay(thinking);
+        if (displayThinking) {
             const thinkId = 'think-' + Math.random().toString(36).substr(2, 8);
             thinkingHtml = `
                 <div class="thinking-block">
@@ -2994,7 +4495,7 @@
                         <span>思考过程</span>
                         <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </div>
-                    <div class="thinking-body" id="${thinkId}">${escapeHtml(thinking)}</div>
+                    <div class="thinking-body markdown-body" id="${thinkId}">${renderMarkdown(displayThinking)}</div>
                 </div>
             `;
         }
@@ -3014,7 +4515,27 @@
         row.innerHTML = avatarHtml;
         row.appendChild(contentDiv);
         chatContainer.appendChild(row);
+        if (isAi && metadata && metadata.android_analysis_job_id) {
+            hydrateAndroidAnalysisMessage(metadata.android_analysis_job_id, bubble);
+        }
+        if (isAi && metadata && metadata.interrupted) {
+            renderInterruptedNotice(contentDiv, {
+                message: metadata.retry_message || '',
+                files: metadata.retry_files || [],
+                displayFiles: metadata.retry_files || [],
+                webSearch: !!metadata.retry_web_search,
+            }, row);
+        }
         return row;
+    }
+
+    async function hydrateAndroidAnalysisMessage(jobId, bubble) {
+        try {
+            bubble.classList.add('android-analysis-result');
+            await refreshAndroidAnalysisBubble(jobId, bubble);
+        } catch (_) {
+            // 切换会话或旧消息缺少 job 文件时，保留已渲染的 Markdown 报告即可。
+        }
     }
 
     function toggleThinking(id) {
@@ -3286,7 +4807,7 @@
             .message-avatar {
                 width: 32px;
                 height: 32px;
-                border-radius: 10px;
+                border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -3297,6 +4818,8 @@
                 background: linear-gradient(135deg, var(--accent), #6D28D9);
             }
             .message-row.user .message-avatar { order: 2; background: #5B2DA0; }
+            .message-avatar.ai { background: transparent; color: transparent; }
+            .message-avatar.ai img { width: 32px; height: 32px; display: block; border-radius: 50%; }
             .message-content { max-width: 76%; min-width: 0; }
             .message-bubble {
                 padding: 13px 16px;
@@ -3306,26 +4829,76 @@
                 font-size: 14px;
             }
             .message-row.user .message-bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; }
-            .message-row.ai .message-bubble { background: var(--ai-bubble); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+            .message-row.ai .message-bubble { background: transparent; border: 0; border-radius: 0; padding: 1px 0; }
             .thinking-block {
                 margin-bottom: 10px;
-                border-radius: 8px;
-                border: 1px solid rgba(124,58,237,0.28);
-                background: var(--thinking-bg);
+                border-radius: 0;
+                border: 0;
+                background: transparent;
                 overflow: hidden;
+            }
+            details.thinking-block > summary.thinking-header {
+                cursor: pointer;
+                list-style: none;
+            }
+            details.thinking-block > summary.thinking-header::-webkit-details-marker {
+                display: none;
             }
             .thinking-header {
                 padding: 8px 12px;
                 color: #c4b5fd;
                 font-size: 12px;
                 font-weight: 700;
-                border-bottom: 1px solid rgba(255,255,255,0.08);
+                border-bottom: 0;
             }
             .thinking-body {
+                padding: 8px 0 0;
+                color: var(--text-secondary);
+                font-size: 13px;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+            .android-process-export {
+                margin-bottom: 10px;
+                border-radius: 8px;
+                border: 1px solid rgba(124,58,237,0.28);
+                background: rgba(255,255,255,0.03);
                 padding: 10px 12px;
                 color: var(--text-secondary);
+                font-size: 12px;
+            }
+            .android-process-export > summary {
+                cursor: pointer;
+                color: var(--text-primary);
+                font-weight: 700;
+            }
+            .android-process-export details {
+                margin-top: 8px;
+                border-top: 1px solid rgba(255,255,255,0.08);
+                padding-top: 8px;
+            }
+            .android-process-export pre {
+                max-height: 260px;
+                overflow: auto;
                 white-space: pre-wrap;
-                font-size: 13px;
+                word-break: break-word;
+                overflow-wrap: anywhere;
+                background: rgba(0,0,0,0.24);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 6px;
+                padding: 8px;
+                font-size: 11px;
+            }
+            .android-process-export .android-export-stream {
+                max-height: 340px;
+                overflow: auto;
+                background: rgba(0,0,0,0.24);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 6px;
+                padding: 8px;
+                margin-top: 6px;
+                overflow-wrap: anywhere;
+                word-break: break-word;
             }
             .message-files { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
             .file-tag {
@@ -3358,6 +4931,26 @@
             .markdown-body th, .markdown-body td { padding: 8px 10px; border: 1px solid rgba(255,255,255,0.12); vertical-align: top; white-space: nowrap; }
             .markdown-body th { background: rgba(124,58,237,0.22); color: #f3edff; font-weight: 700; text-align: left; }
             .markdown-body tr:nth-child(even) td { background: rgba(255,255,255,0.035); }
+            .interrupted-notice {
+                margin-top: 14px;
+                padding: 10px 12px;
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 13px;
+                background: rgba(255,255,255,0.04);
+                color: var(--text-secondary);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .interrupted-notice span { flex: 1; min-width: 0; }
+            .interrupted-notice button {
+                border: 1px solid rgba(255,255,255,0.16);
+                border-radius: 10px;
+                background: transparent;
+                color: var(--text-primary);
+                padding: 7px 12px;
+                font-weight: 700;
+            }
             @media (max-width: 720px) {
                 .export-page { padding: 18px 10px 28px; }
                 .message-row { gap: 8px; margin: 14px 0; }
@@ -3368,10 +4961,55 @@
             }
             @media print {
                 body { background: #fff; color: #111; }
-                .message-row.ai .message-bubble, .message-row.user .message-bubble, .thinking-block { background: #fff; color: #111; border-color: #bbb; }
+                .message-row.ai .message-bubble, .thinking-block { background: transparent; color: #111; border: 0; }
+                .message-row.user .message-bubble { background: #fff; color: #111; border: 1px solid #bbb; }
                 .thinking-body, .export-meta { color: #444; }
             }
         `;
+    }
+
+    function renderExportAndroidProcess(details) {
+        if (!details || !Array.isArray(details.stages) || !details.stages.length) return '';
+        const title = details.process_detail_title || 'Android 问题分析过程详情';
+        const stages = details.stages.map(stage => {
+            const meta = [];
+            if (stage.duration_seconds !== null && stage.duration_seconds !== undefined) meta.push(`${stage.duration_seconds}s`);
+            if (stage.item_count) meta.push(`${stage.item_count} 项`);
+            const items = (stage.items || []).map(entry => {
+                const isAiStream = ['ai_thinking_stream', 'ai_text_stream', 'ai_tool_stream'].includes(entry.event);
+                const dataText = isAiStream ? ((entry.data && entry.data.content) || '') : formatAndroidTraceData(entry.data || {});
+                return `
+                    <div>
+                        <strong>${escapeHtml(entry.title || entry.event || '')}</strong>
+                        ${entry.timestamp ? `<span> · ${escapeHtml(entry.timestamp)}</span>` : ''}
+                        ${entry.summary ? `<div>${escapeHtml(entry.summary)}</div>` : ''}
+                        ${dataText ? (
+                            isAiStream
+                                ? `<div class="android-export-stream markdown-body">${renderMarkdown(dataText)}</div>`
+                                : `<pre>${escapeHtml(dataText)}</pre>`
+                        ) : ''}
+                    </div>`;
+            }).join('');
+            return `
+                <details>
+                    <summary>${escapeHtml(stage.title || stage.id || '')}${meta.length ? ` · ${escapeHtml(meta.join(' · '))}` : ''}</summary>
+                    ${items || '<div>该阶段暂无详细 trace，仅记录了阶段耗时。</div>'}
+                </details>`;
+        }).join('');
+        return `<details class="android-process-export"><summary>${escapeHtml(title)}</summary>${stages}</details>`;
+    }
+
+    async function ensureAssistantLogoDataUri() {
+        if (assistantLogoDataUri && assistantLogoDataUri.startsWith('data:')) return assistantLogoDataUri;
+        try {
+            const r = await fetch(AI_LOGO_SRC, { cache: 'no-store' });
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const svg = await r.text();
+            assistantLogoDataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        } catch (_) {
+            assistantLogoDataUri = AI_LOGO_SRC;
+        }
+        return assistantLogoDataUri;
     }
 
     function renderExportMessage(m) {
@@ -3386,16 +5024,26 @@
             }).join('') + '</div>';
         }
         let thinkingHtml = '';
-        if (isAi && m.thinking) {
+        const androidProcessDetails = m && m.android_process_details;
+        const displayThinking = cleanThinkingForDisplay(m && m.thinking);
+        if (isAi && displayThinking) {
+            const overviewTitle = (androidProcessDetails && androidProcessDetails.process_overview_title)
+                || ((m && m.metadata && m.metadata.android_analysis_job_id) ? 'Android 问题分析过程概览' : '思考过程');
             thinkingHtml = `
-                <div class="thinking-block">
-                    <div class="thinking-header">思考过程</div>
-                    <div class="thinking-body">${escapeHtml(m.thinking)}</div>
-                </div>`;
+                <details class="thinking-block">
+                    <summary class="thinking-header">${escapeHtml(overviewTitle)}</summary>
+                    <div class="thinking-body markdown-body">${renderMarkdown(displayThinking)}</div>
+                </details>`;
         }
+        const androidProcessHtml = renderExportAndroidProcess(androidProcessDetails);
+        const interruptedHtml = (isAi && m && m.metadata && m.metadata.interrupted)
+            ? `<div class="interrupted-notice"><span>AI 的回复已中断。</span><button type="button">Try again</button></div>`
+            : '';
         const bubble = `<div class="message-bubble markdown-body">${renderMarkdown((m && m.content) || '')}</div>`;
-        const avatar = `<div class="message-avatar">${isAi ? 'C' : 'U'}</div>`;
-        return `<div class="message-row ${isAi ? 'ai' : 'user'}">${avatar}<div class="message-content">${filesHtml}${thinkingHtml}${bubble}</div></div>`;
+        const avatar = isAi
+            ? `<div class="message-avatar ai"><img src="${escapeAttr(assistantLogoDataUri || AI_LOGO_SRC)}" alt="AI"></div>`
+            : `<div class="message-avatar user-av">U</div>`;
+        return `<div class="message-row ${isAi ? 'ai' : 'user'}">${avatar}<div class="message-content">${filesHtml}${thinkingHtml}${androidProcessHtml}${bubble}${interruptedHtml}</div></div>`;
     }
 
     function buildExportHtml(session, messages) {
@@ -3410,7 +5058,7 @@
   <title>${escapeHtml(title)} - Claude Chat Export</title>
   <style>${exportCss()}</style>
 </head>
-<body>
+<body class="empty-chat">
   <main class="export-page">
     <header class="export-header">
       <h1>${escapeHtml(title)}</h1>
@@ -3447,6 +5095,21 @@
         return 'downloaded';
     }
 
+    async function enrichExportAndroidProcessDetails(messages, sessionId) {
+        const out = Array.isArray(messages) ? messages : [];
+        await Promise.all(out.map(async (m) => {
+            const jobId = m && m.metadata && m.metadata.android_analysis_job_id;
+            if (!jobId) return;
+            try {
+                const data = await apiGet(androidProcessDetailsUrl(jobId, sessionId));
+                m.android_process_details = data.details || null;
+            } catch (_) {
+                m.android_process_details = null;
+            }
+        }));
+        return out;
+    }
+
     async function exportSessionHtml(event, sessionId) {
         if (event) event.stopPropagation();
         closeAllSessionMenus();
@@ -3465,7 +5128,11 @@
                 });
             }
             showToast('正在准备导出...', 1600);
-            const messages = await apiGet(`/sessions/${sessionId}/messages?user_id=${encodeURIComponent(userId)}`);
+            const messages = await enrichExportAndroidProcessDetails(
+                await apiGet(`/sessions/${sessionId}/messages?user_id=${encodeURIComponent(userId)}`),
+                sessionId
+            );
+            await ensureAssistantLogoDataUri();
             const html = buildExportHtml(session, messages);
             await saveHtmlFile(html, filename, saveHandle);
             showToast('已导出 HTML');
@@ -3604,6 +5271,90 @@
         const app = document.querySelector('.app');
         if (!app) return;
         app.classList.toggle('streaming-locked', !!on);
+    }
+
+    function aiAvatarHtml() {
+        return `<div class="message-avatar ai"><img src="${AI_LOGO_SRC}" alt="AI"></div>`;
+    }
+
+    function setSendButtonIdle() {
+        sendBtn.classList.remove('stop-mode');
+        sendBtn.disabled = false;
+        sendBtn.textContent = '发送';
+        sendBtn.title = '发送';
+        sendBtn.setAttribute('aria-label', '发送');
+    }
+
+    function setSendButtonStop(label) {
+        sendBtn.classList.add('stop-mode');
+        sendBtn.disabled = false;
+        sendBtn.textContent = label || '停止';
+        sendBtn.title = '停止生成';
+        sendBtn.setAttribute('aria-label', '停止生成');
+    }
+
+    async function stopCurrentResponse() {
+        if (!isStreaming || activeStreamStopping) return;
+        activeStreamStopping = true;
+        setSendButtonStop('停止中');
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+            await fetch('/chat/stop', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    user_id: userId,
+                    session_id: currentSessionId,
+                }),
+            });
+        } catch (_) {
+            // 前端还会主动断开 SSE；后端停止请求失败时不打扰用户。
+        } finally {
+            if (activeStreamAbortController) {
+                try { activeStreamAbortController.abort(); } catch (_) {}
+            }
+        }
+    }
+
+    function markReasoningInterrupted(reasoningPanel, streamStartTs) {
+        if (!reasoningPanel || !reasoningPanel.isConnected) return;
+        const totalSec = Math.floor((Date.now() - streamStartTs) / 1000);
+        const label = totalSec > 0 ? `已中断（已用 ${totalSec} 秒）` : '已中断';
+        const te = reasoningPanel.querySelector('.stream-timer');
+        if (te) te.textContent = label;
+        const spin = reasoningPanel.querySelector('.rpt-mini-spin');
+        if (spin) spin.style.display = 'none';
+        const compactLabel = reasoningPanel.querySelector('.rph-compact-label');
+        if (compactLabel) compactLabel.textContent = label + ' · 点击展开';
+        reasoningPanel.classList.add('stream-finished');
+    }
+
+    function renderInterruptedNotice(contentEl, retryPayload, aiRow) {
+        if (!contentEl || contentEl.querySelector('.interrupted-notice')) return;
+        const notice = document.createElement('div');
+        notice.className = 'interrupted-notice';
+        const canRetry = !!(retryPayload && retryPayload.message);
+        notice.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>AI 的回复已中断。</span>
+            ${canRetry ? '<button type="button">Try again</button>' : ''}`;
+        const btn = notice.querySelector('button');
+        if (btn) btn.addEventListener('click', () => retryInterruptedReply(retryPayload, aiRow));
+        contentEl.appendChild(notice);
+    }
+
+    async function retryInterruptedReply(retryPayload, aiRow) {
+        if (!retryPayload || isStreaming) return;
+        if (aiRow && aiRow.isConnected) aiRow.remove();
+        await startChatStream({
+            message: retryPayload.message || '',
+            fileNamesForApi: retryPayload.files || [],
+            fileNamesDisplay: retryPayload.displayFiles || retryPayload.files || [],
+            appendUser: false,
+            retryInterrupted: true,
+            webSearch: !!retryPayload.webSearch,
+        });
     }
 
     /**
@@ -3799,6 +5550,10 @@
                                 contentEl.appendChild(softErr);
                                 break;
                             }
+                            if (activeStreamStopping) {
+                                doneReceived = false;
+                                break;
+                            }
                             doneReceived = false;
                             aiRow.remove();
                             showError(data.message);
@@ -3874,9 +5629,10 @@
         if (!currentSessionId || !userId) return;
         const isGeminiSession = currentSessionProvider() === 'gemini';
         isStreaming = true;
+        activeStreamStopping = false;
+        activeStreamAbortController = new AbortController();
         setStreamingLocked(true);
-        sendBtn.disabled = true;
-        sendBtn.textContent = '回复中...';
+        setSendButtonStop();
 
         const aiRow = document.createElement('div');
         aiRow.className = 'message-row ai';
@@ -3920,7 +5676,7 @@
             contentEl.appendChild(timelineEl);
         }
         contentEl.appendChild(aiBubble);
-        aiRow.innerHTML = `<div class="message-avatar ai">${isGeminiSession ? 'G' : 'C'}</div>`;
+        aiRow.innerHTML = aiAvatarHtml();
         aiRow.appendChild(contentEl);
         chatContainer.appendChild(aiRow);
         scrollToBottom();
@@ -3935,6 +5691,7 @@
             const response = await fetch('/chat/orchestration/continue', {
                 method: 'POST',
                 headers,
+                signal: activeStreamAbortController.signal,
                 body: JSON.stringify({
                     user_id: userId,
                     session_id: currentSessionId,
@@ -3960,12 +5717,31 @@
             streamResult = await streamAssistantResponse(response, {
                 aiRow, contentEl, aiBubble, timelineEl, statusBar, streamStartTs,
             });
+            if (activeStreamStopping && !streamResult.doneReceived) {
+                markReasoningInterrupted(reasoningPanel, streamStartTs);
+                renderInterruptedNotice(contentEl, {
+                    message: '',
+                    files: [],
+                    displayFiles: [],
+                    webSearch: false,
+                }, aiRow);
+            }
             if (streamResult.continuationToken) {
                 showOrchestrationContinueModal(streamResult.continuationToken, streamResult.orchMeta || {});
             }
         } catch (e) {
-            aiRow.remove();
-            showError(`网络错误: ${e.message}`);
+            if (activeStreamStopping || e.name === 'AbortError') {
+                markReasoningInterrupted(reasoningPanel, streamStartTs);
+                renderInterruptedNotice(contentEl, {
+                    message: '',
+                    files: [],
+                    displayFiles: [],
+                    webSearch: false,
+                }, aiRow);
+            } else {
+                aiRow.remove();
+                showError(`网络错误: ${e.message}`);
+            }
         } finally {
             stopStreamTimer();
             if (streamResult.doneReceived && reasoningPanel && reasoningPanel.isConnected) {
@@ -3973,52 +5749,81 @@
             }
             setStreamingLocked(false);
             isStreaming = false;
-            sendBtn.disabled = false;
-            sendBtn.textContent = '发送';
+            activeStreamAbortController = null;
+            activeStreamStopping = false;
+            setSendButtonIdle();
             messageInput.focus();
             loadSessions();
             refreshDevStatus();
         }
     }
 
-    // ==================== Send Message ====================
-    async function handleSend() {
-        const message = messageInput.value.trim();
-        if ((!message && pendingFiles.length === 0) || isStreaming) return;
+    function isAndroidDeepRequest(message) {
+        const text = String(message || '').trim().toLowerCase();
+        if (!text) return false;
+        return /(deep|深入|深度|继续分析|继续深入|进一步分析|进一步定位|继续定位)/i.test(text)
+            && /(分析|定位|deep|继续|深入|深度)/i.test(text);
+    }
 
-        if (!currentSessionId) {
-            // Auto create session
-            await createNewSession();
-            if (!currentSessionId) return;
+    async function latestAndroidAnalysisJob() {
+        if (!androidAnalysisFeatureEnabled || !currentSessionId) return null;
+        const data = await apiGet(`/api/android-analysis/jobs/latest?user_id=${encodeURIComponent(userId)}&session_id=${encodeURIComponent(currentSessionId)}`);
+        return data.job || null;
+    }
+
+    async function tryStartAndroidDeepFromMessage(message) {
+        if (!isAndroidDeepRequest(message) || pendingFiles.length > 0) return false;
+        let job = null;
+        try {
+            job = await latestAndroidAnalysisJob();
+        } catch (_) {
+            return false;
         }
-        const activeProvider = currentSessionProvider();
-        const isGeminiSession = activeProvider === 'gemini';
+        if (!job || job.deep_available === false) return false;
 
-        // Build full message including file references
-        let fullMessage = message;
-        // 只传服务端返回的文件名；附件内容一律由服务器在 cache/<user>/<session>/uploads 下解析（局域网设备无服务器路径）
-        const fileNamesForApi = pendingFiles.map(f => f.name);
-        const fileNamesDisplay = pendingFiles.map(f => f.displayName || f.name);
-        if (pendingFiles.length > 0) {
-            // 后端按 files[] 在会话 uploads 目录读取内容注入，不依赖客户端路径
-        }
-
-        // Show user message
         welcomeEl.style.display = 'none';
-        appendMessage('user', message || `上传了 ${pendingFiles.length} 个文件`, null, fileNamesDisplay);
-
-        // Clear input
+        appendMessage('user', message);
         messageInput.value = '';
         messageInput.style.height = 'auto';
         updateMarkdownPreview();
-        pendingFiles = [];
-        renderUploadPreview();
+        const bubble = appendAndroidAnalysisBubble('正在继续 Deep 分析…');
+        await runAndroidDeepAnalysis(job.id, bubble, message);
+        loadSessions();
+        return true;
+    }
 
-        // Start streaming
+    // ==================== Send Message ====================
+    async function startChatStream(options) {
+        const opts = options || {};
+        const message = String(opts.message || opts.displayText || '').trim();
+        const fileNamesForApi = Array.isArray(opts.fileNamesForApi) ? opts.fileNamesForApi : [];
+        const fileNamesDisplay = Array.isArray(opts.fileNamesDisplay) ? opts.fileNamesDisplay : fileNamesForApi;
+        if (!currentSessionId || (!message && fileNamesForApi.length === 0)) return;
+        const isGeminiSession = currentSessionProvider() === 'gemini';
+        const retryPayload = {
+            message,
+            files: fileNamesForApi,
+            displayFiles: fileNamesDisplay,
+            webSearch: !!opts.webSearch,
+        };
+
+        if (opts.appendUser !== false) {
+            welcomeEl.style.display = 'none';
+            appendMessage('user', opts.displayText || message || `上传了 ${fileNamesForApi.length} 个文件`, null, fileNamesDisplay);
+        }
+        if (opts.clearComposer) {
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            updateMarkdownPreview();
+            pendingFiles = [];
+            renderUploadPreview();
+        }
+
         isStreaming = true;
+        activeStreamStopping = false;
+        activeStreamAbortController = new AbortController();
         setStreamingLocked(true);
-        sendBtn.disabled = true;
-        sendBtn.textContent = '回复中...';
+        setSendButtonStop();
 
         const aiRow = document.createElement('div');
         aiRow.className = 'message-row ai';
@@ -4062,7 +5867,7 @@
             contentEl.appendChild(timelineEl);
         }
         contentEl.appendChild(aiBubble);
-        aiRow.innerHTML = `<div class="message-avatar ai">${isGeminiSession ? 'G' : 'C'}</div>`;
+        aiRow.innerHTML = aiAvatarHtml();
         aiRow.appendChild(contentEl);
         chatContainer.appendChild(aiRow);
         scrollToBottom();
@@ -4079,12 +5884,14 @@
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers,
+                signal: activeStreamAbortController.signal,
                 body: JSON.stringify({
-                    message: fullMessage,
+                    message: message,
                     user_id: userId,
                     session_id: currentSessionId,
                     files: fileNamesForApi,
-                    web_search: !!webSearchEnabled
+                    web_search: !!opts.webSearch,
+                    retry_interrupted: !!opts.retryInterrupted
                 })
             });
 
@@ -4107,12 +5914,21 @@
             streamResult = await streamAssistantResponse(response, {
                 aiRow, contentEl, aiBubble, timelineEl, statusBar, streamStartTs,
             });
+            if (activeStreamStopping && !streamResult.doneReceived) {
+                markReasoningInterrupted(reasoningPanel, streamStartTs);
+                renderInterruptedNotice(contentEl, retryPayload, aiRow);
+            }
             if (streamResult.continuationToken) {
                 showOrchestrationContinueModal(streamResult.continuationToken, streamResult.orchMeta || {});
             }
         } catch (e) {
-            aiRow.remove();
-            showError(`网络错误: ${e.message}`);
+            if (activeStreamStopping || e.name === 'AbortError') {
+                markReasoningInterrupted(reasoningPanel, streamStartTs);
+                renderInterruptedNotice(contentEl, retryPayload, aiRow);
+            } else {
+                aiRow.remove();
+                showError(`网络错误: ${e.message}`);
+            }
         } finally {
             stopStreamTimer();
             if (streamResult.doneReceived && reasoningPanel && reasoningPanel.isConnected) {
@@ -4120,11 +5936,39 @@
             }
             setStreamingLocked(false);
             isStreaming = false;
-            sendBtn.disabled = false;
-            sendBtn.textContent = '发送';
+            activeStreamAbortController = null;
+            activeStreamStopping = false;
+            setSendButtonIdle();
             messageInput.focus();
             loadSessions();
         }
+    }
+
+    async function handleSend() {
+        if (isStreaming) {
+            await stopCurrentResponse();
+            return;
+        }
+        const message = messageInput.value.trim();
+        if (!message && pendingFiles.length === 0) return;
+
+        if (!currentSessionId) {
+            await createNewSession();
+            if (!currentSessionId) return;
+        }
+        if (await tryStartAndroidDeepFromMessage(message)) return;
+
+        const fileNamesForApi = pendingFiles.map(f => f.name);
+        const fileNamesDisplay = pendingFiles.map(f => f.displayName || f.name);
+        await startChatStream({
+            message,
+            displayText: message || `上传了 ${pendingFiles.length} 个文件`,
+            fileNamesForApi,
+            fileNamesDisplay,
+            appendUser: true,
+            clearComposer: true,
+            webSearch: !!webSearchEnabled,
+        });
     }
 
     function showError(msg) {
@@ -4136,6 +5980,7 @@
     }
 
     // ==================== Boot ====================
+    loadSessionSnapshot();
     loadFeatures();
     loadSessions();
     </script>

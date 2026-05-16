@@ -1,0 +1,15 @@
+{
+  "id": "antennapod-stability-playback-crash",
+  "repo": "AntennaPod/AntennaPod",
+  "bundle_id": "app-antennapod",
+  "rule_pack_id": "antennapod-generated",
+  "project_preset": "app",
+  "profiles": ["stability"],
+  "project_dirs": ["local://tests/github_apps/AntennaPod__AntennaPod"],
+  "bundle": {
+    "title": "AntennaPod",
+    "summary": "Podcast app with playback, download and media database modules.",
+    "keywords": ["AntennaPod", "de.danoeh.antennapod", "PlaybackService", "PlayerStatus", "FeedMedia"]
+  },
+  "log_path": "sample.log"
+}

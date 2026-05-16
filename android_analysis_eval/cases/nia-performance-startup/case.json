@@ -1,0 +1,15 @@
+{
+  "id": "nia-performance-startup",
+  "repo": "android/nowinandroid",
+  "bundle_id": "app-nowinandroid",
+  "rule_pack_id": "nowinandroid-generated",
+  "project_preset": "app",
+  "profiles": ["performance"],
+  "project_dirs": ["local://tests/github_apps/android__nowinandroid"],
+  "bundle": {
+    "title": "Now in Android",
+    "summary": "Google Now in Android sample app: startup, baseline profile, ForYou screen and Compose performance.",
+    "keywords": ["nowinandroid", "ForYou", "MainActivity", "baseline profile", "startup", "Compose"]
+  },
+  "log_path": "sample.log"
+}

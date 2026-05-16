@@ -5,6 +5,10 @@ logs/
 feedback/
 android_analysis_knowledge/
 temp/
+tests/github_apps/
+tests/android_eval_artifacts/
+tests/test_case*.xlsx
+-Encoding
 
 # 本地配置（仓库内用 *.example 作为模板）
 config.ini
@@ -23,6 +27,7 @@ env/
 # 杂项日志
 debug.log
 *.log
+!android_analysis_eval/cases/**/sample.log
 
 # IDE / 系统
 .idea/

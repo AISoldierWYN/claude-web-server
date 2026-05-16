@@ -1,0 +1,9 @@
+{
+  "min_rule_count": 4,
+  "min_hit_count": 1,
+  "expected_profile": "stability",
+  "expected_keywords": ["FATAL EXCEPTION", "de.danoeh.antennapod", "PlaybackService"],
+  "must_hit_rule_tags": ["stability"],
+  "must_hit_terms": ["FATAL EXCEPTION"],
+  "max_generic_term_ratio": 0.2
+}

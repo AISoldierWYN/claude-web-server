@@ -43,6 +43,21 @@ def _int(sec: str, key: str, default: int, env: Optional[str] = None, minimum: O
     return _sl.get_int(_parser, sec, key, default, env_key=env, minimum=minimum)
 
 
+def _float(sec: str, key: str, default: float, env: Optional[str] = None, minimum: Optional[float] = None, maximum: Optional[float] = None) -> float:
+    raw = _get_env_str(env) if env else None
+    if raw is None:
+        raw = _str(sec, key, str(default), env=None)
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        value = float(default)
+    if minimum is not None:
+        value = max(value, minimum)
+    if maximum is not None:
+        value = min(value, maximum)
+    return value
+
+
 # ---------- 服务 ----------
 SERVER_HOST = _str('server', 'host', '0.0.0.0', env='CLAUDE_WEB_HOST')
 SERVER_PORT = _int('server', 'port', 8080, env='CLAUDE_WEB_PORT', minimum=1)
@@ -125,6 +140,54 @@ ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS = _int(
     env='CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS',
     minimum=1,
 )
+ANDROID_ANALYSIS_PLANNER_PROMPT_BUDGET_CHARS = _int(
+    'android_analysis',
+    'planner_prompt_budget_chars',
+    80000,
+    env='CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_PROMPT_BUDGET_CHARS',
+    minimum=8000,
+)
+ANDROID_ANALYSIS_PLANNER_MAX_TREE_NODES = _int(
+    'android_analysis',
+    'planner_max_tree_nodes',
+    300,
+    env='CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_MAX_TREE_NODES',
+    minimum=20,
+)
+ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_FILES = _int(
+    'android_analysis',
+    'planner_max_sample_files',
+    24,
+    env='CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_FILES',
+    minimum=1,
+)
+ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_CHARS = _int(
+    'android_analysis',
+    'planner_max_sample_chars',
+    50000,
+    env='CLAUDE_WEB_ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_CHARS',
+    minimum=1000,
+)
+ANDROID_ANALYSIS_DEBUG_TRACE = _bool(
+    'android_analysis',
+    'debug_trace',
+    True,
+    env='CLAUDE_WEB_ANDROID_ANALYSIS_DEBUG_TRACE',
+)
+ANDROID_ANALYSIS_AUTO_DEEP_CONFIDENCE_THRESHOLD = _float(
+    'android_analysis',
+    'auto_deep_confidence_threshold',
+    0.72,
+    env='CLAUDE_WEB_ANDROID_ANALYSIS_AUTO_DEEP_CONFIDENCE_THRESHOLD',
+    minimum=0.0,
+    maximum=1.0,
+)
+ANDROID_ANALYSIS_PROJECT_KNOWLEDGE_RELATIVE_PATH = _str(
+    'android_analysis',
+    'project_knowledge_relative_path',
+    '.claude-web/android-analysis',
+    env='CLAUDE_WEB_ANDROID_ANALYSIS_PROJECT_KNOWLEDGE_RELATIVE_PATH',
+)
 
 # ---------- 上传 ----------
 UPLOAD_MAX_SIZE = _int('upload', 'max_size_mb', 100, env='CLAUDE_WEB_UPLOAD_MAX_MB', minimum=1) * 1024 * 1024
@@ -162,6 +225,12 @@ FEATURE_ANDROID_ISSUE_ANALYSIS = _bool(
     'android_issue_analysis',
     False,
     env='CLAUDE_WEB_ANDROID_ISSUE_ANALYSIS',
+)
+FEATURE_ANDROID_ISSUE_ANALYSIS_EXPERT_WORKBENCH = _bool(
+    'features',
+    'android_issue_analysis_expert_workbench',
+    False,
+    env='CLAUDE_WEB_ANDROID_ISSUE_ANALYSIS_EXPERT_WORKBENCH',
 )
 
 # ---------- 开发模式（手机端远程控制 PC 项目） ----------
@@ -318,6 +387,11 @@ def load_paths_config_file(log) -> Tuple[List[str], str, List[Dict[str, Any]]]:
             all_resources = legacy_resources + resources
             skills = discover_skills(b.get('skills') or [], search_roots, log, bid)
             claude_md_paths = discover_claude_md(search_roots)
+            rule_packs = [
+                str(x).strip()
+                for x in (b.get('rule_packs') or [])
+                if str(x).strip()
+            ] if isinstance(b.get('rule_packs'), list) else []
             bundles_out.append(
                 {
                     'id': bid,
@@ -329,6 +403,7 @@ def load_paths_config_file(log) -> Tuple[List[str], str, List[Dict[str, Any]]]:
                     'resources': all_resources,
                     'skills': skills,
                     'claude_md_paths': claude_md_paths,
+                    'rule_packs': rule_packs,
                 }
             )
 
@@ -384,9 +459,15 @@ def log_config_summary(log: logging.Logger) -> None:
     log.info('[Config] Android 问题分析: %s', FEATURE_ANDROID_ISSUE_ANALYSIS)
     if FEATURE_ANDROID_ISSUE_ANALYSIS:
         log.info('[Config] Android 问题分析知识目录: %s', ANDROID_ANALYSIS_KNOWLEDGE_DIR)
+        log.info('[Config] Android 专家工作台: %s', FEATURE_ANDROID_ISSUE_ANALYSIS_EXPERT_WORKBENCH)
+        log.info('[Config] Android 项目知识包相对路径: %s', ANDROID_ANALYSIS_PROJECT_KNOWLEDGE_RELATIVE_PATH)
         if ANDROID_ANALYSIS_7Z_PATH:
             log.info('[Config] Android RAR 7-Zip 路径: %s', ANDROID_ANALYSIS_7Z_PATH)
         log.info('[Config] Android Planner timeout: %ss', ANDROID_ANALYSIS_PLANNER_TIMEOUT_SECONDS)
+        log.info('[Config] Android Planner prompt budget: %s chars', ANDROID_ANALYSIS_PLANNER_PROMPT_BUDGET_CHARS)
+        log.info('[Config] Android Planner tree/sample caps: tree_nodes=%s, sample_files=%s, sample_chars=%s', ANDROID_ANALYSIS_PLANNER_MAX_TREE_NODES, ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_FILES, ANDROID_ANALYSIS_PLANNER_MAX_SAMPLE_CHARS)
+        log.info('[Config] Android debug trace: %s', ANDROID_ANALYSIS_DEBUG_TRACE)
+        log.info('[Config] Android auto Deep confidence threshold: %.2f', ANDROID_ANALYSIS_AUTO_DEEP_CONFIDENCE_THRESHOLD)
     if FEATURE_GEMINI_SUPPORT:
         log.info('[Config] Gemini CLI: %s', GEMINI_CLI_PATH)
         log.info('[Config] Gemini approval_mode: %s', GEMINI_APPROVAL_MODE)

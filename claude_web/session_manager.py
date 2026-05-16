@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 import shutil
 import threading
 import time
@@ -13,6 +14,9 @@ from .paths import sanitize_ip_for_path
 log = logging.getLogger('claude-web')
 
 SESSION_MEMORY_FILENAME = 'memory.md'
+USER_GLOBAL_MEMORY_FILENAME = 'AGENT.md'
+DEFAULT_SESSION_TITLE = '新对话'
+AUTO_TITLE_MAX_CHARS = 24
 DEFAULT_PROVIDER = 'claude'
 SUPPORTED_PROVIDERS = {'claude', 'gemini'}
 
@@ -37,6 +41,80 @@ def normalize_session_record(session: dict) -> dict:
     return session
 
 
+def _is_default_session_title(title: str) -> bool:
+    return not str(title or '').strip() or str(title or '').strip() == DEFAULT_SESSION_TITLE
+
+
+def derive_session_title_from_message(content: str, max_chars: int = AUTO_TITLE_MAX_CHARS) -> str:
+    """从首条用户消息里提取一个稳定的会话标题，避免额外调用模型产生费用和延迟。"""
+    text = str(content or '').replace('\r\n', '\n').replace('\r', '\n')
+    if not text.strip():
+        return DEFAULT_SESSION_TITLE
+
+    lines = []
+    in_fence = False
+    saw_code = False
+    for raw in text.split('\n'):
+        line = raw.strip()
+        if line.startswith('```') or line.startswith('~~~'):
+            in_fence = not in_fence
+            saw_code = True
+            continue
+        if in_fence:
+            continue
+        if not line:
+            continue
+        if line in {'Android 问题分析', 'Android分析'}:
+            continue
+        if line.startswith(('文件：', '文件:', '附件：', '附件:')):
+            continue
+        if re.fullmatch(r'[\s\-\|\+:=]{3,}', line):
+            continue
+
+        line = re.sub(r'!\[[^\]]*\]\([^)]+\)', '', line)
+        line = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)
+        line = re.sub(r'<[^>]+>', '', line)
+        line = re.sub(r'^[#>\-\*\+\d\.\)\s]+', '', line)
+        line = re.sub(r'[`*_~]+', '', line).strip()
+        if line:
+            lines.append(line)
+
+    candidate = ' '.join(lines).strip()
+    if not candidate and saw_code:
+        candidate = '代码片段讨论'
+    if not candidate:
+        return DEFAULT_SESSION_TITLE
+
+    candidate = re.sub(r'\s+', ' ', candidate)
+    # 去掉常见开场白，让标题更像“问题摘要”，而不是“帮我/请问”。
+    candidate = re.sub(
+        r'^(你好|您好|hi|hello)[，,。！!\s]*(请问|请|帮我|帮忙|麻烦|能不能|可以)?[，,：:\s]*',
+        '',
+        candidate,
+        flags=re.IGNORECASE,
+    )
+    candidate = re.sub(
+        r'^(请帮我|帮我看一下|帮我查一下|帮忙看一下|帮忙查一下|看一下|查一下|请问|请|帮我|帮忙|给我|麻烦|能不能|能否|可以)[，,：:\s]*',
+        '',
+        candidate,
+        flags=re.IGNORECASE,
+    )
+    candidate = re.sub(r'^(这个|一下|下)\s*', '', candidate)
+    candidate = candidate.strip(' \t\r\n,，。！？!?;；:：')
+    if not candidate:
+        return DEFAULT_SESSION_TITLE
+
+    # 先取第一句，避免把整段 Markdown 或日志说明塞进侧栏。
+    sentence_parts = [p.strip() for p in re.split(r'[。！？!?\n]+', candidate) if p.strip()]
+    if sentence_parts:
+        candidate = sentence_parts[0]
+    candidate = candidate.strip(' \t\r\n,，。！？!?;；:：')
+
+    if len(candidate) > max_chars:
+        candidate = candidate[:max_chars].rstrip(' \t\r\n,，。！？!?;；:：') + '...'
+    return candidate or DEFAULT_SESSION_TITLE
+
+
 def ensure_session_memory_file(session_dir: Path) -> Path:
     session_dir.mkdir(parents=True, exist_ok=True)
     p = session_dir / SESSION_MEMORY_FILENAME
@@ -48,6 +126,39 @@ def ensure_session_memory_file(session_dir: Path) -> Path:
             encoding='utf-8',
         )
     return p
+
+
+def ensure_user_global_memory_file(user_dir: Path) -> Path:
+    """确保同一 IP + user_id 下共享的用户级记忆文件存在。"""
+    user_dir.mkdir(parents=True, exist_ok=True)
+    p = user_dir / USER_GLOBAL_MEMORY_FILENAME
+    if not p.exists():
+        p.write_text(
+            '# 用户全局记忆（同一用户共享）\n\n'
+            '本文件由 Claude Web 服务为同一 IP + user_id 创建，位于用户根目录。'
+            '它会在每个会话开始前同步到当前会话工作目录下的 AGENT.md，'
+            '用于保存跨对话共享的用户偏好、称呼、长期项目习惯等。\n\n'
+            '使用约定：\n'
+            '- 需要跨所有对话记住的信息写入本文件。\n'
+            '- 只属于当前对话的信息写入 memory.md。\n'
+            '- 不要写入 Claude/Codex 全局 HOME 下的记忆或配置文件。\n',
+            encoding='utf-8',
+        )
+    return p
+
+
+def ensure_session_global_memory_file(session_dir: Path) -> Path:
+    """确保当前会话目录内有一份用户级 AGENT.md 副本供 CLI 读写。"""
+    session_dir.mkdir(parents=True, exist_ok=True)
+    user_dir = session_dir.parent
+    global_path = ensure_user_global_memory_file(user_dir)
+    local_path = session_dir / USER_GLOBAL_MEMORY_FILENAME
+    if not local_path.exists():
+        try:
+            shutil.copy2(global_path, local_path)
+        except OSError:
+            local_path.write_text(global_path.read_text(encoding='utf-8', errors='replace'), encoding='utf-8')
+    return local_path
 
 
 class SessionManager:
@@ -91,11 +202,58 @@ class SessionManager:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
+    def _apply_auto_title_locked(
+        self,
+        sessions_file: Path,
+        sessions: list,
+        session_id: str,
+        content: str,
+        *,
+        touch_updated_at: bool,
+    ) -> bool:
+        title = derive_session_title_from_message(content)
+        if title == DEFAULT_SESSION_TITLE:
+            return False
+        for s in sessions:
+            if isinstance(s, dict) and s.get('id') == session_id and _is_default_session_title(s.get('title')):
+                s['title'] = title
+                if touch_updated_at:
+                    s['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
+                self._write_json(sessions_file, sessions)
+                log.info('[Session] 自动生成会话标题: session_id=%s, title=%s', session_id, title)
+                return True
+        return False
+
+    def _first_user_message_content(self, user_dir: Path, session_id: str) -> str:
+        messages = self._read_json(user_dir / session_id / 'messages.json', []) or []
+        fallback = ''
+        for msg in messages:
+            if isinstance(msg, dict) and msg.get('role') == 'user':
+                content = str(msg.get('content') or '')
+                if not fallback:
+                    fallback = content
+                if derive_session_title_from_message(content) != DEFAULT_SESSION_TITLE:
+                    return content
+        return fallback
+
     def list_sessions(self, client_ip: str, user_id: str) -> list:
         user_dir = self._get_user_dir(client_ip, user_id)
         sessions_file = user_dir / 'sessions.json'
-        sessions = self._read_json(sessions_file, []) or []
-        sessions = [normalize_session_record(s) for s in sessions if isinstance(s, dict)]
+        lock = self._get_user_lock(client_ip, user_id)
+        with lock:
+            raw_sessions = self._read_json(sessions_file, []) or []
+            sessions = [normalize_session_record(s) for s in raw_sessions if isinstance(s, dict)]
+            changed = len(sessions) != len(raw_sessions)
+            for session in sessions:
+                if _is_default_session_title(session.get('title')):
+                    first_message = self._first_user_message_content(user_dir, session.get('id', ''))
+                    if first_message:
+                        title = derive_session_title_from_message(first_message)
+                        if title != DEFAULT_SESSION_TITLE:
+                            session['title'] = title
+                            changed = True
+            if changed:
+                self._write_json(sessions_file, sessions)
         if sessions:
             sessions.sort(key=lambda s: s.get('updated_at', ''), reverse=True)
         return sessions if sessions else []
@@ -114,7 +272,7 @@ class SessionManager:
                 'provider': provider,
                 'claude_session_id': None,
                 'provider_session_ids': {},
-                'title': '新对话',
+                'title': DEFAULT_SESSION_TITLE,
                 'created_at': now,
                 'updated_at': now,
             }
@@ -125,6 +283,8 @@ class SessionManager:
             self._write_json(msg_dir / 'messages.json', [])
             (msg_dir / 'uploads').mkdir(exist_ok=True)
             ensure_session_memory_file(msg_dir)
+            ensure_user_global_memory_file(user_dir)
+            ensure_session_global_memory_file(msg_dir)
 
         log.info(f"[Session] 创建会话: user={user_id}, session_id={session['id']}")
         return session
@@ -207,7 +367,7 @@ class SessionManager:
         return result if result else []
 
     def add_message(self, client_ip: str, user_id: str, session_id: str, role: str, content: str,
-                    thinking: str = None, files: list = None):
+                    thinking: str = None, files: list = None, metadata: dict = None):
         msg_file = self._get_user_dir(client_ip, user_id) / session_id / 'messages.json'
         lock = self._get_user_lock(client_ip, user_id)
 
@@ -222,11 +382,96 @@ class SessionManager:
                 msg['thinking'] = thinking
             if files:
                 msg['files'] = files
+            if isinstance(metadata, dict) and metadata:
+                msg['metadata'] = metadata
             messages.append(msg)
             self._write_json(msg_file, messages)
+            if role == 'user':
+                user_dir = self._get_user_dir(client_ip, user_id)
+                sessions_file = user_dir / 'sessions.json'
+                sessions = self._read_json(sessions_file, []) or []
+                self._apply_auto_title_locked(
+                    sessions_file,
+                    sessions,
+                    session_id,
+                    content,
+                    touch_updated_at=True,
+                )
+
+    def remove_last_assistant_message(
+        self,
+        client_ip: str,
+        user_id: str,
+        session_id: str,
+        *,
+        interrupted_only: bool = True,
+    ) -> dict | None:
+        """删除最后一条助手消息；默认只删除被标记为 interrupted 的未完成回复。"""
+        msg_file = self._get_user_dir(client_ip, user_id) / session_id / 'messages.json'
+        lock = self._get_user_lock(client_ip, user_id)
+        with lock:
+            messages = self._read_json(msg_file, []) or []
+            for idx in range(len(messages) - 1, -1, -1):
+                msg = messages[idx]
+                if not isinstance(msg, dict) or msg.get('role') not in {'assistant', 'ai'}:
+                    continue
+                meta = msg.get('metadata') if isinstance(msg.get('metadata'), dict) else {}
+                if interrupted_only and not meta.get('interrupted'):
+                    return None
+                removed = messages.pop(idx)
+                self._write_json(msg_file, messages)
+                return removed
+        return None
 
     def get_session_dir(self, client_ip: str, user_id: str, session_id: str) -> Path:
         return self._get_user_dir(client_ip, user_id) / session_id
+
+    def sync_user_global_memory_to_session(self, client_ip: str, user_id: str, session_id: str) -> Path:
+        """把用户级 AGENT.md 同步到当前会话目录，供本轮 CLI 默认加载。"""
+        user_dir = self._get_user_dir(client_ip, user_id)
+        session_dir = user_dir / session_id
+        lock = self._get_user_lock(client_ip, user_id)
+        with lock:
+            global_path = ensure_user_global_memory_file(user_dir)
+            session_dir.mkdir(parents=True, exist_ok=True)
+            local_path = session_dir / USER_GLOBAL_MEMORY_FILENAME
+            try:
+                if local_path.exists():
+                    if local_path.stat().st_mtime > global_path.stat().st_mtime:
+                        # 若上次异常退出导致会话副本更新但未回写，先保留较新的内容。
+                        shutil.copy2(local_path, global_path)
+                    else:
+                        shutil.copy2(global_path, local_path)
+                else:
+                    shutil.copy2(global_path, local_path)
+            except OSError as exc:
+                log.warning(
+                    '[Memory] sync user AGENT.md to session failed: user=%s session=%s error=%s',
+                    user_id,
+                    session_id,
+                    exc,
+                )
+            return local_path
+
+    def sync_session_global_memory_to_user(self, client_ip: str, user_id: str, session_id: str) -> Path:
+        """把当前会话内被 CLI 修改过的 AGENT.md 回写到用户根目录。"""
+        user_dir = self._get_user_dir(client_ip, user_id)
+        session_dir = user_dir / session_id
+        lock = self._get_user_lock(client_ip, user_id)
+        with lock:
+            global_path = ensure_user_global_memory_file(user_dir)
+            local_path = session_dir / USER_GLOBAL_MEMORY_FILENAME
+            if local_path.exists():
+                try:
+                    shutil.copy2(local_path, global_path)
+                except OSError as exc:
+                    log.warning(
+                        '[Memory] sync session AGENT.md to user failed: user=%s session=%s error=%s',
+                        user_id,
+                        session_id,
+                        exc,
+                    )
+            return global_path
 
     def get_upload_dir(self, client_ip: str, user_id: str, session_id: str) -> Path:
         upload_dir = self._get_user_dir(client_ip, user_id) / session_id / 'uploads'
