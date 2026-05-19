@@ -57,6 +57,10 @@ assertIncludes('overflow: visible;', 'mobile input popup should not be clipped')
 assertIncludes('max-height: min(42vh, 260px);', 'mobile input plus menu height guard');
 assertIncludes('function buildExportHtml', 'HTML export builder');
 assertIncludes('session-menu', 'session action menu');
+assertIncludes('toggleSessionStar', 'session star toggle');
+assertIncludes('/star', 'session star endpoint');
+assertIncludes('Starred', 'starred sessions section');
+assertIncludes('Unstar', 'unstar menu item');
 assertIncludes('safe-area-inset-top', 'mobile safe-area top support');
 assertIncludes('safe-area-inset-bottom', 'mobile safe-area bottom support');
 assertIncludes('100dvh', 'mobile dynamic viewport support');

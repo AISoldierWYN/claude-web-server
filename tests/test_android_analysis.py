@@ -17,6 +17,7 @@ from claude_web.android_analysis.code_scope import collect_code_context, resolve
 from claude_web.android_analysis.deep_analysis import build_deep_evidence_pack, generate_deep_report
 from claude_web.android_analysis.evidence import generate_first_evidence_pack
 from claude_web.android_analysis.evidence_selector import run_evidence_template_selection
+from claude_web.android_analysis.evidence_template_matcher import run_evidence_template_matching
 from claude_web.android_analysis.expert_knowledge import (
     build_expert_knowledge_cache,
     load_project_knowledge_dir,
@@ -39,6 +40,7 @@ from claude_web.android_analysis.evidence_template_pipeline import (
     validate_generated_templates,
 )
 from claude_web.android_analysis.jobs import AndroidAnalysisJobStore
+from claude_web.android_analysis.log_type_identifier import identify_log_types
 from claude_web.android_analysis.models import AndroidAnalysisError, ExtractionLimits, PlannerPromptLimits
 from claude_web.android_analysis.parameter_resolver import run_parameter_resolution
 from claude_web.android_analysis.planner import _collect_stream_json, _emit_stream_trace, parse_planner_json, run_planner, validate_planner_result
@@ -294,6 +296,118 @@ class AndroidAnalysisPhaseOneTests(unittest.TestCase):
         self.assertIn('DeviceLockSchedulerImpl', summary['details'][0]['evidence_templates'][0]['regex'])
         self.assertEqual(summary['details'][0]['experience_logs'][0]['id'], 'rdm-empty-eula')
         self.assertEqual(summary['error_count'], 0)
+
+    def test_log_type_identifier_uses_project_patterns_and_content_samples(self):
+        project, _ = self.make_expert_knowledge_project()
+        cache = build_expert_knowledge_cache(
+            [{'id': 'android-rdm', 'title': 'RDM', 'paths': [str(project)]}],
+            self.root / 'android_analysis_knowledge',
+        )
+        extracted = self.root / 'extracted'
+        artifacts = self.root / 'artifacts-log-types'
+        (extracted / 'logs').mkdir(parents=True)
+        (extracted / 'logs' / 'rdm_main.log').write_text(
+            '05-16 12:00:00.000  1000  1000 I DeviceLockSchedulerImpl: has eula:false\n',
+            encoding='utf-8',
+        )
+        (extracted / 'notes' / 'plain.txt').parent.mkdir(parents=True)
+        (extracted / 'notes' / 'plain.txt').write_text('ordinary note without Android log markers\n', encoding='utf-8')
+        profile = profile_extracted_tree(extracted, artifacts)
+        traces = []
+
+        result = identify_log_types(
+            extracted,
+            artifacts,
+            cache,
+            manifest=profile['manifest'],
+            debug_trace=lambda stage, event, data: traces.append((stage, event, data)),
+        )
+
+        by_path = {item['path']: item for item in result['files']}
+        rdm_file = by_path['logs/rdm_main.log']
+        plain_file = by_path['notes/plain.txt']
+        self.assertIn('rdm_business_log', rdm_file['log_types'])
+        self.assertTrue(any(match['match_mode'] == 'path_and_content' for match in rdm_file['matches']))
+        self.assertTrue(plain_file['unrecognized'])
+        self.assertTrue((artifacts / 'log_type_manifest.json').is_file())
+        self.assertTrue((artifacts / 'log_type_manifest_metrics.json').is_file())
+        self.assertTrue(any(event == 'log_type_manifest_result' for _, event, _ in traces))
+
+    def test_evidence_template_matcher_updates_timeline_and_first_evidence_pack(self):
+        project, _ = self.make_expert_knowledge_project()
+        cache = build_expert_knowledge_cache(
+            [{'id': 'android-rdm', 'title': 'RDM', 'paths': [str(project)]}],
+            self.root / 'android_analysis_knowledge',
+        )
+        extracted = self.root / 'extracted-evidence-template-match'
+        artifacts = self.root / 'artifacts-evidence-template-match'
+        (extracted / 'logs').mkdir(parents=True)
+        (extracted / 'logs' / 'rdm_main.log').write_text(
+            '05-16 12:00:00.000  1000  1000 I DeviceLockSchedulerImpl: has eula:false\n',
+            encoding='utf-8',
+        )
+        profile = profile_extracted_tree(extracted, artifacts)
+        identify_log_types(extracted, artifacts, cache, manifest=profile['manifest'])
+        classification = {
+            'module_id': 'android-rdm',
+            'module_confidence': 0.9,
+            'submodule_id': 'activation_eula',
+            'submodule_confidence': 0.86,
+            'profile': 'functional',
+            'top_candidates': [
+                {
+                    'module_id': 'android-rdm',
+                    'submodule_id': 'activation_eula',
+                    'profile': 'functional',
+                    'score': 0.86,
+                    'reason': 'RDM activation EULA issue',
+                }
+            ],
+        }
+        run_evidence_template_selection(
+            artifacts,
+            cache,
+            classification=classification,
+            parameter_resolution={'resolved_parameters': {'package_name': ['com.hihonor.realtimedevicemanager']}},
+        )
+        (artifacts / 'planner_result.json').write_text(
+            json.dumps(
+                {
+                    'issue_types': ['android_business_spec'],
+                    'candidate_bundle_ids': ['android-rdm'],
+                    'candidate_keywords': ['EULA', 'has eula:false'],
+                    'confidence': 0.7,
+                }
+            ),
+            encoding='utf-8',
+        )
+        (artifacts / 'matched_rules.json').write_text(
+            json.dumps({'version': 1, 'rule_pack_count': 0, 'event_count': 0, 'events': []}),
+            encoding='utf-8',
+        )
+        traces = []
+
+        result = run_evidence_template_matching(
+            extracted,
+            artifacts,
+            debug_trace=lambda stage, event, data: traces.append((stage, event, data)),
+        )
+        evidence = generate_first_evidence_pack(artifacts, question='RDM EULA missing')
+        matched = json.loads((artifacts / 'matched_rules.json').read_text(encoding='utf-8'))
+        timeline = json.loads((artifacts / 'annotated_evidence_timeline.json').read_text(encoding='utf-8'))
+        timeline_md = (artifacts / 'annotated_evidence_timeline.md').read_text(encoding='utf-8')
+        pack = (artifacts / 'first_evidence_pack.md').read_text(encoding='utf-8')
+
+        self.assertEqual(result['stats']['matched_event_count'], 1)
+        self.assertEqual(timeline['stats']['matched_event_count'], 1)
+        self.assertEqual(matched['event_count'], 1)
+        self.assertEqual(evidence['event_count'], 1)
+        self.assertEqual(matched['events'][0]['source_type'], 'evidence_template')
+        self.assertEqual(matched['events'][0]['deep_hints']['exact_logs'][0]['logger'], 'rdm_business_log')
+        self.assertIn('Check-in result does not contain EULA configuration.', timeline_md)
+        self.assertIn('DeviceLockSchedulerImpl', pack)
+        self.assertIn('DeviceLockSchedulerImpl#processCheckInResult', pack)
+        self.assertTrue(any(event == 'single_line_evidence_search_result' for _, event, _ in traces))
 
     def test_expert_knowledge_reports_schema_errors_without_crashing(self):
         project = self.root / 'broken-project'

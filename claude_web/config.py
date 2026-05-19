@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -58,6 +59,37 @@ def _float(sec: str, key: str, default: float, env: Optional[str] = None, minimu
     return value
 
 
+_ENV_KEY_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+
+
+def _env_section(*sections: str) -> Dict[str, str]:
+    out: Dict[str, str] = {}
+    for section in sections:
+        if not _parser.has_section(section):
+            continue
+        for raw_key, raw_value in _parser.items(section):
+            key = str(raw_key or '').strip().upper()
+            value = str(raw_value or '').strip()
+            if not key or not value or not _ENV_KEY_RE.match(key):
+                continue
+            out[key] = value
+    return out
+
+
+def _list(sec: str, key: str, default: Optional[List[str]] = None, env: Optional[str] = None) -> List[str]:
+    raw = _get_env_str(env) if env else None
+    if raw is None:
+        raw = _str(sec, key, '', env=None)
+    values: List[str] = []
+    for item in re.split(r'[,;\r\n]+', raw or ''):
+        item = item.strip()
+        if item and item not in values:
+            values.append(item)
+    if values:
+        return values
+    return list(default or [])
+
+
 # ---------- 服务 ----------
 SERVER_HOST = _str('server', 'host', '0.0.0.0', env='CLAUDE_WEB_HOST')
 SERVER_PORT = _int('server', 'port', 8080, env='CLAUDE_WEB_PORT', minimum=1)
@@ -80,6 +112,14 @@ _explicit = _sl.find_claude_cli_explicit(CLAUDE_CLI_PATH_RAW)
 CLAUDE_CLI_PATH = _explicit if _explicit else _sl.find_claude_cli_auto()
 
 CLAUDE_MODEL = _str('claude', 'model', '', env='CLAUDE_WEB_MODEL')
+CLAUDE_MODEL_OPTIONS = _list(
+    'claude',
+    'model_options',
+    ['glm-5', 'tc-code-latest', 'hunyuan-2.0-thinking'],
+    env='CLAUDE_WEB_MODEL_OPTIONS',
+)
+if CLAUDE_MODEL and CLAUDE_MODEL not in CLAUDE_MODEL_OPTIONS:
+    CLAUDE_MODEL_OPTIONS.insert(0, CLAUDE_MODEL)
 CLAUDE_WEB_PERMISSION_MODE = _str(
     'claude', 'permission_mode', 'bypassPermissions', env='CLAUDE_WEB_PERMISSION_MODE'
 )
@@ -92,6 +132,7 @@ CLAUDE_WEB_ORCH_MAX_ROUNDS = _int('claude', 'orch_max_rounds', 20, env='CLAUDE_W
 CLAUDE_EXTRA_CLI_ARGS = _sl.split_extra_cli_args(
     _str('claude', 'extra_args', '', env='CLAUDE_WEB_EXTRA_CLI_ARGS')
 )
+CLAUDE_CHILD_ENV = _env_section('claude_env', 'claude.env')
 
 # ---------- Gemini CLI（可选，默认关闭） ----------
 GEMINI_CLI_PATH_RAW = _str('gemini', 'cli_path', '', env='CLAUDE_WEB_GEMINI_CLI_PATH')
@@ -449,6 +490,10 @@ def log_config_summary(log: logging.Logger) -> None:
     log.info('[Config] Claude CLI: %s', CLAUDE_CLI_PATH)
     if CLAUDE_MODEL:
         log.info('[Config] Claude --model: %s', CLAUDE_MODEL)
+    if CLAUDE_MODEL_OPTIONS:
+        log.info('[Config] Claude 可选模型: %s', CLAUDE_MODEL_OPTIONS)
+    if CLAUDE_CHILD_ENV:
+        log.info('[Config] Claude 子进程 env 覆盖: %s 个键（不打印值）: %s', len(CLAUDE_CHILD_ENV), sorted(CLAUDE_CHILD_ENV.keys()))
     if CLAUDE_EXTRA_CLI_ARGS:
         log.info('[Config] Claude 附加参数: %s', CLAUDE_EXTRA_CLI_ARGS)
     log.info('[Config] 会话 fork Claude HOME（共享父配置但隔离全局记忆）: %s', CLAUDE_WEB_FORK_CLAUDE_HOME)

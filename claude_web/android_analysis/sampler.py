@@ -326,9 +326,9 @@ def _path_priority_terms(question: str, keywords: List[str]) -> List[str]:
             terms.add(kw)
     for token in re.findall(r'[a-z0-9_.$:-]{3,}|[\u4e00-\u9fff]{2,}', text):
         terms.add(token)
-    if any(word in text for word in ('?', '??', '??', 'lock', 'unlock')):
+    if any(word in text for word in ('锁', '锁机', '解锁', 'lock', 'unlock')):
         terms.update({'lock', 'unlock', 'device_lock', 'devicelock', 'policy', 'devicepolicy'})
-    if any(word in text for word in ('??', '????', 'device policy', 'policy')):
+    if any(word in text for word in ('策略', '设备策略', 'device policy', 'policy')):
         terms.update({'policy', 'devicepolicy', 'device_policy', 'settings'})
     return sorted(terms, key=len, reverse=True)
 

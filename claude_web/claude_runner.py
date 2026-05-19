@@ -879,8 +879,6 @@ def stream_claude_output(
 
     if claude_session_id:
         cmd.extend(['--resume', claude_session_id])
-    else:
-        cmd.extend(['--session-id', session_id])
 
     add_dirs = []
     seen = set()
@@ -1018,6 +1016,12 @@ def stream_claude_output(
     if 'env' not in popen_kw:
         popen_kw['env'] = os.environ.copy()
     popen_kw['env'].setdefault('PYTHONIOENCODING', 'utf-8')
+    config_child_env = getattr(config, 'CLAUDE_CHILD_ENV', {}) or {}
+    if config_child_env:
+        for k, v in config_child_env.items():
+            if k:
+                popen_kw['env'][str(k)] = str(v)
+        log.info('[CLI] 已应用 config.ini Claude env 覆盖（不打印值）: %s', sorted(str(k) for k in config_child_env.keys()))
     if child_env_extra:
         for k, v in child_env_extra.items():
             if k:

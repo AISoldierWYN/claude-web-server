@@ -17,6 +17,7 @@ from .android_analysis.debug_trace import AndroidAnalysisDebugTracer
 from .android_analysis.deep_analysis import build_deep_evidence_pack, generate_deep_report
 from .android_analysis.evidence import generate_first_evidence_pack
 from .android_analysis.evidence_selector import run_evidence_template_selection
+from .android_analysis.evidence_template_matcher import run_evidence_template_matching
 from .android_analysis.evidence_template_pipeline import run_evidence_template_generation_pipeline
 from .android_analysis.expert_knowledge import build_expert_knowledge_cache, summarize_expert_knowledge_cache
 from .android_analysis.expert_knowledge_builder import (
@@ -26,6 +27,7 @@ from .android_analysis.expert_knowledge_builder import (
 )
 from .android_analysis.jobs import AndroidAnalysisJobStore
 from .android_analysis.knowledge_store import list_bundles as list_android_analysis_bundles
+from .android_analysis.log_type_identifier import identify_log_types
 from .android_analysis.models import AndroidAnalysisError, PlannerPromptLimits
 from .android_analysis.parameter_resolver import run_parameter_resolution
 from .android_analysis.planner import run_planner
@@ -254,10 +256,38 @@ def register_routes(app, sm: SessionManager):
                     out.append(p)
         return out
 
-    def _v2_orch_kwargs(rt: dict) -> dict:
+    def _claude_model_options() -> list:
+        options = []
+        for model in getattr(config, 'CLAUDE_MODEL_OPTIONS', []) or []:
+            model = str(model or '').strip()
+            if model and model not in options:
+                options.append(model)
+        default_model = str(getattr(config, 'CLAUDE_MODEL', '') or '').strip()
+        if default_model and default_model not in options:
+            options.insert(0, default_model)
+        return options
+
+    def _default_claude_model() -> str:
+        configured = str(getattr(config, 'CLAUDE_MODEL', '') or '').strip()
+        if configured:
+            return configured
+        options = _claude_model_options()
+        return options[0] if options else ''
+
+    def _normalize_claude_model(model: str) -> str:
+        model = str(model or '').strip()
+        if not model:
+            return ''
+        return model if model in _claude_model_options() else ''
+
+    def _session_claude_model(session: dict) -> str:
+        selected = _normalize_claude_model((session or {}).get('model') or '')
+        return selected or _default_claude_model()
+
+    def _v2_orch_kwargs(rt: dict, session_model: str = '') -> dict:
         return {
             'child_env_extra': rt.get('child_env_extra'),
-            'model_override': rt.get('model_override'),
+            'model_override': session_model or rt.get('model_override'),
         }
 
     def _set_memory_line(existing: str, key: str, value: str) -> str:
@@ -419,6 +449,8 @@ def register_routes(app, sm: SessionManager):
         return {
             'classification_input_chars_estimate': read_len('classification_prompt.md'),
             'selected_evidence_templates_chars_estimate': read_len('selected_evidence_templates.json'),
+            'log_type_manifest_chars_estimate': read_len('log_type_manifest.json'),
+            'annotated_evidence_timeline_chars_estimate': read_len('annotated_evidence_timeline.md') + read_len('annotated_evidence_timeline.json'),
             'planner_input_chars_estimate': read_len('file_manifest.json') + read_len('file_tree.json') + read_len('file_samples.json'),
             'first_report_input_chars_estimate': read_len('first_evidence_pack.md') + read_len('matched_rules.json') + read_len('planner_result.json') + read_len('case_cards.json'),
             'deep_report_input_chars_estimate': read_len('deep_evidence_pack.md') + read_len('matched_rules.json') + read_len('planner_result.json') + read_len('final_report.md'),
@@ -621,10 +653,13 @@ def register_routes(app, sm: SessionManager):
             'selecting_evidence_templates': '证据模板选择',
             'extracting': '解压日志包',
             'profiling': '扫描文件树',
+            'identifying_log_types': '日志类型识别',
             'sampling': '初始采样日志',
             'planning': 'Planner 路由',
             'sampling_refined': 'Planner 定向采样',
             'matching_rules': '规则匹配',
+            'searching_evidence_templates': '单行证据搜索',
+            'matching_xml_state': 'XML 状态证据搜索',
             'building_evidence': '构建 Evidence Pack',
             'recalling_cases': '案例召回',
             'generating_report': '生成首轮报告',
@@ -671,6 +706,10 @@ def register_routes(app, sm: SessionManager):
             'parameter_resolution_result': '参数解析结果',
             'evidence_template_selection_input': '证据模板选择输入',
             'evidence_template_selection_result': '证据模板选择结果',
+            'log_type_identification_input': '日志类型识别输入',
+            'log_type_manifest_result': '日志类型识别结果',
+            'single_line_evidence_search_input': '单行证据搜索输入',
+            'single_line_evidence_search_result': '单行证据搜索结果',
             'archive_extracted': '解压结果',
             'profile_result': '文件树扫描结果',
             'keyword_plan': '采样关键词计划',
@@ -729,6 +768,14 @@ def register_routes(app, sm: SessionManager):
         if event == 'evidence_template_selection_result':
             counts = data.get('counts') or {}
             return f"模板 {counts.get('template_count', 0)} 条，XML 状态模板 {counts.get('xml_state_template_count', 0)} 条，待参数 {counts.get('needs_parameters_count', 0)} 条"
+        if event == 'log_type_identification_input':
+            return f"日志类型 {data.get('available_log_type_count', 0)} 个，文件 {data.get('manifest_file_count', 0)} 个"
+        if event == 'log_type_manifest_result':
+            return f"识别文件 {data.get('matched_file_count', 0)} 个，未识别 {data.get('unrecognized_file_count', 0)} 个"
+        if event == 'single_line_evidence_search_input':
+            return f"模板 {data.get('template_count', 0)} 条，日志类型 {data.get('log_type_count', 0)} 个"
+        if event == 'single_line_evidence_search_result':
+            return f"命中 {data.get('matched_event_count', 0)} 条，搜索文件 {data.get('searched_file_count', 0)} 个，跳过模板 {data.get('skipped_template_count', 0)} 条"
         if event == 'profile_result':
             return f"文件 {data.get('file_count', 0)} 个，总大小 {data.get('total_size', 0)} 字节"
         if event == 'keyword_plan':
@@ -785,10 +832,13 @@ def register_routes(app, sm: SessionManager):
             'selecting_evidence_templates',
             'extracting',
             'profiling',
+            'identifying_log_types',
             'sampling',
             'planning',
             'sampling_refined',
             'matching_rules',
+            'searching_evidence_templates',
+            'matching_xml_state',
             'building_evidence',
             'recalling_cases',
             'generating_report',
@@ -1290,6 +1340,31 @@ def register_routes(app, sm: SessionManager):
                 },
             )
 
+            store.update_job(job_id, status='identifying_log_types')
+            log_type_manifest = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'identifying_log_types',
+                lambda: identify_log_types(
+                    store.extracted_dir(job_id),
+                    store.artifacts_dir(job_id),
+                    app.config.get(ANDROID_EXPERT_KNOWLEDGE_KEY),
+                    manifest=profile.get('manifest') or {},
+                    debug_trace=tracer.trace,
+                ),
+            )
+            store.append_event(
+                job_id,
+                'log_types_identified',
+                {
+                    'log_type_count': log_type_manifest.get('log_type_count', 0),
+                    'matched_file_count': log_type_manifest.get('matched_file_count', 0),
+                    'unrecognized_file_count': log_type_manifest.get('unrecognized_file_count', 0),
+                    'by_log_type': (log_type_manifest.get('stats') or {}).get('by_log_type') or {},
+                },
+            )
+
             store.update_job(job_id, status='sampling')
             samples = _timed_android_stage(
                 store,
@@ -1381,6 +1456,29 @@ def register_routes(app, sm: SessionManager):
                 {
                     'rule_pack_count': matched.get('rule_pack_count', 0),
                     'event_count': matched.get('event_count', 0),
+                },
+            )
+            store.update_job(job_id, status='searching_evidence_templates')
+            evidence_template_matches = _timed_android_stage(
+                store,
+                job_id,
+                timings,
+                'searching_evidence_templates',
+                lambda: run_evidence_template_matching(
+                    store.extracted_dir(job_id),
+                    store.artifacts_dir(job_id),
+                    debug_trace=tracer.trace,
+                ),
+            )
+            if evidence_template_matches.get('stats', {}).get('matched_event_count', 0):
+                matched = json.loads((store.artifacts_dir(job_id) / 'matched_rules.json').read_text(encoding='utf-8'))
+            store.append_event(
+                job_id,
+                'evidence_templates_matched',
+                {
+                    'template_count': (evidence_template_matches.get('stats') or {}).get('template_count', 0),
+                    'searchable_template_count': (evidence_template_matches.get('stats') or {}).get('searchable_template_count', 0),
+                    'event_count': (evidence_template_matches.get('stats') or {}).get('matched_event_count', 0),
                 },
             )
             store.update_job(job_id, status='matching_xml_state')
@@ -1510,6 +1608,10 @@ def register_routes(app, sm: SessionManager):
                 'selected_evidence_templates_metrics': 'artifacts/selected_evidence_templates_metrics.json',
                 'file_manifest': 'artifacts/file_manifest.json',
                 'file_tree': 'artifacts/file_tree.json',
+                'log_type_manifest': 'artifacts/log_type_manifest.json',
+                'log_type_manifest_metrics': 'artifacts/log_type_manifest_metrics.json',
+                'annotated_evidence_timeline': 'artifacts/annotated_evidence_timeline.json',
+                'annotated_evidence_timeline_markdown': 'artifacts/annotated_evidence_timeline.md',
                 'file_samples': 'artifacts/file_samples.json',
                 'planner_result': 'artifacts/planner_result.json',
                 'matched_rules': 'artifacts/matched_rules.json',
@@ -1640,6 +1742,8 @@ def register_routes(app, sm: SessionManager):
                 'mobile_remote_development': _dev_enabled(),
                 'gemini_support': bool(config.FEATURE_GEMINI_SUPPORT),
                 'gemini_configured': bool(config.FEATURE_GEMINI_SUPPORT and (config.GEMINI_CLI_PATH or '').strip()),
+                'claude_model': _default_claude_model(),
+                'claude_model_options': _claude_model_options(),
                 'android_issue_analysis': bool(config.FEATURE_ANDROID_ISSUE_ANALYSIS),
                 'android_issue_analysis_expert_workbench': bool(
                     getattr(config, 'FEATURE_ANDROID_ISSUE_ANALYSIS_EXPERT_WORKBENCH', False)
@@ -2447,6 +2551,8 @@ def register_routes(app, sm: SessionManager):
         provider = normalize_provider(session.get('provider'))
         if provider == 'gemini' and not config.FEATURE_GEMINI_SUPPORT:
             return jsonify({'error': 'Gemini support disabled', 'code': 'gemini_disabled'}), 400
+        session_model = _session_claude_model(session) if provider == 'claude' else ''
+        model_handoff_pending = bool(session.get('model_handoff_pending')) if provider == 'claude' else False
 
         dev_meta, dev_project = _attached_dev_project(client_ip, user_id, session_id)
         if dev_meta and not dev_project:
@@ -2465,6 +2571,9 @@ def register_routes(app, sm: SessionManager):
             return jsonify({'error': 'Tavily API key 未配置', 'code': 'tavily_config_required'}), 400
 
         provider_sid = sm.get_provider_session_id(client_ip, user_id, session_id, provider)
+        if provider == 'claude' and provider_sid == session_id:
+            provider_sid = None
+            sm.clear_provider_session_id(client_ip, user_id, session_id, provider)
         prior_messages = sm.get_messages(client_ip, user_id, session_id)
         history_for_prompt = prior_messages
         removed_interrupted = None
@@ -2490,15 +2599,9 @@ def register_routes(app, sm: SessionManager):
                 session_id,
                 bool(removed_interrupted),
             )
-        if provider == 'claude' and not provider_sid and not retry_interrupted:
-            if any(m.get('role') == 'assistant' for m in prior_messages):
-                provider_sid = session_id
-                sm.update_provider_session_id(client_ip, user_id, session_id, provider, provider_sid)
-                log.info(f'[Chat] 补全 claude_session_id 用于 --resume: {provider_sid}')
-
         log.info(
-            '[Chat] user=%s, session=%s, provider=%s, provider_sid=%s, msg_len=%s',
-            user_id, session_id, provider, provider_sid, len(message),
+            '[Chat] user=%s, session=%s, provider=%s, model=%s, provider_sid=%s, msg_len=%s',
+            user_id, session_id, provider, session_model or '-', provider_sid, len(message),
         )
 
         uploaded_files = data.get('files', [])
@@ -2670,7 +2773,7 @@ def register_routes(app, sm: SessionManager):
                         dangerously_skip_permissions_override=dev_dangerous_skip,
                         development_context=dev_context,
                         stream_output_func=_provider_runner(provider),
-                        **_v2_orch_kwargs(rt),
+                        **_v2_orch_kwargs(rt, session_model=session_model),
                     )
                 )
             finally:
@@ -2709,6 +2812,8 @@ def register_routes(app, sm: SessionManager):
         provider = normalize_provider(sess.get('provider'))
         if provider == 'gemini' and not config.FEATURE_GEMINI_SUPPORT:
             return jsonify({'error': 'Gemini support disabled', 'code': 'gemini_disabled'}), 400
+        session_model = _session_claude_model(sess) if provider == 'claude' else ''
+        model_handoff_pending = bool(sess.get('model_handoff_pending')) if provider == 'claude' else False
 
         rt = {}
         if provider == 'claude':
@@ -2729,7 +2834,12 @@ def register_routes(app, sm: SessionManager):
         session_workspace.mkdir(parents=True, exist_ok=True)
         sm.sync_user_global_memory_to_session(client_ip, user_id, session_id)
 
-        provider_sid = (state or {}).get('claude_session_id') or sm.get_provider_session_id(client_ip, user_id, session_id, provider) or session_id
+        provider_sid = (state or {}).get('claude_session_id') or sm.get_provider_session_id(client_ip, user_id, session_id, provider)
+        if provider == 'claude' and provider_sid == session_id:
+            provider_sid = None
+            sm.clear_provider_session_id(client_ip, user_id, session_id, provider)
+        if provider != 'claude' and not provider_sid and not model_handoff_pending:
+            provider_sid = session_id
         mounted_ids = (state or {}).get('mounted_bundle_ids') or []
         skill_bundles, selected_bundles = _select_skill_bundles('', [], bundle_ids=mounted_ids)
         readonly_dirs = _readonly() + _bundle_paths(selected_bundles)
@@ -2836,7 +2946,7 @@ def register_routes(app, sm: SessionManager):
                             dangerously_skip_permissions_override=dev_dangerous_skip,
                             development_context=dev_context,
                             stream_output_func=_provider_runner(provider),
-                            **_v2_orch_kwargs(rt),
+                            **_v2_orch_kwargs(rt, session_model=session_model),
                         )
                     )
                 else:
@@ -2860,7 +2970,7 @@ def register_routes(app, sm: SessionManager):
                             dangerously_skip_permissions_override=dev_dangerous_skip,
                             development_context=dev_context,
                             stream_output_func=_provider_runner(provider),
-                            **_v2_orch_kwargs(rt),
+                            **_v2_orch_kwargs(rt, session_model=session_model),
                         )
                     )
             finally:
@@ -2900,9 +3010,68 @@ def register_routes(app, sm: SessionManager):
         provider = normalize_provider(raw_provider)
         if provider == 'gemini' and not config.FEATURE_GEMINI_SUPPORT:
             return jsonify({'error': 'Gemini support disabled', 'code': 'gemini_disabled'}), 400
+        model = ''
+        if provider == 'claude':
+            model = _normalize_claude_model(data.get('model') or '') or _default_claude_model()
+            if data.get('model') and not _normalize_claude_model(data.get('model')):
+                return jsonify({'error': 'Unsupported model', 'code': 'unsupported_model'}), 400
         client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
-        session = sm.create_session(client_ip, user_id, provider=provider)
+        session = sm.create_session(client_ip, user_id, provider=provider, model=model)
         return jsonify(session)
+
+    @app.route('/sessions/<session_id>/model', methods=['PUT'])
+    @optional_token
+    def update_session_model(session_id):
+        data = request.json or {}
+        user_id = data.get('user_id', '').strip()
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        model = _normalize_claude_model(data.get('model') or '')
+        if not model:
+            return jsonify({'error': 'Unsupported model', 'code': 'unsupported_model'}), 400
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        session = sm.get_session(client_ip, user_id, session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        provider = normalize_provider(session.get('provider'))
+        if provider != 'claude':
+            return jsonify({'error': 'Model selection is only available for Claude sessions', 'code': 'unsupported_provider'}), 400
+
+        old_model = _session_claude_model(session)
+        changed = model != old_model
+        sm.update_session(client_ip, user_id, session_id, model=model)
+        if changed:
+            sm.clear_provider_session_id(
+                client_ip,
+                user_id,
+                session_id,
+                'claude',
+                model_handoff_pending=True,
+            )
+        updated = sm.get_session(client_ip, user_id, session_id)
+        return jsonify(
+            {
+                'ok': True,
+                'model': model,
+                'changed': changed,
+                'session': updated,
+            }
+        )
+
+    @app.route('/sessions/<session_id>/star', methods=['PUT'])
+    @optional_token
+    def update_session_star(session_id):
+        data = request.json or {}
+        user_id = data.get('user_id', '').strip()
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        client_ip = get_client_ip(request, config.TRUST_X_FORWARDED)
+        session = sm.get_session(client_ip, user_id, session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        starred = bool(data.get('starred'))
+        updated = sm.set_session_starred(client_ip, user_id, session_id, starred)
+        return jsonify({'ok': True, 'starred': starred, 'session': updated})
 
     @app.route('/sessions/<session_id>', methods=['DELETE'])
     @optional_token

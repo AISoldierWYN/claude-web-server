@@ -961,31 +961,31 @@ artifacts/
 - 模板选择阶段不读日志文件。
 - 占位符未解析时，相关模板标记为待 Deep 或待用户澄清，不盲目搜索。
 
-### Phase 6???????
+### Phase 6：历史案例召回
 
-- [x] ?? case card ???
-- [x] ?? Top K ?????
-- [x] ?? `summary` ? `embedding_text` ?????????
-- [x] ???????????? ID ???????????
-- [x] ?????????????????
+- [x] 定义轻量 case card 召回结构。
+- [x] 实现 Top K 历史案例召回。
+- [x] 只读取 `summary` 和 `embedding_text` 等轻量摘要，不加载完整案例正文。
+- [x] 根据分类模块、小类、profile 和证据模板 ID 等信号计算匹配分。
+- [x] 输出案例召回结果并写入 debug trace。
 
-???
+验收：
 
-- ???????? 3 ????
-- ????????????????
-- ?????????????????
+- 默认最多返回 3 张案例卡。
+- 历史案例只作为提示，不直接套用结论。
+- 召回结果能解释命中原因。
 
-## Phase 6 ?????2026-05-16?
-?????????????????
+## Phase 6 实施记录（2026-05-16）
+状态：已完成第一版实现与离线自测。
 
-- `casebook.recall_case_cards()` ??? v2 ????????? 3 ??????????????????????????
-- ?????????????? `android_analysis_knowledge/bundles/*/indexes/case_cards.jsonl` ?????? `.claude-web/android-analysis/cases/case_cards.jsonl`?
-- ?????? Phase 5 ?? `selected_evidence_templates.json` ??????????profile????? ID??????????????????
-- project-local case card ??????????`id/title/module_id/submodule_id/profile/summary/embedding_text/key_evidence/root_cause_summary/used_template_ids/log_types/source_bundle_ids/tags`?
-- Debug trace ??? selected module/submodule/template ids?????????????????????????????
-- ????????? RDM ??????? `rdm-eula-missing-001`?????? `rdm-checkin-eula-missing` ???? ID ??????????
+- `casebook.recall_case_cards()` 升级为 v2，默认返回 Top 3 轻量 Case Card，不加载完整案例正文，避免历史案例挤占当前证据上下文。
+- 同时支持旧中心知识目录 `android_analysis_knowledge/bundles/*/indexes/case_cards.jsonl` 和项目知识包 `.claude-web/android-analysis/cases/case_cards.jsonl`。
+- 召回时会消费 Phase 5 的 `selected_evidence_templates.json`，把模块、小类、profile、模板 ID 和日志类型作为排序信号。
+- project-local case card 会归一化为 `id/title/module_id/submodule_id/profile/summary/embedding_text/key_evidence/root_cause_summary/used_template_ids/log_types/source_bundle_ids/tags`。
+- Debug trace 会记录 selected module/submodule/template ids、候选案例分数、命中原因和最终选中案例。
+- 已新增 RDM 样例案例 `rdm-eula-missing-001`，可通过 `rdm-checkin-eula-missing` 模板 ID 命中召回。
 
-?????
+验收命令：
 ```bash
 python -m py_compile claude_web/android_analysis/casebook.py claude_web/routes.py
 python -m unittest tests.test_android_analysis.AndroidAnalysisPhaseOneTests
@@ -993,27 +993,50 @@ python -m unittest tests.test_android_analysis.AndroidAnalysisPhaseOneTests
 
 ### Phase 7：日志类型识别
 
-- [ ] 实现全局和项目 `log_types.json` 加载。
-- [ ] 根据路径正则和内容抽样识别日志类型。
-- [ ] 输出 `log_type_manifest.json`。
-- [ ] 未识别文件只进入 Deep 可读范围，不参与前置证据扫描。
+- [x] 实现全局和项目 `log_types.json` 加载。
+- [x] 根据路径正则和内容抽样识别日志类型。
+- [x] 输出 `log_type_manifest.json`。
+- [x] 未识别文件只进入 Deep 可读范围，不参与前置证据扫描。
 
 验收：
 
 - 同一关键词只在模板声明的 `log_type` 文件中搜索。
 - 能解释每个文件为什么属于某个日志类型。
 
+实现记录：
+
+- 新增 `claude_web/android_analysis/log_type_identifier.py`，合并内置基础日志类型、全局 `global/log_types/*.json` 和项目 `.claude-web/android-analysis/log_types.json`。
+- 日志类型识别会读取 `file_manifest.json`，对每个文件执行路径正则匹配和 head/middle/tail 内容抽样匹配，输出 `log_type_manifest.json` 与 `log_type_manifest_metrics.json`。
+- 输出中每个文件会记录 `log_types`、匹配模式、命中的 path/content pattern、置信度和 Deep-only 状态；未识别文件标记为 `deep_only=true`。
+- Android 分析 job 已在 profiling 后、sampling 前接入 Phase 7，并把产物登记到 job artifacts 与 debug trace。
+- 当前阶段只做日志类型识别，不执行证据模板搜索；Phase 8 将消费 `selected_evidence_templates.json` 与 `log_type_manifest.json`。
+
 ### Phase 8：单行证据搜索和日志释义
 
-- [ ] 使用 `selected_evidence_templates.json` 和 `log_type_manifest.json` 搜索日志。
-- [ ] 只处理单行即可确定含义的日志证据。
-- [ ] 生成 `annotated_evidence_timeline.md/json`。
-- [ ] 复杂多行上下文只记录“建议 Deep 阅读”，不在前置阶段下结论。
+- [x] 使用 `selected_evidence_templates.json` 和 `log_type_manifest.json` 搜索日志。
+- [x] 只处理单行即可确定含义的日志证据。
+- [x] 生成 `annotated_evidence_timeline.md/json`。
+- [x] 复杂多行上下文只记录“建议 Deep 阅读”，不在前置阶段下结论。
+
+实现备注：
+
+- 新增 `claude_web/android_analysis/evidence_template_matcher.py`，按日志类型清单把证据模板限定到对应文件内扫描，跳过 disabled、未 ready、未解析参数、缺少日志类型文件或正则非法的模板。
+- 搜索策略保持前置边界：只做单行正则命中，不向下读取堆栈、ANR、tombstone 或跨文件因果；每个模板与文件有命中上限，超大文件有扫描上限。
+- 输出 `annotated_evidence_timeline.json` 与 `annotated_evidence_timeline.md`，并把命中的模板证据合并进 `matched_rules.json`，供首轮 Evidence Pack、案例召回和 Deep hints 继续消费。
+- Android 分析 job 已在规则匹配后、XML 状态匹配前接入 Phase 8，并把产物登记到 job artifacts、process details 和 debug trace。
 
 验收：
 
 - RDM EULA、IMEI、push token、DLC check-in 等单行明确证据能被召回。
 - FATAL/ANR/tombstone 不被前置工作流错误简化成单行根因。
+
+验收命令：
+
+```bash
+python -m py_compile claude_web/android_analysis/evidence_template_matcher.py claude_web/routes.py tests/test_android_analysis.py
+python -m unittest tests.test_android_analysis.AndroidAnalysisPhaseOneTests
+python -m unittest discover tests
+```
 
 ### Phase 9：前置工作流初步分析
 

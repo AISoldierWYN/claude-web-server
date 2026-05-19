@@ -2407,7 +2407,7 @@
             grid-template-columns: auto minmax(0, 1fr) auto;
             grid-template-areas:
                 "text text text"
-                "actions spacer send";
+                "actions model send";
             max-width: 680px;
             min-height: 98px;
             gap: 10px;
@@ -2435,6 +2435,47 @@
         .input-action-btn:hover {
             background: #f1ebe0;
             color: var(--text-primary);
+        }
+
+        .model-picker-wrap {
+            grid-area: model;
+            justify-self: end;
+            align-self: center;
+            display: none;
+            max-width: 100%;
+        }
+
+        .model-picker-wrap.show {
+            display: block;
+        }
+
+        .model-select {
+            height: 36px;
+            max-width: 230px;
+            min-width: 150px;
+            padding: 0 28px 0 10px;
+            border: 0;
+            border-radius: 10px;
+            background: #f0ebe1;
+            color: var(--text-primary);
+            font: inherit;
+            font-size: 13px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .model-select:hover {
+            background: #e8dfd2;
+        }
+
+        .model-select:focus {
+            outline: 2px solid rgba(26, 115, 232, 0.28);
+            outline-offset: 2px;
+        }
+
+        .model-select:disabled {
+            cursor: default;
+            opacity: 0.55;
         }
 
         .input-plus-wrap {
@@ -2758,7 +2799,7 @@
                 grid-template-columns: auto minmax(0, 1fr) auto;
                 grid-template-areas:
                     "text text text"
-                    "actions spacer send";
+                    "actions model send";
                 max-width: none;
                 width: min(100%, calc(100vw - 24px));
                 min-height: 0;
@@ -2771,6 +2812,18 @@
                 grid-area: actions;
                 display: flex;
                 gap: 0;
+            }
+
+            .model-picker-wrap {
+                justify-self: end;
+            }
+
+            .model-select {
+                width: min(46vw, 190px);
+                min-width: 0;
+                max-width: 100%;
+                height: 42px;
+                font-size: 12px;
             }
 
             .input-wrapper textarea {
@@ -2845,7 +2898,6 @@
                 </div>
             </nav>
             <div class="sidebar-list-wrap">
-                <div class="sidebar-section-title">Recents</div>
                 <div class="sidebar-list" id="sessionList"></div>
             </div>
             <div class="sidebar-footer">
@@ -2934,6 +2986,9 @@
                         <input type="checkbox" id="webSearchToggle" hidden>
                     </div>
                     <textarea id="messageInput" placeholder="输入消息..." rows="1" autofocus></textarea>
+                    <div class="model-picker-wrap" id="modelPickerWrap">
+                        <select id="modelSelect" class="model-select" title="Model"></select>
+                    </div>
                     <button class="send-btn" id="sendBtn" onclick="handleSend()">发送</button>
                 </div>
                 <input type="file" id="fileInput" multiple hidden onchange="handleFileSelect(this.files)">
@@ -3072,6 +3127,9 @@
     let devFeatureEnabled = false;
     let androidAnalysisFeatureEnabled = false;
     let geminiFeatureEnabled = false;
+    let claudeModelOptions = [];
+    let claudeDefaultModel = '';
+    let pendingClaudeModel = localStorage.getItem('claude_selected_model') || '';
     let newSessionProvider = localStorage.getItem('claude_new_session_provider') || 'claude';
     let devProjects = [];
     let androidAnalysisBundles = [];
@@ -3096,6 +3154,8 @@
     const markdownMenuCheck = document.getElementById('markdownMenuCheck');
     const webSearchMenuItem = document.getElementById('webSearchMenuItem');
     const webSearchMenuCheck = document.getElementById('webSearchMenuCheck');
+    const modelPickerWrap = document.getElementById('modelPickerWrap');
+    const modelSelect = document.getElementById('modelSelect');
     const devProjectBtn = document.getElementById('devProjectBtn');
     const androidAnalysisBtn = document.getElementById('androidAnalysisBtn');
     const sidebarDevProjectBtn = document.getElementById('sidebarDevProjectBtn');
@@ -3143,6 +3203,10 @@
             if (webSearchToggleWrap) webSearchToggleWrap.classList.toggle('active', webSearchEnabled);
             syncInputMenuState();
         });
+    }
+
+    if (modelSelect) {
+        modelSelect.addEventListener('change', () => changeClaudeModel(modelSelect.value));
     }
     syncInputMenuState();
 
@@ -3323,11 +3387,25 @@
             androidAnalysisFeatureEnabled = !!j.android_issue_analysis;
             androidAnalysisAutoDeepThreshold = Number(j.android_analysis_auto_deep_confidence_threshold || 0.72);
             geminiFeatureEnabled = !!j.gemini_support;
+            claudeModelOptions = Array.isArray(j.claude_model_options)
+                ? j.claude_model_options.map(x => String(x || '').trim()).filter(Boolean)
+                : [];
+            claudeDefaultModel = String(j.claude_model || '').trim() || claudeModelOptions[0] || '';
+            if (claudeDefaultModel && !claudeModelOptions.includes(claudeDefaultModel)) {
+                claudeModelOptions.unshift(claudeDefaultModel);
+            }
+            if (!normalizeClaudeModel(pendingClaudeModel)) {
+                pendingClaudeModel = claudeDefaultModel;
+                if (pendingClaudeModel) localStorage.setItem('claude_selected_model', pendingClaudeModel);
+            }
+            renderModelOptions();
+            if (sessions.length) renderSessionList();
             if (!geminiFeatureEnabled && newSessionProvider === 'gemini') {
                 newSessionProvider = 'claude';
                 localStorage.setItem('claude_new_session_provider', newSessionProvider);
             }
             updateProviderPicker();
+            updateModelPicker();
             updateDevUi();
             updateAndroidAnalysisUi();
             if (androidAnalysisFeatureEnabled) loadAndroidAnalysisStatus();
@@ -3339,7 +3417,11 @@
             devFeatureEnabled = false;
             androidAnalysisFeatureEnabled = false;
             geminiFeatureEnabled = false;
+            claudeModelOptions = [];
+            claudeDefaultModel = '';
+            renderModelOptions();
             updateProviderPicker();
+            updateModelPicker();
             updateDevUi();
             updateAndroidAnalysisUi();
             updateWebSearchToggleAvailability();
@@ -3356,7 +3438,88 @@
 
     function currentSessionProvider() {
         const s = currentSession();
-        return normalizeProvider(s && s.provider);
+        if (s) return normalizeProvider(s.provider);
+        return geminiFeatureEnabled ? newSessionProvider : 'claude';
+    }
+
+    function normalizeClaudeModel(model) {
+        model = String(model || '').trim();
+        return claudeModelOptions.includes(model) ? model : '';
+    }
+
+    function preferredClaudeModel() {
+        return normalizeClaudeModel(pendingClaudeModel) || claudeDefaultModel || claudeModelOptions[0] || '';
+    }
+
+    function currentSessionModel() {
+        const s = currentSession();
+        if (s && normalizeProvider(s.provider) === 'claude') {
+            return normalizeClaudeModel(s.model) || preferredClaudeModel();
+        }
+        return preferredClaudeModel();
+    }
+
+    function renderModelOptions() {
+        if (!modelSelect) return;
+        modelSelect.innerHTML = '';
+        for (const model of claudeModelOptions) {
+            const opt = document.createElement('option');
+            opt.value = model;
+            opt.textContent = model;
+            modelSelect.appendChild(opt);
+        }
+    }
+
+    function updateModelPicker(lockedOverride) {
+        if (!modelPickerWrap || !modelSelect) return;
+        const show = currentSessionProvider() === 'claude' && claudeModelOptions.length > 0;
+        modelPickerWrap.classList.toggle('show', !!show);
+        const locked = typeof lockedOverride === 'boolean' ? lockedOverride : isStreaming;
+        modelSelect.disabled = !show || locked;
+        if (show) {
+            const model = currentSessionModel();
+            if (modelSelect.value !== model) modelSelect.value = model;
+        }
+    }
+
+    async function changeClaudeModel(model) {
+        model = normalizeClaudeModel(model);
+        if (!model) {
+            updateModelPicker();
+            return;
+        }
+        const previousPendingModel = preferredClaudeModel();
+        pendingClaudeModel = model;
+        localStorage.setItem('claude_selected_model', model);
+        if (!currentSessionId || currentSessionProvider() !== 'claude') {
+            updateModelPicker();
+            return;
+        }
+        const s = currentSession();
+        const previousModel = normalizeClaudeModel(s && s.model) || previousPendingModel;
+        if (s && s.model === model) return;
+        modelSelect.disabled = true;
+        try {
+            const data = await apiPut(`/sessions/${encodeURIComponent(currentSessionId)}/model`, {
+                user_id: userId,
+                model,
+            });
+            if (data.session) {
+                const idx = sessions.findIndex(x => x.id === currentSessionId);
+                if (idx >= 0) sessions[idx] = data.session;
+            } else if (s) {
+                s.model = model;
+            }
+            saveSessionSnapshot();
+            renderSessionList();
+        } catch (e) {
+            pendingClaudeModel = previousModel;
+            localStorage.setItem('claude_selected_model', previousModel);
+            if (s) s.model = previousModel;
+            showToast(e.message || 'Model switch failed');
+        } finally {
+            updateModelPicker();
+        }
     }
 
     function updateProviderPicker() {
@@ -3365,6 +3528,7 @@
         providerPicker.querySelectorAll('.provider-option').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.provider === newSessionProvider);
         });
+        updateModelPicker();
     }
 
     function setNewSessionProvider(provider) {
@@ -4339,6 +4503,7 @@
             if (!Array.isArray(cached) || cached.length === 0) return false;
             sessions = cached;
             renderSessionList();
+            updateModelPicker();
             return true;
         } catch (_) {
             return false;
@@ -4361,6 +4526,7 @@
             sessions = await apiGet(`/sessions?user_id=${encodeURIComponent(userId)}`);
             saveSessionSnapshot();
             renderSessionList();
+            updateModelPicker();
         } catch (e) {
             console.error('加载会话列表失败:', e);
             if (!sessions.length) renderSessionState('最近对话加载失败，请稍后重试。', 'session-empty');
@@ -4373,11 +4539,39 @@
             renderSessionState('暂无最近对话', 'session-empty');
             return;
         }
-        for (const s of sessions) {
+        const starred = sessions
+            .filter(s => !!s.starred)
+            .slice()
+            .sort((a, b) => String(b.starred_at || '').localeCompare(String(a.starred_at || '')));
+        const recent = sessions.filter(s => !s.starred);
+
+        function appendSection(title, items, emptyText) {
+            if (!items.length && !emptyText) return;
+            const sectionTitle = document.createElement('div');
+            sectionTitle.className = 'sidebar-section-title';
+            sectionTitle.textContent = title;
+            sessionListEl.appendChild(sectionTitle);
+            if (!items.length) {
+                const empty = document.createElement('div');
+                empty.className = 'session-empty';
+                empty.textContent = emptyText;
+                sessionListEl.appendChild(empty);
+                return;
+            }
+            for (const s of items) appendSessionItem(s);
+        }
+
+        function appendSessionItem(s) {
             const item = document.createElement('div');
             const provider = normalizeProvider(s.provider);
             const providerLabel = provider === 'gemini' ? 'Gemini' : 'Claude';
             const providerShort = provider === 'gemini' ? 'G' : 'C';
+            const modelLabel = provider === 'claude' ? (normalizeClaudeModel(s.model) || claudeDefaultModel || '') : '';
+            const sessionMeta = modelLabel ? `${providerLabel} / ${modelLabel}` : providerLabel;
+            const starLabel = s.starred ? 'Unstar' : 'Star';
+            const starIcon = s.starred
+                ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.7l2.9 6 6.6.9-4.8 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.8-4.6 6.6-.9L12 2.7z"/></svg>'
+                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2.7l2.9 6 6.6.9-4.8 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.8-4.6 6.6-.9L12 2.7z"/></svg>';
             item.className = 'session-item' + (s.id === currentSessionId ? ' active' : '');
             item.onclick = (e) => {
                 if (e.target.closest('.session-menu-btn') || e.target.closest('.session-menu')) return;
@@ -4387,18 +4581,22 @@
                 <span class="session-provider-badge ${provider === 'gemini' ? 'gemini' : ''}" title="${providerLabel}">${providerShort}</span>
                 <div class="session-info">
                     <div class="session-title">${escapeHtml(s.title)}</div>
-                    <div class="session-time">${providerLabel} · ${s.updated_at || ''}</div>
+                    <div class="session-time">${escapeHtml(sessionMeta)} · ${s.updated_at || ''}</div>
                 </div>
                 <button class="session-menu-btn" title="更多" onclick="toggleSessionMenu(event, '${s.id}')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
                 </button>
                 <div class="session-menu" data-session-menu="${s.id}">
+                    <button type="button" onclick="toggleSessionStar(event, '${s.id}')">${starIcon}<span>${starLabel}</span></button>
                     <button type="button" onclick="exportSessionHtml(event, '${s.id}')">导出 HTML</button>
                     <button type="button" class="danger" onclick="confirmDeleteSessionById('${s.id}')">删除</button>
                 </div>
             `;
             sessionListEl.appendChild(item);
         }
+
+        appendSection('Starred', starred, '');
+        appendSection('Recents', recent, '暂无最近对话');
     }
 
     function closeAllSessionMenus() {
@@ -4413,17 +4611,43 @@
         if (item && !isOpen) item.classList.add('menu-open');
     }
 
+    async function toggleSessionStar(event, sessionId) {
+        event.stopPropagation();
+        const s = sessions.find(x => x.id === sessionId);
+        if (!s) return;
+        const nextStarred = !s.starred;
+        closeAllSessionMenus();
+        try {
+            const data = await apiPut(`/sessions/${encodeURIComponent(sessionId)}/star`, {
+                user_id: userId,
+                starred: nextStarred,
+            });
+            const idx = sessions.findIndex(x => x.id === sessionId);
+            if (idx >= 0) {
+                sessions[idx] = data.session || { ...sessions[idx], starred: nextStarred };
+            }
+            saveSessionSnapshot();
+            renderSessionList();
+            updateModelPicker();
+        } catch (e) {
+            showToast(e.message || 'Star failed');
+        }
+    }
+
     async function createNewSession(providerOverride) {
         if (isStreaming) return;
         try {
             const provider = providerOverride ? normalizeProvider(providerOverride) : (geminiFeatureEnabled ? newSessionProvider : 'claude');
-            const session = await apiPost('/sessions', { user_id: userId, provider });
+            const payload = { user_id: userId, provider };
+            if (provider === 'claude') payload.model = currentSessionModel();
+            const session = await apiPost('/sessions', payload);
             sessions.unshift(session);
             currentSessionId = session.id;
             renderSessionList();
             saveSessionSnapshot();
             renderChat([]);
             headerTitle.textContent = session.title;
+            updateModelPicker();
             await refreshDevStatus();
             updateAndroidAnalysisUi();
             closeSidebar();
@@ -4441,6 +4665,7 @@
         const s = sessions.find(x => x.id === sessionId);
         if (s) headerTitle.textContent = s.title;
         renderSessionList();
+        updateModelPicker();
         closeSidebar();
         pendingFiles = [];
         renderUploadPreview();
@@ -4455,6 +4680,7 @@
         }
         await refreshDevStatus();
         updateAndroidAnalysisUi();
+        updateModelPicker();
     }
 
     let deleteTargetId = null;
@@ -4490,8 +4716,10 @@
                 headerTitle.textContent = 'Claude Chat';
                 renderChat([]);
                 updateAndroidAnalysisUi();
+                updateModelPicker();
             }
             renderSessionList();
+            updateModelPicker();
             saveSessionSnapshot();
             if (delRes && delRes.backed_up_to) {
                 showToast('会话已备份至：' + delRes.backed_up_to, 6000);
@@ -5789,6 +6017,7 @@
         const app = document.querySelector('.app');
         if (!app) return;
         app.classList.toggle('streaming-locked', !!on);
+        updateModelPicker(!!on);
     }
 
     function aiAvatarHtml() {

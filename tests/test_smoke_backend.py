@@ -37,6 +37,9 @@ class BackendSmokeTests(unittest.TestCase):
         config.ENABLE_AUTH = False
         config.TRUST_X_FORWARDED = False
         config.TAVILY_API_KEY = ''
+        config.CLAUDE_MODEL = ''
+        config.CLAUDE_MODEL_OPTIONS = ['glm-5', 'tc-code-latest', 'hunyuan-2.0-thinking']
+        config.CLAUDE_CHILD_ENV = {}
         config.FEATURE_V2_MULTI_USER_API = False
         config.FEATURE_MOBILE_REMOTE_DEVELOPMENT = False
         config.FEATURE_GEMINI_SUPPORT = False
@@ -136,6 +139,36 @@ class BackendSmokeTests(unittest.TestCase):
             launcher.chmod(0o755)
         return launcher
 
+    def make_fake_claude_cli_capture_env(self):
+        fake_dir = Path(self.tmp.name) / 'fake-claude-capture'
+        fake_dir.mkdir()
+        script = fake_dir / 'fake_claude_capture.py'
+        script.write_text(
+            '\n'.join(
+                [
+                    'import json, os, pathlib, sys',
+                    'args = sys.argv[1:]',
+                    'sys.stdin.read()',
+                    'keys = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_DEFAULT_OPUS_MODEL", "API_TIMEOUT_MS", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]',
+                    'payload = {"args": args, "env": {k: os.environ.get(k, "") for k in keys}}',
+                    'pathlib.Path(os.environ["FAKE_CLAUDE_CAPTURE_FILE"]).write_text(json.dumps(payload), encoding="utf-8")',
+                    'sid = "fake-claude-session"',
+                    'print(json.dumps({"type": "system", "session_id": sid}), flush=True)',
+                    'print(json.dumps({"type": "result", "subtype": "success", "is_error": False, "session_id": sid, "result": "OK"}), flush=True)',
+                ]
+            ),
+            encoding='utf-8',
+        )
+        if os.name == 'nt':
+            launcher = fake_dir / 'fake_claude_capture.cmd'
+            launcher.write_text(f'@echo off\r\n"{sys.executable}" "{script}" %*\r\n', encoding='utf-8')
+        else:
+            launcher = fake_dir / 'fake_claude_capture'
+            launcher.write_text(f'#!{sys.executable}\nimport runpy\nrunpy.run_path({str(script)!r}, run_name="__main__")\n', encoding='utf-8')
+            launcher.chmod(0o755)
+        os.environ['FAKE_CLAUDE_CAPTURE_FILE'] = str(fake_dir / 'capture.json')
+        return launcher
+
     def test_features_endpoint_reports_core_flags(self):
         resp = self.client.get('/api/features')
         self.assertEqual(resp.status_code, 200)
@@ -146,6 +179,8 @@ class BackendSmokeTests(unittest.TestCase):
         self.assertIn('mobile_remote_development', data)
         self.assertIn('gemini_support', data)
         self.assertIn('gemini_configured', data)
+        self.assertIn('claude_model', data)
+        self.assertIn('claude_model_options', data)
         self.assertIn('android_issue_analysis', data)
         self.assertIn('android_issue_analysis_expert_workbench', data)
         self.assertIn('android_analysis_debug_trace', data)
@@ -153,6 +188,8 @@ class BackendSmokeTests(unittest.TestCase):
         self.assertFalse(data['mobile_remote_development'])
         self.assertFalse(data['gemini_support'])
         self.assertFalse(data['gemini_configured'])
+        self.assertEqual(data['claude_model'], 'glm-5')
+        self.assertEqual(data['claude_model_options'], ['glm-5', 'tc-code-latest', 'hunyuan-2.0-thinking'])
         self.assertFalse(data['android_issue_analysis'])
         self.assertFalse(data['android_issue_analysis_expert_workbench'])
 
@@ -178,6 +215,54 @@ class BackendSmokeTests(unittest.TestCase):
         self.assertIn('"type": "done"', events)
         self.assertIn('"content": "OK"', events)
         self.assertNotIn('"type": "error"', events)
+
+    def test_claude_config_env_overrides_child_process_api_env(self):
+        from claude_web import claude_runner
+
+        old_cli_path = config.CLAUDE_CLI_PATH
+        old_model = config.CLAUDE_MODEL
+        old_child_env = dict(getattr(config, 'CLAUDE_CHILD_ENV', {}) or {})
+        old_process_base_url = os.environ.get('ANTHROPIC_BASE_URL')
+        config.CLAUDE_CLI_PATH = str(self.make_fake_claude_cli_capture_env())
+        config.CLAUDE_MODEL = 'glm-5'
+        config.CLAUDE_CHILD_ENV = {
+            'ANTHROPIC_BASE_URL': 'https://configured.example/anthropic',
+            'ANTHROPIC_AUTH_TOKEN': 'configured-token',
+            'ANTHROPIC_DEFAULT_OPUS_MODEL': 'glm-5',
+            'API_TIMEOUT_MS': '3000000',
+            'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
+        }
+        os.environ['ANTHROPIC_BASE_URL'] = 'https://process.example/anthropic'
+        workspace = Path(self.tmp.name) / 'capture-workspace'
+        workspace.mkdir()
+        try:
+            events = ''.join(
+                claude_runner.stream_claude_output(
+                    'hello',
+                    session_id='fake-session',
+                    session_workspace_dir=workspace,
+                    readonly_dirs=[],
+                )
+            )
+            capture = json.loads(Path(os.environ['FAKE_CLAUDE_CAPTURE_FILE']).read_text(encoding='utf-8'))
+        finally:
+            config.CLAUDE_CLI_PATH = old_cli_path
+            config.CLAUDE_MODEL = old_model
+            config.CLAUDE_CHILD_ENV = old_child_env
+            if old_process_base_url is None:
+                os.environ.pop('ANTHROPIC_BASE_URL', None)
+            else:
+                os.environ['ANTHROPIC_BASE_URL'] = old_process_base_url
+
+        self.assertIn('"type": "done"', events)
+        self.assertIn('--model', capture['args'])
+        self.assertEqual(capture['args'][capture['args'].index('--model') + 1], 'glm-5')
+        self.assertNotIn('--session-id', capture['args'])
+        self.assertEqual(capture['env']['ANTHROPIC_BASE_URL'], 'https://configured.example/anthropic')
+        self.assertEqual(capture['env']['ANTHROPIC_AUTH_TOKEN'], 'configured-token')
+        self.assertEqual(capture['env']['ANTHROPIC_DEFAULT_OPUS_MODEL'], 'glm-5')
+        self.assertEqual(capture['env']['API_TIMEOUT_MS'], '3000000')
+        self.assertEqual(capture['env']['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'], '1')
 
     def test_orchestrator_rebuilds_expired_claude_session_without_user_visible_error(self):
         from claude_web import orchestrator
@@ -660,6 +745,7 @@ class BackendSmokeTests(unittest.TestCase):
         list_resp = self.client.get(f'/sessions?user_id={self.user_id}')
         self.assertEqual(list_resp.status_code, 200)
         self.assertEqual([s['id'] for s in list_resp.get_json()], [session_id])
+        self.assertFalse(list_resp.get_json()[0]['starred'])
 
         other_resp = self.client.get('/sessions?user_id=another-user')
         self.assertEqual(other_resp.status_code, 200)
@@ -669,12 +755,127 @@ class BackendSmokeTests(unittest.TestCase):
         self.assertEqual(msg_resp.status_code, 200)
         self.assertEqual(msg_resp.get_json(), [])
 
+        starred = self.client.put(
+            f'/sessions/{session_id}/star',
+            json={'user_id': self.user_id, 'starred': True},
+        )
+        self.assertEqual(starred.status_code, 200, starred.get_data(as_text=True))
+        self.assertTrue(starred.get_json()['session']['starred'])
+        self.assertTrue(starred.get_json()['session']['starred_at'])
+        still_same_order = self.client.get(f'/sessions?user_id={self.user_id}').get_json()[0]
+        self.assertEqual(still_same_order['id'], session_id)
+        self.assertTrue(still_same_order['starred'])
+
+        unstarred = self.client.put(
+            f'/sessions/{session_id}/star',
+            json={'user_id': self.user_id, 'starred': False},
+        )
+        self.assertEqual(unstarred.status_code, 200, unstarred.get_data(as_text=True))
+        self.assertFalse(unstarred.get_json()['session']['starred'])
+        self.assertEqual(unstarred.get_json()['session']['starred_at'], '')
+
         del_resp = self.client.delete(f'/sessions/{session_id}?user_id={self.user_id}')
         self.assertEqual(del_resp.status_code, 200)
         self.assertTrue(del_resp.get_json()['ok'])
 
         list_after = self.client.get(f'/sessions?user_id={self.user_id}')
         self.assertEqual(list_after.get_json(), [])
+
+    def test_claude_chat_without_provider_sid_does_not_resume_with_web_session_id(self):
+        session = self.create_session()
+        session_id = session['id']
+        manager = SessionManager(config.CACHE_DIR)
+        manager.add_message('127.0.0.1', self.user_id, session_id, 'user', 'first question')
+        manager.add_message('127.0.0.1', self.user_id, session_id, 'assistant', 'first answer')
+
+        from claude_web import orchestrator
+
+        calls = []
+        old_stream = orchestrator.stream_orchestrated_turns
+
+        def fake_stream(**kwargs):
+            calls.append(kwargs)
+            yield 'data: {"type":"session","session_id":"real-claude-sid"}\n\n'
+            yield 'data: {"type":"text","content":"ok"}\n\n'
+            yield 'data: {"type":"done","ok":true}\n\n'
+            yield 'data: {"type":"orchestration_complete","ok":true}\n\n'
+
+        try:
+            orchestrator.stream_orchestrated_turns = fake_stream
+            chat = self.client.post(
+                '/chat',
+                json={'user_id': self.user_id, 'session_id': session_id, 'message': 'second question'},
+            )
+            self.assertEqual(chat.status_code, 200, chat.get_data(as_text=True))
+            chat.get_data(as_text=True)
+        finally:
+            orchestrator.stream_orchestrated_turns = old_stream
+
+        self.assertEqual(len(calls), 1)
+        self.assertIsNone(calls[0]['initial_claude_session_id'])
+        self.assertTrue(any(m.get('content') == 'first answer' for m in calls[0]['conversation_history']))
+        stored = self.client.get(f'/sessions?user_id={self.user_id}').get_json()[0]
+        self.assertEqual(stored['provider_session_ids']['claude'], 'real-claude-sid')
+
+    def test_session_model_update_clears_resume_and_next_chat_uses_selected_model(self):
+        session = self.create_session()
+        session_id = session['id']
+        manager = SessionManager(config.CACHE_DIR)
+        manager.add_message('127.0.0.1', self.user_id, session_id, 'user', 'first question')
+        manager.add_message('127.0.0.1', self.user_id, session_id, 'assistant', 'first answer')
+        manager.update_provider_session_id('127.0.0.1', self.user_id, session_id, 'claude', 'old-claude-sid')
+
+        invalid = self.client.put(
+            f'/sessions/{session_id}/model',
+            json={'user_id': self.user_id, 'model': 'unknown-model'},
+        )
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(invalid.get_json()['code'], 'unsupported_model')
+
+        updated = self.client.put(
+            f'/sessions/{session_id}/model',
+            json={'user_id': self.user_id, 'model': 'tc-code-latest'},
+        )
+        self.assertEqual(updated.status_code, 200, updated.get_data(as_text=True))
+        payload = updated.get_json()
+        self.assertTrue(payload['changed'])
+        self.assertEqual(payload['model'], 'tc-code-latest')
+        self.assertNotIn('claude', payload['session']['provider_session_ids'])
+        self.assertIsNone(payload['session']['claude_session_id'])
+        self.assertTrue(payload['session']['model_handoff_pending'])
+
+        from claude_web import orchestrator
+
+        calls = []
+        old_stream = orchestrator.stream_orchestrated_turns
+
+        def fake_stream(**kwargs):
+            calls.append(kwargs)
+            yield 'data: {"type":"session","session_id":"new-claude-sid"}\n\n'
+            yield 'data: {"type":"text","content":"ok"}\n\n'
+            yield 'data: {"type":"done","ok":true}\n\n'
+            yield 'data: {"type":"orchestration_complete","ok":true}\n\n'
+
+        try:
+            orchestrator.stream_orchestrated_turns = fake_stream
+            chat = self.client.post(
+                '/chat',
+                json={'user_id': self.user_id, 'session_id': session_id, 'message': 'second question'},
+            )
+            self.assertEqual(chat.status_code, 200, chat.get_data(as_text=True))
+            chat.get_data(as_text=True)
+        finally:
+            orchestrator.stream_orchestrated_turns = old_stream
+
+        self.assertEqual(len(calls), 1)
+        self.assertIsNone(calls[0]['initial_claude_session_id'])
+        self.assertEqual(calls[0]['model_override'], 'tc-code-latest')
+        self.assertTrue(any(m.get('content') == 'first answer' for m in calls[0]['conversation_history']))
+
+        stored = self.client.get(f'/sessions?user_id={self.user_id}').get_json()[0]
+        self.assertEqual(stored['model'], 'tc-code-latest')
+        self.assertEqual(stored['provider_session_ids']['claude'], 'new-claude-sid')
+        self.assertFalse(stored['model_handoff_pending'])
 
     def test_session_title_is_derived_from_first_user_message(self):
         session = self.create_session()

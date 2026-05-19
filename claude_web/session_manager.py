@@ -38,6 +38,11 @@ def normalize_session_record(session: dict) -> dict:
     if claude_sid and not ids.get('claude'):
         ids['claude'] = claude_sid
     session['provider_session_ids'] = ids
+    if 'model' not in session or session.get('model') is None:
+        session['model'] = ''
+    session['model_handoff_pending'] = bool(session.get('model_handoff_pending'))
+    session['starred'] = bool(session.get('starred'))
+    session['starred_at'] = str(session.get('starred_at') or '')
     return session
 
 
@@ -258,7 +263,7 @@ class SessionManager:
             sessions.sort(key=lambda s: s.get('updated_at', ''), reverse=True)
         return sessions if sessions else []
 
-    def create_session(self, client_ip: str, user_id: str, provider: str = DEFAULT_PROVIDER) -> dict:
+    def create_session(self, client_ip: str, user_id: str, provider: str = DEFAULT_PROVIDER, model: str = '') -> dict:
         user_dir = self._get_user_dir(client_ip, user_id)
         sessions_file = user_dir / 'sessions.json'
         lock = self._get_user_lock(client_ip, user_id)
@@ -270,6 +275,10 @@ class SessionManager:
             session = {
                 'id': str(uuid.uuid4()),
                 'provider': provider,
+                'model': str(model or '').strip() if provider == DEFAULT_PROVIDER else '',
+                'model_handoff_pending': False,
+                'starred': False,
+                'starred_at': '',
                 'claude_session_id': None,
                 'provider_session_ids': {},
                 'title': DEFAULT_SESSION_TITLE,
@@ -318,6 +327,9 @@ class SessionManager:
         provider = normalize_provider(provider)
         if not provider_session_id:
             return
+        if provider == DEFAULT_PROVIDER and provider_session_id == session_id:
+            log.warning('[Session] ignore web session id as Claude resume id: session_id=%s', session_id)
+            return
         user_dir = self._get_user_dir(client_ip, user_id)
         sessions_file = user_dir / 'sessions.json'
         lock = self._get_user_lock(client_ip, user_id)
@@ -330,6 +342,34 @@ class SessionManager:
                     s['provider_session_ids'][provider] = provider_session_id
                     if provider == DEFAULT_PROVIDER:
                         s['claude_session_id'] = provider_session_id
+                        s['model_handoff_pending'] = False
+                    s['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
+                    break
+            self._write_json(sessions_file, sessions)
+
+    def clear_provider_session_id(
+        self,
+        client_ip: str,
+        user_id: str,
+        session_id: str,
+        provider: str,
+        *,
+        model_handoff_pending: bool = False,
+    ):
+        provider = normalize_provider(provider)
+        user_dir = self._get_user_dir(client_ip, user_id)
+        sessions_file = user_dir / 'sessions.json'
+        lock = self._get_user_lock(client_ip, user_id)
+
+        with lock:
+            sessions = self._read_json(sessions_file, []) or []
+            for s in sessions:
+                if s['id'] == session_id:
+                    normalize_session_record(s)
+                    s['provider_session_ids'].pop(provider, None)
+                    if provider == DEFAULT_PROVIDER:
+                        s['claude_session_id'] = None
+                        s['model_handoff_pending'] = bool(model_handoff_pending)
                     s['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
                     break
             self._write_json(sessions_file, sessions)
@@ -341,8 +381,29 @@ class SessionManager:
         provider = normalize_provider(provider)
         ids = session.get('provider_session_ids') or {}
         if provider == DEFAULT_PROVIDER:
-            return ids.get(provider) or session.get('claude_session_id')
+            sid = ids.get(provider) or session.get('claude_session_id')
+            if sid == session_id:
+                return None
+            return sid
         return ids.get(provider)
+
+    def set_session_starred(self, client_ip: str, user_id: str, session_id: str, starred: bool):
+        user_dir = self._get_user_dir(client_ip, user_id)
+        sessions_file = user_dir / 'sessions.json'
+        lock = self._get_user_lock(client_ip, user_id)
+        updated = None
+
+        with lock:
+            sessions = self._read_json(sessions_file, []) or []
+            for s in sessions:
+                if s['id'] == session_id:
+                    normalize_session_record(s)
+                    s['starred'] = bool(starred)
+                    s['starred_at'] = time.strftime('%Y-%m-%d %H:%M:%S') if starred else ''
+                    updated = s
+                    break
+            self._write_json(sessions_file, sessions)
+        return updated
 
     def delete_session(self, client_ip: str, user_id: str, session_id: str) -> bool:
         user_dir = self._get_user_dir(client_ip, user_id)
